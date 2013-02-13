@@ -60,6 +60,10 @@
         <system>Jenkins</system>
         <url>https://ci.everit.biz/jenkins/job/eosgi-maven-plugin</url>
     </ciManagement>
+    <issueManagement>
+            <system>GitHub</system>
+            <url>https://github.com/everit-org/eosgi-maven-plugin/issues</url>
+    </issueManagement>
     <build>
         <plugins>
             <plugin>
