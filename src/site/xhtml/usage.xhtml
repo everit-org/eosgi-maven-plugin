@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2011, Everit Kft.
+
+    All rights reserved.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 3 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA 02110-1301  USA
+
+-->
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+
+<html xmlns="http://www.w3.org/1999/xhtml" 
+  xml:lang="en" lang="en">
+	<body>
+		<h1>Usage</h1>
+		<h2>Dependency collection</h2>
+		<p>In case of dist or integration-test goals the plugin checks the project which the goal was started on with
+		all of it's dependencies except provided scope if they are OSGi bundles. The OSGi bundles will be deployed to
+		the generated environment where the checks ran successfully. A dependency is an OSGi bundle if it has the Bundle-SymbolicName
+		and Bundle-Version manifest headers defined.</p>
+		<h2>Distribution packages</h2>
+		<p>In the goals this plugin uses distribution packages. A distribution package is a simple ZIP file available in a maven repository with the
+		dependencies and configuration files of a framework. By default there is an Equinox based distribution package. To see how to create your own distribution
+		package please see the <a href="distpackage.html">distribution package guide</a>.</p>
+
+		<h2>Environments</h2>
+
+		<p>In the configuration part of the maven plugin it is possible to define multiple environments. An environment is based on a framework that is basically a
+		link to a distribution package. If no environment is configured for the plugin a default Equinox environment with the id 'equinox' is used.</p>
+		<h3>Default configuration</h3>
+		<p>The most simple configuration where no custom environment is defined is the following:</p>
+		<div class="source">
+			<pre>
+&lt;plugin&gt;
+    &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-eosgi-plugin&lt;/artifactId&gt;
+    &lt;version&gt;0.5.0-SNAPSHOT&lt;/version&gt;
+&lt;/plugin&gt;
+			</pre>
+		</div>
+		<p>The configuration above is equal to the following (default configuration):</p>
+		<div class="source">
+			<pre>
+&lt;plugin&gt;
+    &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-eosgi-plugin&lt;/artifactId&gt;
+    &lt;version&gt;0.5.0-SNAPSHOT&lt;/version&gt;
+    &lt;configuration&gt;
+        &lt;environments&gt;
+            &lt;environment&gt;
+                &lt;id&gt;equinox&lt;/id&gt;
+                &lt;framework&gt;equinox&lt;/framework&gt;
+            &lt;/environment&gt;
+        &lt;/environments&gt;
+    &lt;/configuration&gt;
+&lt;/plugin&gt;
+			</pre>
+		</div>
+		<h3>Environment settings</h3>
+		<p>A plugin configuration may contain multiple environment configuration. The environment can be well
+		configured. Here is the list of entries that can be used inside an environment:</p>
+		<table>
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td><p>id</p></td>
+					<td><p>The id of the environment. This must be unique in the pom.xml. Subfolders are created for
+					each environment during running the dist or the integration-test goals. Therefore the id should
+					have a value that is valid for creating a folder. It is not a good idea to use spaces
+					inside.</p></td>
+				</tr>
+				<tr>
+					<td><p>framework</p></td>
+					<td><p>The distribution package name that we should work with. Based on this value the plugin will
+					get a maven dependency. To define a framework, you can use one of the formats:</p>
+					<ul>
+						<li style="with: 100%;"><p><span style="font-weight: bold;">Full:</span> You can define the maven dependency with the
+						"groupId:artifactId:version". With this format maven will search for a dependency with the type
+						zip.</p></li>
+						<li style="width: 100%;"><p><span style="font-weight: bold;">Short:</span>The plugin searches it's classpath to find
+						all of the META-INF/eosgi-framework.properties files. You can find a sample file like this in
+						the jar file of the plugin. These properties files contain short-name=full-name entries.
+						A typical short name is 'equinox' that is defined in the plugin jar.</p></li>
+					</ul>
+					</td>
+				</tr>
+				<tr>
+					<td><p>timeout</p></td>
+					<td><p>This setting is only used when the environment is started with the integration-test goal. The
+					plugin will wait until all of the tests run in the test environment. It can happen that due to
+					an error the test OSGi framework never runs the tests (missing dependencies, wiring issues, etc.).
+					In this case the plugin kills the environment after the defined timeout. The timeout should be
+					specified in milliseconds. The default value is five minutes that is 300000 milliseconds.</p></td>
+				</tr>
+				<tr>
+					<td><p>systemProperties</p></td>
+					<td><p>Java system properties that will be passed to the OSGi container. There should be any xml
+					element inside where the name of the element will be the name of the system property and the
+					value of the element will be the value of the system property. An example:</p>
+					<div class="source" style="width: 100%;">
+						<pre>
+&lt;environment&gt;
+	...
+	&lt;systemProperties&gt;
+		&lt;jetty.port&gt;8081&lt;/jetty.port&gt;
+		&lt;file.encoding&gt;UTF8&lt;/file.encoding&gt;
+	&lt;/systemProperties&gt;
+&lt;/environment&gt;
+						</pre>
+					</div>
+					<p>The definition will define two system properties just like you would define "-Djetty.port=8081 -Dfile.encoding=UTF8" when you start a java application from the command line.</p>
+					</td>
+				</tr>
+				<tr>
+					<td><p>vmOptions</p></td>
+					<td>
+						<p>It is possible to specify arguments that will be passed to the JVM. An example:</p>
+						<div class="source">
+							<pre>
+&lt;environment&gt;
+	...
+	&lt;vmOptions&gt;
+		&lt;option&gt;-XX:MaxPermSize=64m&lt;/option&gt;
+		&lt;option&gt;-Xmx512m&lt;/option&gt;
+	&lt;/vmOptions&gt;
+&lt;/environment&gt;
+							</pre>
+						</div>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<p>There are additional settings that can be defined for goals. To see them please check the documentation
+		of the goal you want to run!</p>
+		<h2>Integrate tests as a maven compilation lifecycle</h2>
+		<h3>Configuration of the osgi plugin</h3>
+		<p>In order to run the integration-test goal at the integration phase of maven you can use the following
+		configuration snippet:</p>
+		<div class="source">
+			<pre>
+&lt;plugin&gt;
+    &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-eosgi-plugin&lt;/artifactId&gt;
+    &lt;version&gt;0.5.0-SNAPSHOT&lt;/version&gt;
+    &lt;executions&gt;
+        &lt;execution&gt;
+            &lt;id&gt;integration-test&lt;/id&gt;
+            &lt;phase&gt;integration-test&lt;/phase&gt;
+            &lt;goals&gt;
+                &lt;goal&gt;integration-test&lt;/goal&gt;
+            &lt;/goals&gt;
+        &lt;/execution&gt;
+    &lt;/executions&gt;
+&lt;/plugin&gt;
+			</pre>
+		</div>
+		<p>The configuration of the plugin (with the environments) can go on the plugin level or into the execution.</p>
+		<h3>Defining the number of expected tests</h3>
+		<p>When the integration-test goal runs it will be successful if the number of successful tests is equal to the
+		amount that are defined in the bundle headers. When an OSGi bundle dependency or the current header has the
+		manifest header "EOSGi-TestNum" it adds the value of this header entry to the total number of expected tests count.
+		Normally you define this header in your bundle project with the maven-bundle-plugin like the following:</p>
+		<div class="source">
+			<pre>
+&lt;plugin&gt;
+    &lt;groupId&gt;org.apache.felix&lt;/groupId&gt;
+    &lt;artifactId&gt;maven-bundle-plugin&lt;/artifactId&gt;
+    &lt;extensions&gt;true&lt;/extensions&gt;
+    &lt;configuration&gt;
+        &lt;instructions&gt;
+            &lt;Bundle-SymbolicName&gt;${project.artifactId}&lt;/Bundle-SymbolicName&gt;
+            &lt;Import-Package&gt;
+                *
+            &lt;/Import-Package&gt;
+			...
+            &lt;EOSGi-TestNum&gt;2&lt;/EOSGi-TestNum&gt;
+        &lt;/instructions&gt;
+    &lt;/configuration&gt;
+&lt;/plugin&gt;
+			</pre>
+		</div>
+		<p>The snippet above means that the bundle has two expected test results. Please not that in your big project
+		this header does not have to be defined in the same project as the one containing your test classes. It can happen
+		that one of the bundle contains the test code but the OSGi test services are provided by another bundle multiple
+		times. In that case it is better to define the manifest header in the bundle where we know how many test services
+		will be provided.</p>
+	</body>
+</html>

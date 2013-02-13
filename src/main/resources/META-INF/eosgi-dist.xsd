@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright (c) 2011, Everit Kft.
+
+    All rights reserved.
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 3 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+    MA 02110-1301  USA
+
+-->
+<schema targetNamespace="http://everit.org/eosgi/dist/definition/1.0.0" elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://everit.org/eosgi/dist/definition/1.0.0">
+
+    <element name="distributionPackage" type="tns:DistributionPackage">
+        <annotation>
+            <documentation>Root element of a distribution package definition.</documentation>
+        </annotation></element>
+
+    <complexType name="DistributionPackage">
+        <sequence maxOccurs="1" minOccurs="0">
+            <element name="artifacts" type="tns:Artifacts" maxOccurs="1" minOccurs="0">
+                <annotation>
+                    <documentation>
+                        Artifacts that should be resolved (downloaded and copied) into the distribution package.
+                    </documentation>
+                </annotation>
+            </element>
+            <element name="parseables" type="tns:Parseables" maxOccurs="1" minOccurs="0"></element>
+            <element name="launchers" type="tns:Launchers" minOccurs="0" maxOccurs="1">
+                <annotation>
+                    <documentation>
+                        Start command is necessary to be able to start integration tests on server.
+                    </documentation>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
+
+    <complexType name="Artifact">
+        <sequence>
+            <element name="groupId" type="string" minOccurs="1"
+                maxOccurs="1">
+            </element>
+            <element name="artifactId" type="string" minOccurs="1"
+                maxOccurs="1">
+            </element>
+            <element name="version" type="string" minOccurs="1"
+                maxOccurs="1">
+            </element>
+            <element name="type" type="string" minOccurs="0"
+                maxOccurs="1">
+            </element>
+            <element name="classifier" type="string" minOccurs="0"
+                maxOccurs="1">
+            </element>
+        </sequence>
+        <attribute name="targetFolder" type="string">
+            <annotation>
+                <documentation>
+                    The target path inside the generated distribution
+                    package
+                </documentation>
+            </annotation>
+        </attribute>
+        <attribute name="targetFile" type="string"></attribute>
+        <attribute name="start" type="boolean" use="optional" default="true"></attribute>
+    </complexType>
+
+    <complexType name="Artifacts">
+        <sequence>
+            <element name="artifact" type="tns:Artifact" maxOccurs="unbounded"></element>
+        </sequence>
+    </complexType>
+
+    <complexType name="Parseables">
+        <sequence>
+            <element name="parseable" type="tns:Parseable" maxOccurs="unbounded"></element>
+        </sequence>
+    </complexType>
+
+    <complexType name="Parseable">
+        <attribute name="path" type="string" />
+        <attribute name="encoding" type="string" />
+    </complexType>
+
+
+
+    <complexType name="Launchers">
+        <sequence>
+            <element name="launcher" type="tns:Launcher" maxOccurs="unbounded" minOccurs="0"></element>
+        </sequence>
+    </complexType>
+
+    <complexType name="Launcher">
+        <sequence>
+            <element name="startCommand" type="tns:Command"></element>
+            <element name="killCommand" type="tns:Command"></element>
+        </sequence>
+        <attribute name="os">
+            <simpleType>
+                <restriction base="string">
+                    <enumeration value="windows"></enumeration>
+                    <enumeration value="linux"></enumeration>
+                    <enumeration value="mac"></enumeration>
+                    <enumeration value="sunos"></enumeration>
+                </restriction>
+            </simpleType>
+        </attribute>
+    </complexType>
+
+    <complexType name="Command">
+        <simpleContent>
+            <extension base="string">
+                <attribute name="folder" type="string" use="optional"></attribute>
+            </extension>
+        </simpleContent>
+    </complexType>
+</schema>
