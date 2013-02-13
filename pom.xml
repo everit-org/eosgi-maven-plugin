@@ -45,20 +45,20 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <scm>
-        <connection>scm:git:git://github.com/everit-org/maven-eosgi-plugin.git</connection>
-        <developerConnection>scm:git:https://github.com/everit-org/maven-eosgi-plugin.git</developerConnection>
-        <url>https://github.com/everit-org/maven-eosgi-plugin</url>
+        <connection>scm:git:git://github.com/everit-org/eosgi-maven-plugin.git</connection>
+        <developerConnection>scm:git:https://github.com/everit-org/eosgi-maven-plugin.git</developerConnection>
+        <url>https://github.com/everit-org/eosgi-maven-plugin</url>
     </scm>
-    <url>${everit.public.site.url}/maven-eosgi-plugin</url>
+    <url>${everit.public.site.url}/eosgi-maven-plugin</url>
     <distributionManagement>
         <site>
             <id>everit.org</id>
-            <url>dav:${everit.public.site.url}/maven-eosgi-plugin</url>
+            <url>dav:${everit.public.site.url}/eosgi-maven-plugin</url>
         </site>
     </distributionManagement>
     <ciManagement>
         <system>Jenkins</system>
-        <url>https://ci.everit.biz/jenkins/job/maven-eosgi-plugin</url>
+        <url>https://ci.everit.biz/jenkins/job/eosgi-maven-plugin</url>
     </ciManagement>
     <build>
         <plugins>
