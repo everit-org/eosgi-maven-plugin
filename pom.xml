@@ -33,7 +33,7 @@
     </parent>
 
     <groupId>org.everit.osgi.dev</groupId>
-    <artifactId>maven-eosgi-plugin</artifactId>
+    <artifactId>eosgi-maven-plugin</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
     <packaging>maven-plugin</packaging>
