@@ -88,10 +88,10 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
             return null;
         }
         File bundleFile = artifact.getFile();
-        if (!bundleFile.exists()) {
+        if (bundleFile == null || !bundleFile.exists()) {
             getLog().warn(
                     "Bundle does not exist (it will be excluded from the bundles in the OSGI integration test): "
-                            + bundleFile.toString());
+                            + artifact.getArtifactId());
             return null;
         }
         JarFile jarFile = null;
