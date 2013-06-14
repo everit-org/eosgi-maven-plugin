@@ -184,13 +184,9 @@ public class DistMojo extends AbstractOSGIMojo {
         } catch (MalformedURLException e) {
             throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
         }
-        Environment[] distEnvironments = environments;
-        if (distEnvironments == null || distEnvironments.length == 0) {
-            distEnvironments = new Environment[] { getDefaultEnvironment() };
-        }
-        environments = distEnvironments;
+        
         distributedEnvironments = new ArrayList<DistributedEnvironment>();
-        for (Environment distEnvironment : distEnvironments) {
+        for (Environment distEnvironment : getEnvironments()) {
             Artifact distPackageArtifact = resolveDistPackage(distEnvironment);
             File distPackageFile = distPackageArtifact.getFile();
             File distFolderFile = new File(globalDistFolderFile, distEnvironment.getId());
@@ -235,13 +231,6 @@ public class DistMojo extends AbstractOSGIMojo {
                 }
             }
         }
-    }
-
-    protected Environment getDefaultEnvironment() {
-        Environment defaultEnvironment = new Environment();
-        defaultEnvironment.setId("equinox");
-        defaultEnvironment.setFramework("equinox");
-        return defaultEnvironment;
     }
 
     protected void parseParseables(DistributionPackage distributionPackage, File distFolderFile,

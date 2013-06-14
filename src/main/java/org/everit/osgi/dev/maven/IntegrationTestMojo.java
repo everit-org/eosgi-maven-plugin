@@ -39,6 +39,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
@@ -218,6 +219,13 @@ public class IntegrationTestMojo extends DistMojo {
      */
     protected MavenProject executedProject;
 
+    /**
+     * The jacoco code coverage generation settings. To see the possible settings see {@link JacocoSettings}.
+     * 
+     * @parameter
+     */
+    protected JacocoSettings jacoco;
+
     public String getCopyMode() {
         return copyMode;
     }
@@ -234,9 +242,48 @@ public class IntegrationTestMojo extends DistMojo {
     public String getDistFolder() {
         return distFolder;
     }
+    
+    private void processJacocoSettings() {
+        if (jacoco != null) {
+            File globalReportFolderFile = new File(testReportFolder);
+            
+            Artifact jacocoAgentArtifact = pluginArtifactMap
+                    .get("org.jacoco:org.jacoco.agent");
+            File jacocoAgentFile = jacocoAgentArtifact.getFile();
+            String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
+            
+            StringBuilder sb = new StringBuilder("-javaagent:");
+            sb.append(jacocoAgentAbsPath);
+            sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
+            sb.append("\\,dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
+            if (jacoco.getIncludes() != null) {
+                sb.append("\\,includes=").append(jacoco.getIncludes());
+            }
+            if (jacoco.getExcludes() != null) {
+                sb.append("\\,excludes=").append(jacoco.getExcludes());
+            }
+            String jacocoAgentParam = sb.toString();
+            for (Environment environment : getEnvironments()) {
+                File reportFolderFile = new File(globalReportFolderFile, environment.getId());
+                reportFolderFile.mkdirs();
+                File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
+                StringBuilder envSb = new StringBuilder(jacocoAgentParam);
+                envSb.append("\\,destfile=").append(jacocoExecFile.getAbsolutePath());
+                envSb.append("\\,sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
+                
+                List<String> vmOptions = environment.getVmOptions();
+                if (vmOptions == null) {
+                    vmOptions = new ArrayList<String>();
+                    environment.setVmOptions(vmOptions);
+                }
+                vmOptions.add(envSb.toString());
+            }
+        }
+    }
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        processJacocoSettings();
         super.execute();
 
         File testReportFolderFile = new File(testReportFolder);
@@ -321,16 +368,15 @@ public class IntegrationTestMojo extends DistMojo {
                     deamonStdErrPoller.close();
                     timeoutChecker.stop();
                 }
-                
+
                 String environmentId = distributedEnvironment.getEnvironment().getId();
                 boolean exitError = checkExitError(resultFolder, environmentId);
                 if (exitValue != 0) {
                     throw new MojoExecutionException("Test Process finished with exit code " + exitValue);
                 }
-                
+
                 getLog().info("Analyzing test results...");
 
-                
                 if (exitError) {
                     throw new MojoFailureException("Could not shut down the JVM of the environment " + environmentId
                             + " in a nice way");
@@ -511,5 +557,13 @@ public class IntegrationTestMojo extends DistMojo {
             }
         }
         return result;
+    }
+
+    public JacocoSettings getJacoco() {
+        return jacoco;
+    }
+
+    public void setJacoco(JacocoSettings jacoco) {
+        this.jacoco = jacoco;
     }
 }

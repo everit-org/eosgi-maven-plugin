@@ -30,83 +30,84 @@ import java.util.Map;
  */
 public class Environment {
 
-	/**
-	 * The id that will be used to identify this configuration in system
-	 * property of the framework.
-	 * 
-	 * @parameter
-	 */
-	private String id;
+    /**
+     * The id that will be used to identify this configuration in system property of the framework.
+     * 
+     * @parameter
+     */
+    private String id;
 
-	/**
-	 * The name of the osgi framework. Currently equinox and felix is supported.
-	 * Default is equinox.
-	 * 
-	 * @parameter
-	 */
-	private String framework;
+    /**
+     * The name of the osgi framework. Currently equinox is supported. Default is equinox.
+     * 
+     * @parameter
+     */
+    private String framework;
 
-	/**
-	 * The JVM options that will be applied during starting the OSGI Container.
-	 * 
-	 * @parameter
-	 */
-	private List<String> vmOptions;
+    /**
+     * The JVM options that will be applied during starting the OSGI Container.
+     * 
+     * @parameter
+     */
+    private List<String> vmOptions;
 
-	/**
-	 * The timeout in milliseconds after the Tests should stop for sure. Default
-	 * value is five minutes.
-	 * 
-	 * @parameter
-	 */
-	private long timeout = 300000;
+    /**
+     * The timeout in milliseconds after the Tests should stop for sure. Default value is five minutes.
+     * 
+     * @parameter
+     */
+    private long timeout = 300000;
 
-	/**
-	 * System properties that will be added to the JVM of started OSGI
-	 * container.
-	 * 
-	 * @parameter
-	 */
-	private Map<String, String> systemProperties = new HashMap<String, String>();
+    /**
+     * System properties that will be added to the JVM of started OSGI container.
+     * 
+     * @parameter
+     */
+    private Map<String, String> systemProperties = new HashMap<String, String>();
 
-	public String getFramework() {
-		return framework;
-	}
+    public String getFramework() {
+        return framework;
+    }
 
-	public String getId() {
-		return id;
-	}
+    public String getId() {
+        return id;
+    }
 
-	public long getTimeout() {
-		return timeout;
-	}
-	
-	public void setTimeout(long timeout) {
-		this.timeout = timeout;
-	}
+    public long getTimeout() {
+        return timeout;
+    }
 
-	public void setSystemProperties(Map<String, String> systemProperties) {
-		this.systemProperties = systemProperties;
-	}
+    public void setTimeout(long timeout) {
+        this.timeout = timeout;
+    }
 
-	public Map<String, String> getSystemProperties() {
-		return systemProperties;
-	}
+    public void setSystemProperties(Map<String, String> systemProperties) {
+        this.systemProperties = systemProperties;
+    }
 
-	public List<String> getVmOptions() {
-		return vmOptions;
-	}
+    public Map<String, String> getSystemProperties() {
+        return systemProperties;
+    }
 
-	public void setFramework(final String framework) {
-		this.framework = framework;
-	}
+    public List<String> getVmOptions() {
+        return vmOptions;
+    }
 
-	public void setId(final String id) {
-		this.id = id;
-	}
+    public void setFramework(final String framework) {
+        this.framework = framework;
+    }
 
-	public void setVmOptions(final List<String> vmOptions) {
-		this.vmOptions = vmOptions;
-	}
+    public void setId(final String id) {
+        this.id = id;
+    }
 
+    public void setVmOptions(final List<String> vmOptions) {
+        this.vmOptions = vmOptions;
+    }
+
+    @Override
+    public String toString() {
+        return "Environment [id=" + id + ", framework=" + framework + ", vmOptions=" + vmOptions + ", timeout="
+                + timeout + ", systemProperties=" + systemProperties + "]";
+    }
 }
