@@ -120,4 +120,5 @@ public class BundleArtifact {
     public void setFragmentHost(String fragmentHost) {
         this.fragmentHost = fragmentHost;
     }
+
 }

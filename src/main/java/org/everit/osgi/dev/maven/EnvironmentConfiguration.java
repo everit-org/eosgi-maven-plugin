@@ -1,5 +1,6 @@
 package org.everit.osgi.dev.maven;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ import java.util.Map;
 /**
  * The OSGI environment that is specified in the pom.xml for the plugin. *
  */
-public class Environment {
+public class EnvironmentConfiguration {
 
     /**
      * The id that will be used to identify this configuration in system property of the framework.
@@ -57,6 +58,20 @@ public class Environment {
      * @parameter
      */
     private long timeout = 300000;
+
+    /**
+     * The default start level of the OSGi framework.
+     * 
+     * @parameter
+     */
+    private Integer frameworkStartLevel;
+
+    /**
+     * Setting non-default behaviors for bundles. For more information see the javadoc of {@link BundleSettings} class.
+     * 
+     * @parameter
+     */
+    private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
 
     /**
      * System properties that will be added to the JVM of started OSGI container.
@@ -105,9 +120,28 @@ public class Environment {
         this.vmOptions = vmOptions;
     }
 
+    public void setDefaultBundleStartLevel(Integer defaultBundleStartLevel) {
+        this.frameworkStartLevel = defaultBundleStartLevel;
+    }
+
+    public Integer getDefaultBundleStartLevel() {
+        return frameworkStartLevel;
+    }
+
+    public void setBundleSettings(List<BundleSettings> bundleSettings) {
+        this.bundleSettings = bundleSettings;
+    }
+
+    public List<BundleSettings> getBundleSettings() {
+        return bundleSettings;
+    }
+
     @Override
     public String toString() {
-        return "Environment [id=" + id + ", framework=" + framework + ", vmOptions=" + vmOptions + ", timeout="
-                + timeout + ", systemProperties=" + systemProperties + "]";
+        return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", vmOptions=" + vmOptions
+                + ", timeout=" + timeout + ", defaultBundleStartLevel=" + frameworkStartLevel
+                + ", systemProperties=" + systemProperties + ", bundleSettings=" + bundleSettings + "]";
     }
+
+
 }

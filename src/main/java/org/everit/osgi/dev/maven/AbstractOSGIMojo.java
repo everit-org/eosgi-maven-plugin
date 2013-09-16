@@ -67,7 +67,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
      * 
      * @parameter
      */
-    private Environment[] environments;
+    private EnvironmentConfiguration[] environments;
 
     /**
      * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
@@ -248,15 +248,15 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
         return result.toString();
     }
     
-    public Environment[] getEnvironments() {
+    public EnvironmentConfiguration[] getEnvironments() {
         if (environments == null || environments.length == 0) {
-            environments = new Environment[] { getDefaultEnvironment() };
+            environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
         }
         return environments;
     }
     
-    protected Environment getDefaultEnvironment() {
-        Environment defaultEnvironment = new Environment();
+    protected EnvironmentConfiguration getDefaultEnvironment() {
+        EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
         defaultEnvironment.setId("equinox");
         defaultEnvironment.setFramework("equinox");
         return defaultEnvironment;

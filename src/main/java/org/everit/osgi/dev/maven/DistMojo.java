@@ -30,6 +30,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -154,7 +155,7 @@ public class DistMojo extends AbstractOSGIMojo {
             throw new RuntimeException("Could not create JAXB Context for distribution configuration file", e);
         }
     }
-    
+
     public List<DistributedEnvironment> getDistributedEnvironments() {
         return distributedEnvironments;
     }
@@ -170,7 +171,7 @@ public class DistMojo extends AbstractOSGIMojo {
     public String getCopyMode() {
         return copyMode;
     }
-    
+
     public String getDistFolder() {
         return distFolder;
     }
@@ -184,12 +185,12 @@ public class DistMojo extends AbstractOSGIMojo {
         } catch (MalformedURLException e) {
             throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
         }
-        
+
         distributedEnvironments = new ArrayList<DistributedEnvironment>();
-        for (Environment distEnvironment : getEnvironments()) {
-            Artifact distPackageArtifact = resolveDistPackage(distEnvironment);
+        for (EnvironmentConfiguration environment : getEnvironments()) {
+            Artifact distPackageArtifact = resolveDistPackage(environment);
             File distPackageFile = distPackageArtifact.getFile();
-            File distFolderFile = new File(globalDistFolderFile, distEnvironment.getId());
+            File distFolderFile = new File(globalDistFolderFile, environment.getId());
 
             ZipFile distPackageZipFile = null;
             try {
@@ -203,16 +204,19 @@ public class DistMojo extends AbstractOSGIMojo {
                         DistUtil.copyDirectory(sourceDistPathFile, distFolderFile);
                     }
                 }
+                List<DistributedBundleArtifact> distributedBundleArtifacts = convertBundleArtifactsToDistributed(
+                        environment, bundleArtifacts);
 
-                DistributionPackage distributionPackage = parseConfiguration(distFolderFile, bundleArtifacts,
-                        distEnvironment);
+                DistributionPackage distributionPackage = parseConfiguration(distFolderFile,
+                        distributedBundleArtifacts, environment);
+
                 Artifacts artifacts = distributionPackage.getArtifacts();
                 if (artifacts != null) {
                     resolveAndCopyArtifacts(artifacts.getArtifact(), distFolderFile);
                 }
-                parseParseables(distributionPackage, distFolderFile, bundleArtifacts, distEnvironment);
-                distributedEnvironments.add(new DistributedEnvironment(distEnvironment, distributionPackage,
-                        distFolderFile, bundleArtifacts));
+                parseParseables(distributionPackage, distFolderFile, distributedBundleArtifacts, environment);
+                distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
+                        distFolderFile, distributedBundleArtifacts));
 
             } catch (ZipException e) {
                 throw new MojoExecutionException("Could not uncompress distribution package file: "
@@ -233,8 +237,42 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
+    protected List<DistributedBundleArtifact> convertBundleArtifactsToDistributed(EnvironmentConfiguration environment,
+            List<BundleArtifact> artifacts) {
+
+        List<DistributedBundleArtifact> distributedBundleArtifacts = new ArrayList<DistributedBundleArtifact>();
+        for (BundleArtifact artifact : artifacts) {
+            distributedBundleArtifacts.add(generateDistributedArtifact(environment, artifact));
+        }
+        return distributedBundleArtifacts;
+    }
+
+    protected DistributedBundleArtifact generateDistributedArtifact(EnvironmentConfiguration environment,
+            BundleArtifact artifact) {
+
+        DistributedBundleArtifact distributedBundleArtifact = new DistributedBundleArtifact();
+        distributedBundleArtifact.setBundleArtifact(artifact);
+
+        // Getting the start level
+        List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
+        Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
+        BundleSettings matchedSettings = null;
+        while (iterator.hasNext() && matchedSettings == null) {
+            BundleSettings settings = iterator.next();
+            if (settings.getSymbolicName().equals(artifact.getSymbolicName())
+                    && (settings.getVersion() == null || settings.getVersion().equals(artifact.getVersion()))) {
+                matchedSettings = settings;
+            }
+        }
+        if (matchedSettings != null) {
+            distributedBundleArtifact.setStartLevel(matchedSettings.getStartLevel());
+        }
+        return distributedBundleArtifact;
+    }
+
     protected void parseParseables(DistributionPackage distributionPackage, File distFolderFile,
-            List<BundleArtifact> bundleArtifacts, Environment environment) throws MojoExecutionException {
+            List<DistributedBundleArtifact> bundleArtifacts, EnvironmentConfiguration environment)
+            throws MojoExecutionException {
         VelocityContext context = new VelocityContext();
         context.put("bundleArtifacts", bundleArtifacts);
         context.put("distributionPackage", distributionPackage);
@@ -310,8 +348,9 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected DistributionPackage parseConfiguration(File distFolderFile, List<BundleArtifact> bundleArtifacts,
-            Environment environment)
+    protected DistributionPackage parseConfiguration(File distFolderFile,
+            List<DistributedBundleArtifact> bundleArtifacts,
+            EnvironmentConfiguration environment)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
@@ -355,7 +394,7 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected Artifact resolveDistPackage(Environment environment) throws MojoExecutionException {
+    protected Artifact resolveDistPackage(EnvironmentConfiguration environment) throws MojoExecutionException {
         String[] distPackageIdParts;
         try {
             distPackageIdParts = resolveDistPackageId(environment);
@@ -392,7 +431,8 @@ public class DistMojo extends AbstractOSGIMojo {
      * @throws MojoExecutionException
      *             if the distPackage expression configured for this plugin has wrong format.
      */
-    protected String[] resolveDistPackageId(Environment environment) throws IOException, MojoExecutionException {
+    protected String[] resolveDistPackageId(EnvironmentConfiguration environment) throws IOException,
+            MojoExecutionException {
         String frameworkArtifact = environment.getFramework();
         String[] distPackageParts = frameworkArtifact.split("\\:");
         if (distPackageParts.length == 1) {

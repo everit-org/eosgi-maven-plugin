@@ -28,19 +28,19 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 
 public class DistributedEnvironment {
 
-    private Environment environment;
+    private EnvironmentConfiguration environment;
 
     private DistributionPackage distributionPackage;
 
     private File distributionFolder;
 
-    private List<BundleArtifact> bundleArtifacts;
+    private List<DistributedBundleArtifact> bundleArtifacts;
 
     public DistributedEnvironment() {
     }
 
-    public DistributedEnvironment(Environment environment, DistributionPackage distributionPackage,
-            File distributionFolder, List<BundleArtifact> bundleArtifacts) {
+    public DistributedEnvironment(EnvironmentConfiguration environment, DistributionPackage distributionPackage,
+            File distributionFolder, List<DistributedBundleArtifact> bundleArtifacts) {
         super();
         this.environment = environment;
         this.distributionPackage = distributionPackage;
@@ -48,11 +48,11 @@ public class DistributedEnvironment {
         this.bundleArtifacts = bundleArtifacts;
     }
 
-    public Environment getEnvironment() {
+    public EnvironmentConfiguration getEnvironment() {
         return environment;
     }
 
-    public void setEnvironment(Environment environment) {
+    public void setEnvironment(EnvironmentConfiguration environment) {
         this.environment = environment;
     }
 
@@ -72,11 +72,11 @@ public class DistributedEnvironment {
         this.distributionFolder = distributionFolder;
     }
 
-    public List<BundleArtifact> getBundleArtifacts() {
+    public List<DistributedBundleArtifact> getBundleArtifacts() {
         return bundleArtifacts;
     }
 
-    public void setBundleArtifacts(List<BundleArtifact> bundleArtifacts) {
+    public void setBundleArtifacts(List<DistributedBundleArtifact> bundleArtifacts) {
         this.bundleArtifacts = bundleArtifacts;
     }
 }

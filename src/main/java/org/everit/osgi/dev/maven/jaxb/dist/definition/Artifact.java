@@ -47,6 +47,7 @@ import javax.xml.bind.annotation.XmlType;
  *       &lt;attribute name="targetFolder" type="{http://www.w3.org/2001/XMLSchema}string" />
  *       &lt;attribute name="targetFile" type="{http://www.w3.org/2001/XMLSchema}string" />
  *       &lt;attribute name="start" type="{http://www.w3.org/2001/XMLSchema}boolean" default="true" />
+ *       &lt;attribute name="startLevel" type="{http://www.w3.org/2001/XMLSchema}int" />
  *     &lt;/restriction>
  *   &lt;/complexContent>
  * &lt;/complexType>
@@ -78,6 +79,8 @@ public class Artifact {
     protected String targetFile;
     @XmlAttribute(name = "start")
     protected Boolean start;
+    @XmlAttribute(name = "startLevel")
+    protected Integer startLevel;
 
     /**
      * Gets the value of the groupId property.
@@ -273,6 +276,30 @@ public class Artifact {
      */
     public void setStart(Boolean value) {
         this.start = value;
+    }
+
+    /**
+     * Gets the value of the startLevel property.
+     * 
+     * @return
+     *     possible object is
+     *     {@link Integer }
+     *     
+     */
+    public Integer getStartLevel() {
+        return startLevel;
+    }
+
+    /**
+     * Sets the value of the startLevel property.
+     * 
+     * @param value
+     *     allowed object is
+     *     {@link Integer }
+     *     
+     */
+    public void setStartLevel(Integer value) {
+        this.startLevel = value;
     }
 
 }

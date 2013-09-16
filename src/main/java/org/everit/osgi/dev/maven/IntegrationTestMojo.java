@@ -263,7 +263,7 @@ public class IntegrationTestMojo extends DistMojo {
                 sb.append("\\,excludes=").append(jacoco.getExcludes());
             }
             String jacocoAgentParam = sb.toString();
-            for (Environment environment : getEnvironments()) {
+            for (EnvironmentConfiguration environment : getEnvironments()) {
                 File reportFolderFile = new File(globalReportFolderFile, environment.getId());
                 reportFolderFile.mkdirs();
                 File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
@@ -548,7 +548,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     private int calculateExpectedTestNum(DistributedEnvironment distributedEnvironment) {
         int result = 0;
-        for (BundleArtifact bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
+        for (DistributedBundleArtifact bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
             Attributes mainAttributes = bundleArtifact.getManifest().getMainAttributes();
             String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
             if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {

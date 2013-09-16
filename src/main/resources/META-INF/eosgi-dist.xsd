@@ -50,32 +50,20 @@
 
     <complexType name="Artifact">
         <sequence>
-            <element name="groupId" type="string" minOccurs="1"
-                maxOccurs="1">
-            </element>
-            <element name="artifactId" type="string" minOccurs="1"
-                maxOccurs="1">
-            </element>
-            <element name="version" type="string" minOccurs="1"
-                maxOccurs="1">
-            </element>
-            <element name="type" type="string" minOccurs="0"
-                maxOccurs="1">
-            </element>
-            <element name="classifier" type="string" minOccurs="0"
-                maxOccurs="1">
-            </element>
+            <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
+            <element name="artifactId" type="string" minOccurs="1" maxOccurs="1"></element>
+            <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
+            <element name="type" type="string" minOccurs="0" maxOccurs="1"></element>
+            <element name="classifier" type="string" minOccurs="0" maxOccurs="1"></element>
         </sequence>
         <attribute name="targetFolder" type="string">
             <annotation>
-                <documentation>
-                    The target path inside the generated distribution
-                    package
-                </documentation>
+                <documentation>The target path inside the generated distribution package</documentation>
             </annotation>
         </attribute>
         <attribute name="targetFile" type="string"></attribute>
         <attribute name="start" type="boolean" use="optional" default="true"></attribute>
+        <attribute name="startLevel" type="int"></attribute>
     </complexType>
 
     <complexType name="Artifacts">
