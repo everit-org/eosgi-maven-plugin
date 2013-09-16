@@ -41,7 +41,6 @@ public class DistributedEnvironment {
 
     public DistributedEnvironment(EnvironmentConfiguration environment, DistributionPackage distributionPackage,
             File distributionFolder, List<DistributedBundleArtifact> bundleArtifacts) {
-        super();
         this.environment = environment;
         this.distributionPackage = distributionPackage;
         this.distributionFolder = distributionFolder;
