@@ -24,6 +24,13 @@ package org.everit.osgi.dev.maven;
 public class BundleSettings {
 
     /**
+     * The start level of the bundle or if left empty, the framework default startlevel will be used.
+     * 
+     * @parameter
+     */
+    private Integer startLevel;
+
+    /**
      * The Bundle-SymbolicName, a required parameter.
      * 
      * @parameter
@@ -38,35 +45,28 @@ public class BundleSettings {
      */
     private String version;
 
-    /**
-     * The start level of the bundle or if left empty, the framework default startlevel will be used.
-     * 
-     * @parameter
-     */
-    private Integer startLevel;
+    public Integer getStartLevel() {
+        return startLevel;
+    }
 
     public String getSymbolicName() {
         return symbolicName;
-    }
-
-    public void setSymbolicName(String symbolicName) {
-        this.symbolicName = symbolicName;
     }
 
     public String getVersion() {
         return version;
     }
 
-    public void setVersion(String version) {
-        this.version = version;
-    }
-
-    public Integer getStartLevel() {
-        return startLevel;
-    }
-
-    public void setStartLevel(Integer startLevel) {
+    public void setStartLevel(final Integer startLevel) {
         this.startLevel = startLevel;
+    }
+
+    public void setSymbolicName(final String symbolicName) {
+        this.symbolicName = symbolicName;
+    }
+
+    public void setVersion(final String version) {
+        this.version = version;
     }
 
     @Override

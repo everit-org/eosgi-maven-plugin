@@ -36,24 +36,9 @@ public class BundleArtifact {
     private Artifact artifact;
 
     /**
-     * The Bundle-SymbolicName.
-     */
-    private String symbolicName;
-
-    /**
-     * Import-Package entry of the bundle.
-     */
-    private String importPackage;
-
-    /**
      * Export-Package entry of the bundle.
      */
     private String exportPackage;
-
-    /**
-     * The Bundle-Version.
-     */
-    private String version;
 
     /**
      * The fragment host header if one exists.
@@ -61,9 +46,24 @@ public class BundleArtifact {
     private String fragmentHost;
 
     /**
+     * Import-Package entry of the bundle.
+     */
+    private String importPackage;
+
+    /**
      * The global manifest of the jar.
      */
     private Manifest manifest;
+
+    /**
+     * The Bundle-SymbolicName.
+     */
+    private String symbolicName;
+
+    /**
+     * The Bundle-Version.
+     */
+    private String version;
 
     public Artifact getArtifact() {
         return artifact;
@@ -73,8 +73,16 @@ public class BundleArtifact {
         return exportPackage;
     }
 
+    public String getFragmentHost() {
+        return fragmentHost;
+    }
+
     public String getImportPackage() {
         return importPackage;
+    }
+
+    public Manifest getManifest() {
+        return manifest;
     }
 
     public String getSymbolicName() {
@@ -93,8 +101,16 @@ public class BundleArtifact {
         this.exportPackage = exportPackage;
     }
 
+    public void setFragmentHost(final String fragmentHost) {
+        this.fragmentHost = fragmentHost;
+    }
+
     public void setImportPackage(final String importPackage) {
         this.importPackage = importPackage;
+    }
+
+    public void setManifest(final Manifest manifest) {
+        this.manifest = manifest;
     }
 
     public void setSymbolicName(final String symbolicName) {
@@ -103,22 +119,6 @@ public class BundleArtifact {
 
     public void setVersion(final String version) {
         this.version = version;
-    }
-
-    public Manifest getManifest() {
-        return manifest;
-    }
-
-    public void setManifest(Manifest manifest) {
-        this.manifest = manifest;
-    }
-
-    public String getFragmentHost() {
-        return fragmentHost;
-    }
-
-    public void setFragmentHost(String fragmentHost) {
-        this.fragmentHost = fragmentHost;
     }
 
 }

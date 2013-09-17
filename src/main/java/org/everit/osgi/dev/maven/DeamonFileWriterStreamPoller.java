@@ -38,7 +38,7 @@ public class DeamonFileWriterStreamPoller implements Closeable {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
             String line;
             try {
-                while (!closed && (line = bufferedReader.readLine()) != null) {
+                while (!closed && ((line = bufferedReader.readLine()) != null)) {
                     fout.write(line.getBytes());
                     fout.write("\n".getBytes());
                 }
@@ -49,26 +49,21 @@ public class DeamonFileWriterStreamPoller implements Closeable {
                 e.printStackTrace();
             }
         }
-        
+
     }
-
-    private InputStream inputStream;
-
-    private File file;
-    
-    private FileOutputStream fout;
 
     private boolean closed;
 
-    public DeamonFileWriterStreamPoller(InputStream inputStream, File file) {
+    private File file;
+
+    private FileOutputStream fout;
+
+    private InputStream inputStream;
+
+    public DeamonFileWriterStreamPoller(final InputStream inputStream, final File file) {
         this.inputStream = inputStream;
         this.file = file;
     }
-    
-    public void start() throws IOException {
-        fout = new FileOutputStream(file);
-        new Thread(new PollerRunnable()).start();
-    }    
 
     @Override
     public void close() throws IOException {
@@ -78,5 +73,10 @@ public class DeamonFileWriterStreamPoller implements Closeable {
             fout.close();
         }
 
+    }
+
+    public void start() throws IOException {
+        fout = new FileOutputStream(file);
+        new Thread(new PollerRunnable()).start();
     }
 }

@@ -27,11 +27,12 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
-
 /**
- * <p>Java class for Launcher complex type.
+ * <p>
+ * Java class for Launcher complex type.
  * 
- * <p>The following schema fragment specifies the expected content contained within this class.
+ * <p>
+ * The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
  * &lt;complexType name="Launcher">
@@ -60,88 +61,79 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "Launcher", propOrder = {
-    "startCommand",
-    "killCommand"
+        "startCommand",
+        "killCommand"
 })
 public class Launcher {
 
     @XmlElement(required = true)
-    protected Command startCommand;
-    @XmlElement(required = true)
     protected Command killCommand;
     @XmlAttribute(name = "os")
     protected String os;
-
-    /**
-     * Gets the value of the startCommand property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link Command }
-     *     
-     */
-    public Command getStartCommand() {
-        return startCommand;
-    }
-
-    /**
-     * Sets the value of the startCommand property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link Command }
-     *     
-     */
-    public void setStartCommand(Command value) {
-        this.startCommand = value;
-    }
+    @XmlElement(required = true)
+    protected Command startCommand;
 
     /**
      * Gets the value of the killCommand property.
      * 
-     * @return
-     *     possible object is
-     *     {@link Command }
-     *     
+     * @return possible object is {@link Command }
+     * 
      */
     public Command getKillCommand() {
         return killCommand;
     }
 
     /**
-     * Sets the value of the killCommand property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link Command }
-     *     
-     */
-    public void setKillCommand(Command value) {
-        this.killCommand = value;
-    }
-
-    /**
      * Gets the value of the os property.
      * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
+     * @return possible object is {@link String }
+     * 
      */
     public String getOs() {
         return os;
     }
 
     /**
+     * Gets the value of the startCommand property.
+     * 
+     * @return possible object is {@link Command }
+     * 
+     */
+    public Command getStartCommand() {
+        return startCommand;
+    }
+
+    /**
+     * Sets the value of the killCommand property.
+     * 
+     * @param value
+     *            allowed object is {@link Command }
+     * 
+     */
+    public void setKillCommand(final Command value) {
+        killCommand = value;
+    }
+
+    /**
      * Sets the value of the os property.
      * 
      * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
+     *            allowed object is {@link String }
+     * 
      */
-    public void setOs(String value) {
-        this.os = value;
+    public void setOs(final String value) {
+        os = value;
+    }
+
+    /**
+     * Sets the value of the startCommand property.
+     * 
+     * @param value
+     *            allowed object is {@link Command }
+     * 
+     */
+    public void setStartCommand(final Command value) {
+        startCommand = value;
     }
 
 }

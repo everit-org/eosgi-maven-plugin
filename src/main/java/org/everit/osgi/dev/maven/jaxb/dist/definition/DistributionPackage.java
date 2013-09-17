@@ -25,11 +25,12 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlType;
 
-
 /**
- * <p>Java class for DistributionPackage complex type.
+ * <p>
+ * Java class for DistributionPackage complex type.
  * 
- * <p>The following schema fragment specifies the expected content contained within this class.
+ * <p>
+ * The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
  * &lt;complexType name="DistributionPackage">
@@ -49,86 +50,77 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "DistributionPackage", propOrder = {
-    "artifacts",
-    "parseables",
-    "launchers"
+        "artifacts",
+        "parseables",
+        "launchers"
 })
 public class DistributionPackage {
 
     protected Artifacts artifacts;
-    protected Parseables parseables;
     protected Launchers launchers;
+    protected Parseables parseables;
 
     /**
      * Gets the value of the artifacts property.
      * 
-     * @return
-     *     possible object is
-     *     {@link Artifacts }
-     *     
+     * @return possible object is {@link Artifacts }
+     * 
      */
     public Artifacts getArtifacts() {
         return artifacts;
     }
 
     /**
-     * Sets the value of the artifacts property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link Artifacts }
-     *     
-     */
-    public void setArtifacts(Artifacts value) {
-        this.artifacts = value;
-    }
-
-    /**
-     * Gets the value of the parseables property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link Parseables }
-     *     
-     */
-    public Parseables getParseables() {
-        return parseables;
-    }
-
-    /**
-     * Sets the value of the parseables property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link Parseables }
-     *     
-     */
-    public void setParseables(Parseables value) {
-        this.parseables = value;
-    }
-
-    /**
      * Gets the value of the launchers property.
      * 
-     * @return
-     *     possible object is
-     *     {@link Launchers }
-     *     
+     * @return possible object is {@link Launchers }
+     * 
      */
     public Launchers getLaunchers() {
         return launchers;
     }
 
     /**
+     * Gets the value of the parseables property.
+     * 
+     * @return possible object is {@link Parseables }
+     * 
+     */
+    public Parseables getParseables() {
+        return parseables;
+    }
+
+    /**
+     * Sets the value of the artifacts property.
+     * 
+     * @param value
+     *            allowed object is {@link Artifacts }
+     * 
+     */
+    public void setArtifacts(final Artifacts value) {
+        artifacts = value;
+    }
+
+    /**
      * Sets the value of the launchers property.
      * 
      * @param value
-     *     allowed object is
-     *     {@link Launchers }
-     *     
+     *            allowed object is {@link Launchers }
+     * 
      */
-    public void setLaunchers(Launchers value) {
-        this.launchers = value;
+    public void setLaunchers(final Launchers value) {
+        launchers = value;
+    }
+
+    /**
+     * Sets the value of the parseables property.
+     * 
+     * @param value
+     *            allowed object is {@link Parseables }
+     * 
+     */
+    public void setParseables(final Parseables value) {
+        parseables = value;
     }
 
 }

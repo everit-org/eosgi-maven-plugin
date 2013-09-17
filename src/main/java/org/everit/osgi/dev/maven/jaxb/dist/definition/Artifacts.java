@@ -23,16 +23,18 @@ package org.everit.osgi.dev.maven.jaxb.dist.definition;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
-
 /**
- * <p>Java class for Artifacts complex type.
+ * <p>
+ * Java class for Artifacts complex type.
  * 
- * <p>The following schema fragment specifies the expected content contained within this class.
+ * <p>
+ * The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
  * &lt;complexType name="Artifacts">
@@ -50,7 +52,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "Artifacts", propOrder = {
-    "artifact"
+        "artifact"
 })
 public class Artifacts {
 
@@ -61,21 +63,20 @@ public class Artifacts {
      * Gets the value of the artifact property.
      * 
      * <p>
-     * This accessor method returns a reference to the live list,
-     * not a snapshot. Therefore any modification you make to the
-     * returned list will be present inside the JAXB object.
-     * This is why there is not a <CODE>set</CODE> method for the artifact property.
+     * This accessor method returns a reference to the live list, not a snapshot. Therefore any modification you make to
+     * the returned list will be present inside the JAXB object. This is why there is not a <CODE>set</CODE> method for
+     * the artifact property.
      * 
      * <p>
      * For example, to add a new item, do as follows:
+     * 
      * <pre>
-     *    getArtifact().add(newItem);
+     * getArtifact().add(newItem);
      * </pre>
      * 
      * 
      * <p>
-     * Objects of the following type(s) are allowed in the list
-     * {@link Artifact }
+     * Objects of the following type(s) are allowed in the list {@link Artifact }
      * 
      * 
      */
@@ -83,7 +84,7 @@ public class Artifacts {
         if (artifact == null) {
             artifact = new ArrayList<Artifact>();
         }
-        return this.artifact;
+        return artifact;
     }
 
 }

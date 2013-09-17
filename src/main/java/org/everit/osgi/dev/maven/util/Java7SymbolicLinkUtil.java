@@ -35,7 +35,7 @@ import org.apache.maven.plugin.logging.Log;
 public class Java7SymbolicLinkUtil {
 
     public static boolean createSymbolicLinks(final Map<File, File> sourceAndTargetFileMap,
-            Map<String, Artifact> artifactMap, Log log)
+            final Map<String, Artifact> artifactMap, final Log log)
             throws MojoExecutionException {
         try {
             for (Entry<File, File> entry : sourceAndTargetFileMap.entrySet()) {
@@ -47,7 +47,7 @@ public class Java7SymbolicLinkUtil {
             return false;
         } catch (IOException e) {
             throw new MojoExecutionException("Unable to create symbolic links", e);
-            
+
         }
     }
 }

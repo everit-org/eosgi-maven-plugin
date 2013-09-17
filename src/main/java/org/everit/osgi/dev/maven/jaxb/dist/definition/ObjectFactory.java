@@ -26,55 +26,28 @@ import javax.xml.bind.annotation.XmlElementDecl;
 import javax.xml.bind.annotation.XmlRegistry;
 import javax.xml.namespace.QName;
 
-
 /**
- * This object contains factory methods for each 
- * Java content interface and Java element interface 
- * generated in the org.everit.osgi.dev.maven.jaxb.dist.definition package. 
- * <p>An ObjectFactory allows you to programatically 
- * construct new instances of the Java representation 
- * for XML content. The Java representation of XML 
- * content can consist of schema derived interfaces 
- * and classes representing the binding of schema 
- * type definitions, element declarations and model 
- * groups.  Factory methods for each of these are 
- * provided in this class.
+ * This object contains factory methods for each Java content interface and Java element interface generated in the
+ * org.everit.osgi.dev.maven.jaxb.dist.definition package.
+ * <p>
+ * An ObjectFactory allows you to programatically construct new instances of the Java representation for XML content.
+ * The Java representation of XML content can consist of schema derived interfaces and classes representing the binding
+ * of schema type definitions, element declarations and model groups. Factory methods for each of these are provided in
+ * this class.
  * 
  */
 @XmlRegistry
 public class ObjectFactory {
 
-    private final static QName _DistributionPackage_QNAME = new QName("http://everit.org/eosgi/dist/definition/1.0.0", "distributionPackage");
+    private final static QName _DistributionPackage_QNAME = new QName("http://everit.org/eosgi/dist/definition/1.0.0",
+            "distributionPackage");
 
     /**
-     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: org.everit.osgi.dev.maven.jaxb.dist.definition
+     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package:
+     * org.everit.osgi.dev.maven.jaxb.dist.definition
      * 
      */
     public ObjectFactory() {
-    }
-
-    /**
-     * Create an instance of {@link DistributionPackage }
-     * 
-     */
-    public DistributionPackage createDistributionPackage() {
-        return new DistributionPackage();
-    }
-
-    /**
-     * Create an instance of {@link Command }
-     * 
-     */
-    public Command createCommand() {
-        return new Command();
-    }
-
-    /**
-     * Create an instance of {@link Artifacts }
-     * 
-     */
-    public Artifacts createArtifacts() {
-        return new Artifacts();
     }
 
     /**
@@ -86,19 +59,36 @@ public class ObjectFactory {
     }
 
     /**
-     * Create an instance of {@link Launchers }
+     * Create an instance of {@link Artifacts }
      * 
      */
-    public Launchers createLaunchers() {
-        return new Launchers();
+    public Artifacts createArtifacts() {
+        return new Artifacts();
     }
 
     /**
-     * Create an instance of {@link Parseables }
+     * Create an instance of {@link Command }
      * 
      */
-    public Parseables createParseables() {
-        return new Parseables();
+    public Command createCommand() {
+        return new Command();
+    }
+
+    /**
+     * Create an instance of {@link DistributionPackage }
+     * 
+     */
+    public DistributionPackage createDistributionPackage() {
+        return new DistributionPackage();
+    }
+
+    /**
+     * Create an instance of {@link JAXBElement }{@code <}{@link DistributionPackage }{@code >}
+     * 
+     */
+    @XmlElementDecl(namespace = "http://everit.org/eosgi/dist/definition/1.0.0", name = "distributionPackage")
+    public JAXBElement<DistributionPackage> createDistributionPackage(final DistributionPackage value) {
+        return new JAXBElement<DistributionPackage>(_DistributionPackage_QNAME, DistributionPackage.class, null, value);
     }
 
     /**
@@ -110,6 +100,14 @@ public class ObjectFactory {
     }
 
     /**
+     * Create an instance of {@link Launchers }
+     * 
+     */
+    public Launchers createLaunchers() {
+        return new Launchers();
+    }
+
+    /**
      * Create an instance of {@link Parseable }
      * 
      */
@@ -118,12 +116,11 @@ public class ObjectFactory {
     }
 
     /**
-     * Create an instance of {@link JAXBElement }{@code <}{@link DistributionPackage }{@code >}}
+     * Create an instance of {@link Parseables }
      * 
      */
-    @XmlElementDecl(namespace = "http://everit.org/eosgi/dist/definition/1.0.0", name = "distributionPackage")
-    public JAXBElement<DistributionPackage> createDistributionPackage(DistributionPackage value) {
-        return new JAXBElement<DistributionPackage>(_DistributionPackage_QNAME, DistributionPackage.class, null, value);
+    public Parseables createParseables() {
+        return new Parseables();
     }
 
 }

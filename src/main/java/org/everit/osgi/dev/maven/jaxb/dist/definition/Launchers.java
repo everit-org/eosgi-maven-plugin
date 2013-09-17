@@ -23,15 +23,17 @@ package org.everit.osgi.dev.maven.jaxb.dist.definition;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlType;
 
-
 /**
- * <p>Java class for Launchers complex type.
+ * <p>
+ * Java class for Launchers complex type.
  * 
- * <p>The following schema fragment specifies the expected content contained within this class.
+ * <p>
+ * The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
  * &lt;complexType name="Launchers">
@@ -49,7 +51,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "Launchers", propOrder = {
-    "launcher"
+        "launcher"
 })
 public class Launchers {
 
@@ -59,21 +61,20 @@ public class Launchers {
      * Gets the value of the launcher property.
      * 
      * <p>
-     * This accessor method returns a reference to the live list,
-     * not a snapshot. Therefore any modification you make to the
-     * returned list will be present inside the JAXB object.
-     * This is why there is not a <CODE>set</CODE> method for the launcher property.
+     * This accessor method returns a reference to the live list, not a snapshot. Therefore any modification you make to
+     * the returned list will be present inside the JAXB object. This is why there is not a <CODE>set</CODE> method for
+     * the launcher property.
      * 
      * <p>
      * For example, to add a new item, do as follows:
+     * 
      * <pre>
-     *    getLauncher().add(newItem);
+     * getLauncher().add(newItem);
      * </pre>
      * 
      * 
      * <p>
-     * Objects of the following type(s) are allowed in the list
-     * {@link Launcher }
+     * Objects of the following type(s) are allowed in the list {@link Launcher }
      * 
      * 
      */
@@ -81,7 +82,7 @@ public class Launchers {
         if (launcher == null) {
             launcher = new ArrayList<Launcher>();
         }
-        return this.launcher;
+        return launcher;
     }
 
 }

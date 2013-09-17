@@ -45,13 +45,11 @@ import org.osgi.framework.Constants;
 public abstract class AbstractOSGIMojo extends AbstractMojo {
 
     /**
-     * The Maven project.
+     * The environments on which the tests should run.
      * 
-     * @parameter expression="${project}"
-     * @readonly
-     * @required
+     * @parameter
      */
-    protected MavenProject project;
+    private EnvironmentConfiguration[] environments;
 
     /**
      * Map of plugin artifacts.
@@ -63,11 +61,13 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
     protected Map<String, Artifact> pluginArtifactMap;
 
     /**
-     * The environments on which the tests should run.
+     * The Maven project.
      * 
-     * @parameter
+     * @parameter expression="${project}"
+     * @readonly
+     * @required
      */
-    private EnvironmentConfiguration[] environments;
+    protected MavenProject project;
 
     /**
      * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
@@ -88,7 +88,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
             return null;
         }
         File bundleFile = artifact.getFile();
-        if (bundleFile == null || !bundleFile.exists()) {
+        if ((bundleFile == null) || !bundleFile.exists()) {
             getLog().warn(
                     "Bundle does not exist (it will be excluded from the bundles in the OSGI integration test): "
                             + artifact.getArtifactId());
@@ -221,6 +221,20 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
         return result;
     }
 
+    protected EnvironmentConfiguration getDefaultEnvironment() {
+        EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
+        defaultEnvironment.setId("equinox");
+        defaultEnvironment.setFramework("equinox");
+        return defaultEnvironment;
+    }
+
+    public EnvironmentConfiguration[] getEnvironments() {
+        if ((environments == null) || (environments.length == 0)) {
+            environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
+        }
+        return environments;
+    }
+
     /**
      * Getting the normalized version of an artifact. The artifact has to have at least three digits inside the version
      * separated by dots. If there are less than two dots inside the version it is extended with the necessary numbers
@@ -246,19 +260,5 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
             result.append(".0");
         }
         return result.toString();
-    }
-    
-    public EnvironmentConfiguration[] getEnvironments() {
-        if (environments == null || environments.length == 0) {
-            environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
-        }
-        return environments;
-    }
-    
-    protected EnvironmentConfiguration getDefaultEnvironment() {
-        EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
-        defaultEnvironment.setId("equinox");
-        defaultEnvironment.setFramework("equinox");
-        return defaultEnvironment;
     }
 }

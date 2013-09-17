@@ -28,54 +28,55 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 
 public class DistributedEnvironment {
 
-    private EnvironmentConfiguration environment;
-
-    private DistributionPackage distributionPackage;
+    private List<DistributableBundleArtifact> bundleArtifacts;
 
     private File distributionFolder;
 
-    private List<DistributedBundleArtifact> bundleArtifacts;
+    private DistributionPackage distributionPackage;
+
+    private EnvironmentConfiguration environment;
 
     public DistributedEnvironment() {
     }
 
-    public DistributedEnvironment(EnvironmentConfiguration environment, DistributionPackage distributionPackage,
-            File distributionFolder, List<DistributedBundleArtifact> bundleArtifacts) {
+    public DistributedEnvironment(final EnvironmentConfiguration environment,
+            final DistributionPackage distributionPackage,
+            final File distributionFolder, final List<DistributableBundleArtifact> bundleArtifacts) {
         this.environment = environment;
         this.distributionPackage = distributionPackage;
         this.distributionFolder = distributionFolder;
         this.bundleArtifacts = bundleArtifacts;
     }
 
-    public EnvironmentConfiguration getEnvironment() {
-        return environment;
-    }
-
-    public void setEnvironment(EnvironmentConfiguration environment) {
-        this.environment = environment;
-    }
-
-    public DistributionPackage getDistributionPackage() {
-        return distributionPackage;
-    }
-
-    public void setDistributionPackage(DistributionPackage distributionPackage) {
-        this.distributionPackage = distributionPackage;
+    public List<DistributableBundleArtifact> getBundleArtifacts() {
+        return bundleArtifacts;
     }
 
     public File getDistributionFolder() {
         return distributionFolder;
     }
 
-    public void setDistributionFolder(File distributionFolder) {
+    public DistributionPackage getDistributionPackage() {
+        return distributionPackage;
+    }
+
+    public EnvironmentConfiguration getEnvironment() {
+        return environment;
+    }
+
+    public void setBundleArtifacts(final List<DistributableBundleArtifact> bundleArtifacts) {
+        this.bundleArtifacts = bundleArtifacts;
+    }
+
+    public void setDistributionFolder(final File distributionFolder) {
         this.distributionFolder = distributionFolder;
     }
 
-    public List<DistributedBundleArtifact> getBundleArtifacts() {
-        return bundleArtifacts;
+    public void setDistributionPackage(final DistributionPackage distributionPackage) {
+        this.distributionPackage = distributionPackage;
     }
 
-    public void setBundleArtifacts(List<DistributedBundleArtifact> bundleArtifacts) {
-        this.bundleArtifacts = bundleArtifacts;
+    public void setEnvironment(final EnvironmentConfiguration environment) {
+        this.environment = environment;
     }
 }

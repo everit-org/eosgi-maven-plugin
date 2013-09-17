@@ -1,4 +1,5 @@
-@javax.xml.bind.annotation.XmlSchema(namespace = "http://everit.org/eosgi/dist/definition/1.0.0", elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
+@javax.xml.bind.annotation.XmlSchema(namespace = "http://everit.org/eosgi/dist/definition/1.0.0",
+        elementFormDefault = javax.xml.bind.annotation.XmlNsForm.QUALIFIED)
 package org.everit.osgi.dev.maven.jaxb.dist.definition;
 
 /*

@@ -27,27 +27,24 @@ import java.io.OutputStream;
 
 public class StreamRedirector implements Runnable {
 
+    private boolean closeInputStreamOnStop;
+
+    private boolean closeOutputStreamOnStop;
+
     private InputStream inputStream;
 
     private OutputStream outputStream;
-    
-    private boolean closeInputStreamOnStop;
-    
-    private boolean closeOutputStreamOnStop;
 
     private boolean stopped = false;
 
-    public StreamRedirector(InputStream inputStream, OutputStream outputStream, boolean closeInputStreamOnStop,
-            boolean closeOutputStreamOnStop) {
+    public StreamRedirector(final InputStream inputStream, final OutputStream outputStream,
+            final boolean closeInputStreamOnStop,
+            final boolean closeOutputStreamOnStop) {
         super();
         this.inputStream = inputStream;
         this.outputStream = outputStream;
         this.closeInputStreamOnStop = closeInputStreamOnStop;
         this.closeOutputStreamOnStop = closeOutputStreamOnStop;
-    }
-
-    public void stop() {
-        stopped = true;
     }
 
     @Override
@@ -74,13 +71,17 @@ public class StreamRedirector implements Runnable {
                 e.printStackTrace();
             }
         }
-         if (closeOutputStreamOnStop) {
-             try {
+        if (closeOutputStreamOnStop) {
+            try {
                 outputStream.close();
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-         }
+        }
+    }
+
+    public void stop() {
+        stopped = true;
     }
 }

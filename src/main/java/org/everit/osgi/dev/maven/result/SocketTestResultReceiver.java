@@ -155,14 +155,14 @@ public class SocketTestResultReceiver implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(SocketTestResultReceiver.class);
 
     /**
-     * The received test results by the test container ids.
-     */
-    private Map<String, TestResult> testResults = new ConcurrentHashMap<String, TestResult>();
-
-    /**
      * The server socket that receives the data.
      */
     private final ServerSocket serverSocket;
+
+    /**
+     * The received test results by the test container ids.
+     */
+    private Map<String, TestResult> testResults = new ConcurrentHashMap<String, TestResult>();
 
     /**
      * Constructor.

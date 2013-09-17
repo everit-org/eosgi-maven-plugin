@@ -27,19 +27,19 @@ package org.everit.osgi.dev.maven.result;
 public class TestResult {
 
     /**
-     * Number of failures.
-     */
-    private Long failureCount;
-
-    /**
      * Number of errors.
      */
     private Long errorCount;
 
     /**
-     * Amount of time how long the tests were running.
+     * Number of failures.
      */
-    private Long runTime;
+    private Long failureCount;
+
+    /**
+     * The number of tests that were ignored.
+     */
+    private Long ignoreCount;
 
     /**
      * The number of tests that were run.
@@ -47,9 +47,9 @@ public class TestResult {
     private Long runCount;
 
     /**
-     * The number of tests that were ignored.
+     * Amount of time how long the tests were running.
      */
-    private Long ignoreCount;
+    private Long runTime;
 
     public Long getErrorCount() {
         return errorCount;

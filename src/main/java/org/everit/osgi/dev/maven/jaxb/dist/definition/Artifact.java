@@ -27,11 +27,12 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlType;
 
-
 /**
- * <p>Java class for Artifact complex type.
+ * <p>
+ * Java class for Artifact complex type.
  * 
- * <p>The following schema fragment specifies the expected content contained within this class.
+ * <p>
+ * The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
  * &lt;complexType name="Artifact">
@@ -57,206 +58,116 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "Artifact", propOrder = {
-    "groupId",
-    "artifactId",
-    "version",
-    "type",
-    "classifier"
+        "groupId",
+        "artifactId",
+        "version",
+        "type",
+        "classifier"
 })
 public class Artifact {
 
     @XmlElement(required = true)
-    protected String groupId;
-    @XmlElement(required = true)
     protected String artifactId;
-    @XmlElement(required = true)
-    protected String version;
-    protected String type;
     protected String classifier;
-    @XmlAttribute(name = "targetFolder")
-    protected String targetFolder;
-    @XmlAttribute(name = "targetFile")
-    protected String targetFile;
+    @XmlElement(required = true)
+    protected String groupId;
     @XmlAttribute(name = "start")
     protected Boolean start;
     @XmlAttribute(name = "startLevel")
     protected Integer startLevel;
-
-    /**
-     * Gets the value of the groupId property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getGroupId() {
-        return groupId;
-    }
-
-    /**
-     * Sets the value of the groupId property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setGroupId(String value) {
-        this.groupId = value;
-    }
+    @XmlAttribute(name = "targetFile")
+    protected String targetFile;
+    @XmlAttribute(name = "targetFolder")
+    protected String targetFolder;
+    protected String type;
+    @XmlElement(required = true)
+    protected String version;
 
     /**
      * Gets the value of the artifactId property.
      * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
+     * @return possible object is {@link String }
+     * 
      */
     public String getArtifactId() {
         return artifactId;
     }
 
     /**
-     * Sets the value of the artifactId property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setArtifactId(String value) {
-        this.artifactId = value;
-    }
-
-    /**
-     * Gets the value of the version property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getVersion() {
-        return version;
-    }
-
-    /**
-     * Sets the value of the version property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setVersion(String value) {
-        this.version = value;
-    }
-
-    /**
-     * Gets the value of the type property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getType() {
-        return type;
-    }
-
-    /**
-     * Sets the value of the type property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setType(String value) {
-        this.type = value;
-    }
-
-    /**
      * Gets the value of the classifier property.
      * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
+     * @return possible object is {@link String }
+     * 
      */
     public String getClassifier() {
         return classifier;
     }
 
     /**
-     * Sets the value of the classifier property.
+     * Gets the value of the groupId property.
      * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
+     * @return possible object is {@link String }
+     * 
      */
-    public void setClassifier(String value) {
-        this.classifier = value;
+    public String getGroupId() {
+        return groupId;
     }
 
     /**
-     * Gets the value of the targetFolder property.
+     * Gets the value of the startLevel property.
      * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getTargetFolder() {
-        return targetFolder;
-    }
-
-    /**
-     * Sets the value of the targetFolder property.
+     * @return possible object is {@link Integer }
      * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
      */
-    public void setTargetFolder(String value) {
-        this.targetFolder = value;
+    public Integer getStartLevel() {
+        return startLevel;
     }
 
     /**
      * Gets the value of the targetFile property.
      * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
+     * @return possible object is {@link String }
+     * 
      */
     public String getTargetFile() {
         return targetFile;
     }
 
     /**
-     * Sets the value of the targetFile property.
+     * Gets the value of the targetFolder property.
      * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
+     * @return possible object is {@link String }
+     * 
      */
-    public void setTargetFile(String value) {
-        this.targetFile = value;
+    public String getTargetFolder() {
+        return targetFolder;
+    }
+
+    /**
+     * Gets the value of the type property.
+     * 
+     * @return possible object is {@link String }
+     * 
+     */
+    public String getType() {
+        return type;
+    }
+
+    /**
+     * Gets the value of the version property.
+     * 
+     * @return possible object is {@link String }
+     * 
+     */
+    public String getVersion() {
+        return version;
     }
 
     /**
      * Gets the value of the start property.
      * 
-     * @return
-     *     possible object is
-     *     {@link Boolean }
-     *     
+     * @return possible object is {@link Boolean }
+     * 
      */
     public boolean isStart() {
         if (start == null) {
@@ -267,39 +178,102 @@ public class Artifact {
     }
 
     /**
-     * Sets the value of the start property.
+     * Sets the value of the artifactId property.
      * 
      * @param value
-     *     allowed object is
-     *     {@link Boolean }
-     *     
+     *            allowed object is {@link String }
+     * 
      */
-    public void setStart(Boolean value) {
-        this.start = value;
+    public void setArtifactId(final String value) {
+        artifactId = value;
     }
 
     /**
-     * Gets the value of the startLevel property.
+     * Sets the value of the classifier property.
      * 
-     * @return
-     *     possible object is
-     *     {@link Integer }
-     *     
+     * @param value
+     *            allowed object is {@link String }
+     * 
      */
-    public Integer getStartLevel() {
-        return startLevel;
+    public void setClassifier(final String value) {
+        classifier = value;
+    }
+
+    /**
+     * Sets the value of the groupId property.
+     * 
+     * @param value
+     *            allowed object is {@link String }
+     * 
+     */
+    public void setGroupId(final String value) {
+        groupId = value;
+    }
+
+    /**
+     * Sets the value of the start property.
+     * 
+     * @param value
+     *            allowed object is {@link Boolean }
+     * 
+     */
+    public void setStart(final Boolean value) {
+        start = value;
     }
 
     /**
      * Sets the value of the startLevel property.
      * 
      * @param value
-     *     allowed object is
-     *     {@link Integer }
-     *     
+     *            allowed object is {@link Integer }
+     * 
      */
-    public void setStartLevel(Integer value) {
-        this.startLevel = value;
+    public void setStartLevel(final Integer value) {
+        startLevel = value;
+    }
+
+    /**
+     * Sets the value of the targetFile property.
+     * 
+     * @param value
+     *            allowed object is {@link String }
+     * 
+     */
+    public void setTargetFile(final String value) {
+        targetFile = value;
+    }
+
+    /**
+     * Sets the value of the targetFolder property.
+     * 
+     * @param value
+     *            allowed object is {@link String }
+     * 
+     */
+    public void setTargetFolder(final String value) {
+        targetFolder = value;
+    }
+
+    /**
+     * Sets the value of the type property.
+     * 
+     * @param value
+     *            allowed object is {@link String }
+     * 
+     */
+    public void setType(final String value) {
+        type = value;
+    }
+
+    /**
+     * Sets the value of the version property.
+     * 
+     * @param value
+     *            allowed object is {@link String }
+     * 
+     */
+    public void setVersion(final String value) {
+        version = value;
     }
 
 }

@@ -63,22 +63,11 @@ import org.xml.sax.SAXException;
  */
 public class IntegrationTestMojo extends DistMojo {
 
-    public static final String ENV_PROCESS_UNIQUE_ID = "EOSGI_PROCESS_ID";
-
-    private static class TestResult {
-        public String environmentId;
-        public int expectedTestNum;
-        public int tests;
-        public int skipped;
-        public int failure;
-        public int error;
-    }
-
     private class ShutdownHook extends Thread {
 
         private TimeoutChecker timeoutChecker;
 
-        public ShutdownHook(TimeoutChecker timeoutChecker) {
+        public ShutdownHook(final TimeoutChecker timeoutChecker) {
             this.timeoutChecker = timeoutChecker;
         }
 
@@ -89,19 +78,28 @@ public class IntegrationTestMojo extends DistMojo {
         }
     }
 
+    private static class TestResult {
+        public String environmentId;
+        public int error;
+        public int expectedTestNum;
+        public int failure;
+        public int skipped;
+        public int tests;
+    }
+
     private class TimeoutChecker implements Runnable {
-        private final long timeout;
-
         private final ProcessBuilder killCommand;
-
-        private boolean stopped = false;
 
         private ShutdownHook shutdownHook;
 
-        public TimeoutChecker(long timeout, ProcessBuilder killCommand) {
+        private boolean stopped = false;
+
+        private final long timeout;
+
+        public TimeoutChecker(final long timeout, final ProcessBuilder killCommand) {
             this.timeout = timeout;
             this.killCommand = killCommand;
-            this.shutdownHook = new ShutdownHook(this);
+            shutdownHook = new ShutdownHook(this);
             Runtime.getRuntime().addShutdownHook(shutdownHook);
 
         }
@@ -114,13 +112,13 @@ public class IntegrationTestMojo extends DistMojo {
             while (!stopped) {
                 long currentTime = new Date().getTime();
 
-                if (currentTime - lastLoggedTime > 5000) {
+                if ((currentTime - lastLoggedTime) > 5000) {
                     lastLoggedTime = currentTime;
                     long runningSecs = (currentTime - startTime) / 1000;
                     logger.info("Test server is running since " + runningSecs + " seconds. Please wait!");
                 }
 
-                if (currentTime - startTime > timeout) {
+                if ((currentTime - startTime) > timeout) {
                     logger.error("Timeout exceeded, forcing to stop server...");
                     logger.info("If you need a higher timeout you can override the default five " +
                             "minutes in the environment configuration");
@@ -135,6 +133,13 @@ public class IntegrationTestMojo extends DistMojo {
                 }
             }
 
+        }
+
+        public void stop() {
+            stopped = true;
+            if (shutdownHook != null) {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            }
         }
 
         public void timeoutHappen() {
@@ -162,33 +167,14 @@ public class IntegrationTestMojo extends DistMojo {
                 stdoutRedirector.stop();
             }
         }
-
-        public void stop() {
-            stopped = true;
-            if (shutdownHook != null) {
-                Runtime.getRuntime().removeShutdownHook(shutdownHook);
-            }
-        }
     }
+
+    public static final String ENV_PROCESS_UNIQUE_ID = "EOSGI_PROCESS_ID";
 
     /**
      * Constant of the MANIFEST header key to count the {@link #expectedNumberOfIntegrationTests}.
      */
     private static final String EXPECTED_NUMBER_OF_INTEGRATION_TESTS = "EOSGi-TestNum";
-
-    /**
-     * Whether to include the test runner and it's dependencies.
-     * 
-     * @parameter expression="${eosgi.includeTestRunner}" default-value="true"
-     */
-    protected boolean includeTestRunner = true;
-
-    /**
-     * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
-     * 
-     * @parameter expression="${eosgi.includeCurrentProject}" default-value="true"
-     */
-    protected boolean includeCurrentProject = true;
 
     /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
@@ -197,14 +183,6 @@ public class IntegrationTestMojo extends DistMojo {
      * @parameter expression="${eosgi.copyMode}" default-value="link"
      */
     protected String copyMode;
-
-    /**
-     * The folder where the integration test reports will be placed. Please note that the content of this folder will be
-     * deleted before running the tests.
-     * 
-     * @parameter expression="${eosgi.testReportFolder}" default-value="${project.build.directory}/eosgi-itests-reports"
-     */
-    protected String testReportFolder;
 
     /**
      * Path to folder where the distribution will be generated. The content of this folder will be overridden if the
@@ -220,65 +198,108 @@ public class IntegrationTestMojo extends DistMojo {
     protected MavenProject executedProject;
 
     /**
+     * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
+     * 
+     * @parameter expression="${eosgi.includeCurrentProject}" default-value="true"
+     */
+    protected boolean includeCurrentProject = true;
+
+    /**
+     * Whether to include the test runner and it's dependencies.
+     * 
+     * @parameter expression="${eosgi.includeTestRunner}" default-value="true"
+     */
+    protected boolean includeTestRunner = true;
+
+    /**
      * The jacoco code coverage generation settings. To see the possible settings see {@link JacocoSettings}.
      * 
      * @parameter
      */
     protected JacocoSettings jacoco;
 
-    public String getCopyMode() {
-        return copyMode;
-    }
+    /**
+     * The folder where the integration test reports will be placed. Please note that the content of this folder will be
+     * deleted before running the tests.
+     * 
+     * @parameter expression="${eosgi.testReportFolder}" default-value="${project.build.directory}/eosgi-itests-reports"
+     */
+    protected String testReportFolder;
 
-    public boolean isIncludeCurrentProject() {
-        return includeCurrentProject;
-    }
-
-    public boolean isIncludeTestRunner() {
-        return includeTestRunner;
-    }
-
-    @Override
-    public String getDistFolder() {
-        return distFolder;
-    }
-    
-    private void processJacocoSettings() {
-        if (jacoco != null) {
-            File globalReportFolderFile = new File(testReportFolder);
-            
-            Artifact jacocoAgentArtifact = pluginArtifactMap
-                    .get("org.jacoco:org.jacoco.agent");
-            File jacocoAgentFile = jacocoAgentArtifact.getFile();
-            String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
-            
-            StringBuilder sb = new StringBuilder("-javaagent:");
-            sb.append(jacocoAgentAbsPath);
-            sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
-            sb.append("\\,dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
-            if (jacoco.getIncludes() != null) {
-                sb.append("\\,includes=").append(jacoco.getIncludes());
-            }
-            if (jacoco.getExcludes() != null) {
-                sb.append("\\,excludes=").append(jacoco.getExcludes());
-            }
-            String jacocoAgentParam = sb.toString();
-            for (EnvironmentConfiguration environment : getEnvironments()) {
-                File reportFolderFile = new File(globalReportFolderFile, environment.getId());
-                reportFolderFile.mkdirs();
-                File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
-                StringBuilder envSb = new StringBuilder(jacocoAgentParam);
-                envSb.append("\\,destfile=").append(jacocoExecFile.getAbsolutePath());
-                envSb.append("\\,sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
-                
-                List<String> vmOptions = environment.getVmOptions();
-                if (vmOptions == null) {
-                    vmOptions = new ArrayList<String>();
-                    environment.setVmOptions(vmOptions);
-                }
-                vmOptions.add(envSb.toString());
+    private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
+        int result = 0;
+        for (DistributableBundleArtifact bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
+            Attributes mainAttributes = bundleArtifact.getManifest().getMainAttributes();
+            String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
+            if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
+                long currentExpectedNumber = Long.valueOf(currentExpectedNumberString).longValue();
+                result += currentExpectedNumber;
             }
         }
+        return result;
+    }
+
+    private Launcher calculateLauncherForCurrentOS(final DistributedEnvironment distributedEnvironment) {
+
+        Launchers launchers = distributedEnvironment.getDistributionPackage().getLaunchers();
+        if (launchers == null) {
+            return null;
+        }
+
+        List<Launcher> launcherList = launchers.getLauncher();
+
+        if (launcherList.size() == 0) {
+            return null;
+        }
+
+        String os = DistUtil.getOS();
+
+        Launcher selectedLauncher = null;
+        Iterator<Launcher> iterator = launcherList.iterator();
+        while ((selectedLauncher == null) && iterator.hasNext()) {
+            Launcher launcher = iterator.next();
+            if (os.equals(launcher.getOs())) {
+                selectedLauncher = launcher;
+            }
+        }
+        return selectedLauncher;
+    }
+
+    private boolean checkExitError(final File resultFolder, final String environmentId) {
+        File exitErrorFile = new File(resultFolder, TestRunnerActivator.SYSTEM_EXIT_ERROR_FILE_NAME);
+        if (exitErrorFile.exists()) {
+            StringBuilder sb = new StringBuilder();
+            FileInputStream fin = null;
+            try {
+                fin = new FileInputStream(exitErrorFile);
+                InputStreamReader reader = new InputStreamReader(fin);
+                BufferedReader br = new BufferedReader(reader);
+                String line = br.readLine();
+                while (line != null) {
+                    sb.append(line).append("\n");
+                    line = br.readLine();
+                }
+            } catch (FileNotFoundException e) {
+                getLog().error("Could not find file " + exitErrorFile.getAbsolutePath(), e);
+            } catch (IOException e) {
+                getLog().error("Error during reading exit error file " + exitErrorFile.getAbsolutePath(), e);
+            } finally {
+                if (fin != null) {
+                    try {
+                        fin.close();
+                    } catch (IOException e) {
+                        getLog().error("Could not close file " + exitErrorFile.getAbsolutePath(), e);
+                    }
+                }
+            }
+            getLog().error(
+                    "Error during stopping the JVM of the environment " + environmentId
+                            + ". Information can be found at " + exitErrorFile.getAbsolutePath()
+                            + ". Content of the file is: \n" + sb.toString());
+
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -412,7 +433,7 @@ public class IntegrationTestMojo extends DistMojo {
                 .append(resultSum.skipped).append("\n");
         getLog().info(testLogTextSB.toString());
 
-        if (resultSum.error > 0 || resultSum.failure > 0) {
+        if ((resultSum.error > 0) || (resultSum.failure > 0)) {
             throw new MojoFailureException("Error during running OSGi integration tests");
         }
 
@@ -427,44 +448,69 @@ public class IntegrationTestMojo extends DistMojo {
         }
     }
 
-    private boolean checkExitError(File resultFolder, String environmentId) {
-        File exitErrorFile = new File(resultFolder, TestRunnerActivator.SYSTEM_EXIT_ERROR_FILE_NAME);
-        if (exitErrorFile.exists()) {
-            StringBuilder sb = new StringBuilder();
-            FileInputStream fin = null;
-            try {
-                fin = new FileInputStream(exitErrorFile);
-                InputStreamReader reader = new InputStreamReader(fin);
-                BufferedReader br = new BufferedReader(reader);
-                String line = br.readLine();
-                while (line != null) {
-                    sb.append(line).append("\n");
-                    line = br.readLine();
-                }
-            } catch (FileNotFoundException e) {
-                getLog().error("Could not find file " + exitErrorFile.getAbsolutePath(), e);
-            } catch (IOException e) {
-                getLog().error("Error during reading exit error file " + exitErrorFile.getAbsolutePath(), e);
-            } finally {
-                if (fin != null) {
-                    try {
-                        fin.close();
-                    } catch (IOException e) {
-                        getLog().error("Could not close file " + exitErrorFile.getAbsolutePath(), e);
-                    }
-                }
-            }
-            getLog().error(
-                    "Error during stopping the JVM of the environment " + environmentId
-                            + ". Information can be found at " + exitErrorFile.getAbsolutePath()
-                            + ". Content of the file is: \n" + sb.toString());
-
-            return true;
-        }
-        return false;
+    @Override
+    public String getCopyMode() {
+        return copyMode;
     }
 
-    private void processResults(File resultFolder, TestResult results) throws MojoFailureException {
+    @Override
+    public String getDistFolder() {
+        return distFolder;
+    }
+
+    public JacocoSettings getJacoco() {
+        return jacoco;
+    }
+
+    @Override
+    public boolean isIncludeCurrentProject() {
+        return includeCurrentProject;
+    }
+
+    @Override
+    public boolean isIncludeTestRunner() {
+        return includeTestRunner;
+    }
+
+    private void processJacocoSettings() {
+        if (jacoco != null) {
+            File globalReportFolderFile = new File(testReportFolder);
+
+            Artifact jacocoAgentArtifact = pluginArtifactMap
+                    .get("org.jacoco:org.jacoco.agent");
+            File jacocoAgentFile = jacocoAgentArtifact.getFile();
+            String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
+
+            StringBuilder sb = new StringBuilder("-javaagent:");
+            sb.append(jacocoAgentAbsPath);
+            sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
+            sb.append("\\,dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
+            if (jacoco.getIncludes() != null) {
+                sb.append("\\,includes=").append(jacoco.getIncludes());
+            }
+            if (jacoco.getExcludes() != null) {
+                sb.append("\\,excludes=").append(jacoco.getExcludes());
+            }
+            String jacocoAgentParam = sb.toString();
+            for (EnvironmentConfiguration environment : getEnvironments()) {
+                File reportFolderFile = new File(globalReportFolderFile, environment.getId());
+                reportFolderFile.mkdirs();
+                File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
+                StringBuilder envSb = new StringBuilder(jacocoAgentParam);
+                envSb.append("\\,destfile=").append(jacocoExecFile.getAbsolutePath());
+                envSb.append("\\,sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
+
+                List<String> vmOptions = environment.getVmOptions();
+                if (vmOptions == null) {
+                    vmOptions = new ArrayList<String>();
+                    environment.setVmOptions(vmOptions);
+                }
+                vmOptions.add(envSb.toString());
+            }
+        }
+    }
+
+    private void processResults(final File resultFolder, final TestResult results) throws MojoFailureException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder documentBuilder = null;
         try {
@@ -489,10 +535,10 @@ public class IntegrationTestMojo extends DistMojo {
                         String failures = testSuite.getAttribute("failures");
                         String skipped = testSuite.getAttribute("skipped");
 
-                        if (tests == null || "".equals(tests)
-                                || errors == null || "".equals(errors)
-                                || failures == null || "".equals(failures)
-                                || skipped == null || "".equals(skipped)) {
+                        if ((tests == null) || "".equals(tests)
+                                || (errors == null) || "".equals(errors)
+                                || (failures == null) || "".equals(failures)
+                                || (skipped == null) || "".equals(skipped)) {
 
                             throw new MojoFailureException("Invalid test result file "
                                     + resultFile.getAbsolutePath()
@@ -520,50 +566,7 @@ public class IntegrationTestMojo extends DistMojo {
         }
     }
 
-    private Launcher calculateLauncherForCurrentOS(DistributedEnvironment distributedEnvironment) {
-
-        Launchers launchers = distributedEnvironment.getDistributionPackage().getLaunchers();
-        if (launchers == null) {
-            return null;
-        }
-
-        List<Launcher> launcherList = launchers.getLauncher();
-
-        if (launcherList.size() == 0) {
-            return null;
-        }
-
-        String os = DistUtil.getOS();
-
-        Launcher selectedLauncher = null;
-        Iterator<Launcher> iterator = launcherList.iterator();
-        while (selectedLauncher == null && iterator.hasNext()) {
-            Launcher launcher = iterator.next();
-            if (os.equals(launcher.getOs())) {
-                selectedLauncher = launcher;
-            }
-        }
-        return selectedLauncher;
-    }
-
-    private int calculateExpectedTestNum(DistributedEnvironment distributedEnvironment) {
-        int result = 0;
-        for (DistributedBundleArtifact bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
-            Attributes mainAttributes = bundleArtifact.getManifest().getMainAttributes();
-            String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
-            if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
-                long currentExpectedNumber = Long.valueOf(currentExpectedNumberString).longValue();
-                result += currentExpectedNumber;
-            }
-        }
-        return result;
-    }
-
-    public JacocoSettings getJacoco() {
-        return jacoco;
-    }
-
-    public void setJacoco(JacocoSettings jacoco) {
+    public void setJacoco(final JacocoSettings jacoco) {
         this.jacoco = jacoco;
     }
 }

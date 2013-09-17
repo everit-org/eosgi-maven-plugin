@@ -1,6 +1,5 @@
 package org.everit.osgi.dev.maven;
 
-
 /*
  * Copyright (c) 2011, Everit Kft.
  *
@@ -32,7 +31,7 @@ public class JacocoSettings {
     /**
      * @parameter
      */
-    private String includes;
+    private boolean dumponexit = true;
 
     /**
      * @parameter
@@ -42,39 +41,38 @@ public class JacocoSettings {
     /**
      * @parameter
      */
-    private boolean dumponexit = true;
+    private String includes;
 
-
-    public boolean isAppend() {
-        return append;
-    }
-
-    public void setAppend(boolean append) {
-        this.append = append;
+    public String getExcludes() {
+        return excludes;
     }
 
     public String getIncludes() {
         return includes;
     }
 
-    public void setIncludes(String includes) {
-        this.includes = includes;
-    }
-
-    public String getExcludes() {
-        return excludes;
-    }
-
-    public void setExcludes(String excludes) {
-        this.excludes = excludes;
+    public boolean isAppend() {
+        return append;
     }
 
     public boolean isDumponexit() {
         return dumponexit;
     }
 
-    public void setDumponexit(boolean dumponexit) {
+    public void setAppend(final boolean append) {
+        this.append = append;
+    }
+
+    public void setDumponexit(final boolean dumponexit) {
         this.dumponexit = dumponexit;
+    }
+
+    public void setExcludes(final String excludes) {
+        this.excludes = excludes;
+    }
+
+    public void setIncludes(final String includes) {
+        this.includes = includes;
     }
 
     @Override

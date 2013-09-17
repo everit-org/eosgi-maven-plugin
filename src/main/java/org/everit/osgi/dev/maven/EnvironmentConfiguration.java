@@ -32,11 +32,18 @@ import java.util.Map;
 public class EnvironmentConfiguration {
 
     /**
-     * The id that will be used to identify this configuration in system property of the framework.
+     * Setting non-default behaviors for bundles. For more information see the javadoc of {@link BundleSettings} class.
      * 
      * @parameter
      */
-    private String id;
+    private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
+
+    /**
+     * The default startlevel for newly installed bundles
+     * 
+     * @parameter
+     */
+    private Integer bundleStartLevel;
 
     /**
      * The name of the osgi framework. Currently equinox is supported. Default is equinox.
@@ -46,11 +53,25 @@ public class EnvironmentConfiguration {
     private String framework;
 
     /**
-     * The JVM options that will be applied during starting the OSGI Container.
+     * The default start level of the OSGi framework.
      * 
      * @parameter
      */
-    private List<String> vmOptions;
+    private Integer frameworkStartLevel;
+
+    /**
+     * The id that will be used to identify this configuration in system property of the framework.
+     * 
+     * @parameter
+     */
+    private String id;
+
+    /**
+     * System properties that will be added to the JVM of started OSGI container.
+     * 
+     * @parameter
+     */
+    private Map<String, String> systemProperties = new HashMap<String, String>();
 
     /**
      * The timeout in milliseconds after the Tests should stop for sure. Default value is five minutes.
@@ -60,88 +81,82 @@ public class EnvironmentConfiguration {
     private long timeout = 300000;
 
     /**
-     * The default start level of the OSGi framework.
+     * The JVM options that will be applied during starting the OSGI Container.
      * 
      * @parameter
      */
-    private Integer frameworkStartLevel;
+    private List<String> vmOptions;
 
-    /**
-     * Setting non-default behaviors for bundles. For more information see the javadoc of {@link BundleSettings} class.
-     * 
-     * @parameter
-     */
-    private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
+    public List<BundleSettings> getBundleSettings() {
+        return bundleSettings;
+    }
 
-    /**
-     * System properties that will be added to the JVM of started OSGI container.
-     * 
-     * @parameter
-     */
-    private Map<String, String> systemProperties = new HashMap<String, String>();
+    public Integer getBundleStartLevel() {
+        return bundleStartLevel;
+    }
 
     public String getFramework() {
         return framework;
+    }
+
+    public Integer getFrameworkStartLevel() {
+        return frameworkStartLevel;
     }
 
     public String getId() {
         return id;
     }
 
-    public long getTimeout() {
-        return timeout;
-    }
-
-    public void setTimeout(long timeout) {
-        this.timeout = timeout;
-    }
-
-    public void setSystemProperties(Map<String, String> systemProperties) {
-        this.systemProperties = systemProperties;
-    }
-
     public Map<String, String> getSystemProperties() {
         return systemProperties;
+    }
+
+    public long getTimeout() {
+        return timeout;
     }
 
     public List<String> getVmOptions() {
         return vmOptions;
     }
 
+    public void setBundleSettings(final List<BundleSettings> bundleSettings) {
+        this.bundleSettings = bundleSettings;
+    }
+
+    public void setBundleStartLevel(final Integer bundleStartLevel) {
+        this.bundleStartLevel = bundleStartLevel;
+    }
+
     public void setFramework(final String framework) {
         this.framework = framework;
+    }
+
+    public void setFrameworkStartLevel(final Integer frameworkStartLevel) {
+        this.frameworkStartLevel = frameworkStartLevel;
     }
 
     public void setId(final String id) {
         this.id = id;
     }
 
+    public void setSystemProperties(final Map<String, String> systemProperties) {
+        this.systemProperties = systemProperties;
+    }
+
+    public void setTimeout(final long timeout) {
+        this.timeout = timeout;
+    }
+
     public void setVmOptions(final List<String> vmOptions) {
         this.vmOptions = vmOptions;
     }
 
-    public void setDefaultBundleStartLevel(Integer defaultBundleStartLevel) {
-        this.frameworkStartLevel = defaultBundleStartLevel;
-    }
-
-    public Integer getDefaultBundleStartLevel() {
-        return frameworkStartLevel;
-    }
-
-    public void setBundleSettings(List<BundleSettings> bundleSettings) {
-        this.bundleSettings = bundleSettings;
-    }
-
-    public List<BundleSettings> getBundleSettings() {
-        return bundleSettings;
-    }
-
     @Override
     public String toString() {
-        return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", vmOptions=" + vmOptions
-                + ", timeout=" + timeout + ", defaultBundleStartLevel=" + frameworkStartLevel
-                + ", systemProperties=" + systemProperties + ", bundleSettings=" + bundleSettings + "]";
+        return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", timeout=" + timeout
+                + ", frameworkStartLevel=" + frameworkStartLevel + ", defaultBundleStartLevel="
+                + bundleStartLevel + ", bundleSettings=" + bundleSettings + ", vmOptions=" + vmOptions
+                + ", systemProperties=" + systemProperties + "]";
     }
-
 
 }

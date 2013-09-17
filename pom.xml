@@ -49,11 +49,11 @@
 		<developerConnection>scm:git:https://github.com/everit-org/eosgi-maven-plugin.git</developerConnection>
 		<url>https://github.com/everit-org/eosgi-maven-plugin</url>
 	</scm>
-	<url>${everit.public.site.url}/eosgi-maven-plugin</url>
+	<url>${everit.public.site.url}/mvnsites/eosgi-maven-plugin</url>
 	<distributionManagement>
 		<site>
 			<id>everit.org</id>
-			<url>dav:${everit.public.site.url}/eosgi-maven-plugin</url>
+			<url>dav:${everit.public.site.url}/mvnsites/eosgi-maven-plugin</url>
 		</site>
 	</distributionManagement>
 	<ciManagement>

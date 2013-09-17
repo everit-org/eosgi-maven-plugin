@@ -86,30 +86,15 @@ public class DistMojo extends AbstractOSGIMojo {
      */
     protected ArtifactResolver artifactResolver;
 
-    /** @parameter default-value="${project.remoteArtifactRepositories}" */
-    protected List<ArtifactRepository> remoteRepositories;
-
-    /** @parameter default-value="${localRepository}" */
-    protected ArtifactRepository localRepository;
-
     /**
-     * @parameter expression="${executedProject}"
-     */
-    protected MavenProject executedProject;
-
-    /**
-     * Whether to include the test runner and it's dependencies.
+     * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
+     * values: link, file.
      * 
-     * @parameter expression="${eosgi.includeTestRunner}" default-value="false"
+     * @parameter expression="${eosgi.copyMode}" default-value="file"
      */
-    protected boolean includeTestRunner = false;
+    protected String copyMode;
 
-    /**
-     * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
-     * 
-     * @parameter expression="${eosgi.includeCurrentProject}" default-value="false"
-     */
-    protected boolean includeCurrentProject = false;
+    protected final JAXBContext distConfigJAXBContext;
 
     /**
      * Path to folder where the distribution will be generated. The content of this folder will be overridden if the
@@ -119,17 +104,8 @@ public class DistMojo extends AbstractOSGIMojo {
      */
     protected String distFolder;
 
-    /**
-     * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
-     * values: link, file.
-     * 
-     * @parameter expression="${eosgi.copyMode}" default-value="file"
-     */
-    protected String copyMode;
-
     protected List<DistributedEnvironment> distributedEnvironments;
 
-    protected final JAXBContext distConfigJAXBContext;
     /**
      * The path of the zip file in which the distribution package will be generated. If the zip file already exists it
      * will be overridden. In zip distribution only copyMode file works.
@@ -138,6 +114,30 @@ public class DistMojo extends AbstractOSGIMojo {
      *            default-value="${project.build.directory}/${project.artifactId}-dist.zip"
      */
     protected String distZipPath;
+
+    /**
+     * @parameter expression="${executedProject}"
+     */
+    protected MavenProject executedProject;
+
+    /**
+     * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
+     * 
+     * @parameter expression="${eosgi.includeCurrentProject}" default-value="false"
+     */
+    protected boolean includeCurrentProject = false;
+
+    /**
+     * Whether to include the test runner and it's dependencies.
+     * 
+     * @parameter expression="${eosgi.includeTestRunner}" default-value="false"
+     */
+    protected boolean includeTestRunner = false;
+
+    /** @parameter default-value="${localRepository}" */
+    protected ArtifactRepository localRepository;
+    /** @parameter default-value="${project.remoteArtifactRepositories}" */
+    protected List<ArtifactRepository> remoteRepositories;
 
     /**
      * The directory where there may be additional files to create the distribution package.
@@ -156,24 +156,15 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    public List<DistributedEnvironment> getDistributedEnvironments() {
-        return distributedEnvironments;
-    }
+    protected List<DistributableBundleArtifact> convertBundleArtifactsToDistributed(
+            final EnvironmentConfiguration environment,
+            final List<BundleArtifact> artifacts) {
 
-    public boolean isIncludeCurrentProject() {
-        return includeCurrentProject;
-    }
-
-    public boolean isIncludeTestRunner() {
-        return includeTestRunner;
-    }
-
-    public String getCopyMode() {
-        return copyMode;
-    }
-
-    public String getDistFolder() {
-        return distFolder;
+        List<DistributableBundleArtifact> distributedBundleArtifacts = new ArrayList<DistributableBundleArtifact>();
+        for (BundleArtifact artifact : artifacts) {
+            distributedBundleArtifacts.add(generateDistributedArtifact(environment, artifact));
+        }
+        return distributedBundleArtifacts;
     }
 
     @Override
@@ -204,7 +195,7 @@ public class DistMojo extends AbstractOSGIMojo {
                         DistUtil.copyDirectory(sourceDistPathFile, distFolderFile);
                     }
                 }
-                List<DistributedBundleArtifact> distributedBundleArtifacts = convertBundleArtifactsToDistributed(
+                List<DistributableBundleArtifact> distributedBundleArtifacts = convertBundleArtifactsToDistributed(
                         environment, bundleArtifacts);
 
                 DistributionPackage distributionPackage = parseConfiguration(distFolderFile,
@@ -237,41 +228,100 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected List<DistributedBundleArtifact> convertBundleArtifactsToDistributed(EnvironmentConfiguration environment,
-            List<BundleArtifact> artifacts) {
+    protected DistributableBundleArtifact generateDistributedArtifact(final EnvironmentConfiguration environment,
+            final BundleArtifact artifact) {
 
-        List<DistributedBundleArtifact> distributedBundleArtifacts = new ArrayList<DistributedBundleArtifact>();
-        for (BundleArtifact artifact : artifacts) {
-            distributedBundleArtifacts.add(generateDistributedArtifact(environment, artifact));
-        }
-        return distributedBundleArtifacts;
-    }
+        getLog().debug("Converting artifact to distributable bundle artifact: " + artifact.toString());
 
-    protected DistributedBundleArtifact generateDistributedArtifact(EnvironmentConfiguration environment,
-            BundleArtifact artifact) {
-
-        DistributedBundleArtifact distributedBundleArtifact = new DistributedBundleArtifact();
-        distributedBundleArtifact.setBundleArtifact(artifact);
+        DistributableBundleArtifact distributableBundleArtifact = new DistributableBundleArtifact();
+        distributableBundleArtifact.setBundleArtifact(artifact);
 
         // Getting the start level
         List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
         Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
         BundleSettings matchedSettings = null;
-        while (iterator.hasNext() && matchedSettings == null) {
+        while (iterator.hasNext() && (matchedSettings == null)) {
             BundleSettings settings = iterator.next();
             if (settings.getSymbolicName().equals(artifact.getSymbolicName())
-                    && (settings.getVersion() == null || settings.getVersion().equals(artifact.getVersion()))) {
+                    && ((settings.getVersion() == null) || settings.getVersion().equals(artifact.getVersion()))) {
                 matchedSettings = settings;
             }
         }
         if (matchedSettings != null) {
-            distributedBundleArtifact.setStartLevel(matchedSettings.getStartLevel());
+            
+            distributableBundleArtifact.setStartLevel(matchedSettings.getStartLevel());
         }
-        return distributedBundleArtifact;
+        return distributableBundleArtifact;
     }
 
-    protected void parseParseables(DistributionPackage distributionPackage, File distFolderFile,
-            List<DistributedBundleArtifact> bundleArtifacts, EnvironmentConfiguration environment)
+    public String getCopyMode() {
+        return copyMode;
+    }
+
+    public String getDistFolder() {
+        return distFolder;
+    }
+
+    public List<DistributedEnvironment> getDistributedEnvironments() {
+        return distributedEnvironments;
+    }
+
+    public boolean isIncludeCurrentProject() {
+        return includeCurrentProject;
+    }
+
+    public boolean isIncludeTestRunner() {
+        return includeTestRunner;
+    }
+
+    protected DistributionPackage parseConfiguration(final File distFolderFile,
+            final List<DistributableBundleArtifact> bundleArtifacts,
+            final EnvironmentConfiguration environment)
+            throws MojoExecutionException {
+        File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
+
+        VelocityContext context = new VelocityContext();
+        context.put("bundleArtifacts", bundleArtifacts);
+        context.put("environment", environment);
+        try {
+            DistUtil.replaceFileWithParsed(configFile, context, "UTF8");
+        } catch (IOException e) {
+            throw new MojoExecutionException("Could not run velocity on configuration file: " + configFile.getName(),
+                    e);
+        }
+        InputStream inputStream = null;
+        try {
+            inputStream = new FileInputStream(configFile);
+            Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
+            Object distributionPackage = unmarshaller.unmarshal(inputStream);
+            if (distributionPackage instanceof JAXBElement) {
+                distributionPackage = ((JAXBElement<DistributionPackage>) distributionPackage).getValue();
+            }
+            if (distributionPackage instanceof DistributionPackage) {
+                return (DistributionPackage) distributionPackage;
+            } else {
+                throw new MojoExecutionException("The root element in the provided distribution configuration file "
+                        + "is not the expected DistributionPackage element");
+            }
+        } catch (IOException e) {
+            throw new MojoExecutionException("Could not read configuration file in distribution package: "
+                    + configFile.getName(), e);
+        } catch (JAXBException e) {
+            throw new MojoExecutionException("Could not read configuration file in distribution package: "
+                    + configFile.getName(), e);
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    getLog().error("Could not close zip stream: " + configFile.getName(), e);
+                }
+            }
+        }
+    }
+
+    protected void parseParseables(final DistributionPackage distributionPackage, final File distFolderFile,
+            final List<DistributableBundleArtifact> bundleArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         VelocityContext context = new VelocityContext();
         context.put("bundleArtifacts", bundleArtifacts);
@@ -297,8 +347,36 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected void resolveAndCopyArtifacts(List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts,
-            File envDistFolderFile)
+    /**
+     * Reading up the content of each /META-INF/eosgi-frameworks.properties file from the classpath of the plugin.
+     * 
+     * @return The merged properties file.
+     * @throws IOException
+     *             if a read error occurs.
+     */
+    protected Properties readDefaultFrameworkPops() throws IOException {
+        Enumeration<URL> resources = this.getClass().getClassLoader()
+                .getResources("META-INF/eosgi-frameworks.properties");
+        Properties result = new Properties();
+        while (resources.hasMoreElements()) {
+            URL resource = resources.nextElement();
+            Properties tmpProps = new Properties();
+            InputStream inputStream = resource.openStream();
+            try {
+                tmpProps.load(inputStream);
+            } finally {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+            }
+            result.putAll(tmpProps);
+        }
+        return result;
+    }
+
+    protected void resolveAndCopyArtifacts(
+            final List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts,
+            final File envDistFolderFile)
             throws MojoExecutionException {
         Map<File, File> fileCopyMap = new HashMap<File, File>();
         for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
@@ -348,53 +426,7 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected DistributionPackage parseConfiguration(File distFolderFile,
-            List<DistributedBundleArtifact> bundleArtifacts,
-            EnvironmentConfiguration environment)
-            throws MojoExecutionException {
-        File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
-
-        VelocityContext context = new VelocityContext();
-        context.put("bundleArtifacts", bundleArtifacts);
-        context.put("environment", environment);
-        try {
-            DistUtil.replaceFileWithParsed(configFile, context, "UTF8");
-        } catch (IOException e) {
-            throw new MojoExecutionException("Could not run velocity on configuration file: " + configFile.getName(),
-                    e);
-        }
-        InputStream inputStream = null;
-        try {
-            inputStream = new FileInputStream(configFile);
-            Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
-            Object distributionPackage = unmarshaller.unmarshal(inputStream);
-            if (distributionPackage instanceof JAXBElement) {
-                distributionPackage = ((JAXBElement<DistributionPackage>) distributionPackage).getValue();
-            }
-            if (distributionPackage instanceof DistributionPackage) {
-                return (DistributionPackage) distributionPackage;
-            } else {
-                throw new MojoExecutionException("The root element in the provided distribution configuration file "
-                        + "is not the expected DistributionPackage element");
-            }
-        } catch (IOException e) {
-            throw new MojoExecutionException("Could not read configuration file in distribution package: "
-                    + configFile.getName(), e);
-        } catch (JAXBException e) {
-            throw new MojoExecutionException("Could not read configuration file in distribution package: "
-                    + configFile.getName(), e);
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    getLog().error("Could not close zip stream: " + configFile.getName(), e);
-                }
-            }
-        }
-    }
-
-    protected Artifact resolveDistPackage(EnvironmentConfiguration environment) throws MojoExecutionException {
+    protected Artifact resolveDistPackage(final EnvironmentConfiguration environment) throws MojoExecutionException {
         String[] distPackageIdParts;
         try {
             distPackageIdParts = resolveDistPackageId(environment);
@@ -431,7 +463,7 @@ public class DistMojo extends AbstractOSGIMojo {
      * @throws MojoExecutionException
      *             if the distPackage expression configured for this plugin has wrong format.
      */
-    protected String[] resolveDistPackageId(EnvironmentConfiguration environment) throws IOException,
+    protected String[] resolveDistPackageId(final EnvironmentConfiguration environment) throws IOException,
             MojoExecutionException {
         String frameworkArtifact = environment.getFramework();
         String[] distPackageParts = frameworkArtifact.split("\\:");
@@ -456,33 +488,6 @@ public class DistMojo extends AbstractOSGIMojo {
             throw new MojoExecutionException("Invalid distribution package id format: " + frameworkArtifact);
         }
         return distPackageParts;
-    }
-
-    /**
-     * Reading up the content of each /META-INF/eosgi-frameworks.properties file from the classpath of the plugin.
-     * 
-     * @return The merged properties file.
-     * @throws IOException
-     *             if a read error occurs.
-     */
-    protected Properties readDefaultFrameworkPops() throws IOException {
-        Enumeration<URL> resources = this.getClass().getClassLoader()
-                .getResources("META-INF/eosgi-frameworks.properties");
-        Properties result = new Properties();
-        while (resources.hasMoreElements()) {
-            URL resource = resources.nextElement();
-            Properties tmpProps = new Properties();
-            InputStream inputStream = resource.openStream();
-            try {
-                tmpProps.load(inputStream);
-            } finally {
-                if (inputStream != null) {
-                    inputStream.close();
-                }
-            }
-            result.putAll(tmpProps);
-        }
-        return result;
     }
 
 }
