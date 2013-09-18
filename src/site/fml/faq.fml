@@ -28,13 +28,13 @@
         <faq id="what-is-everit-osgi-plugin">
             <question>What is Everit OSGI plugin?</question>
             <answer>
-                <p>Everit OSGI plugin helps creating distribution packages where the application runs on an OSGi container. It also makes it possible to run JUnit tests provided as OSGi services inside the created OSGi environment without restarting the container between each test.</p>
+                <p>Everit OSGI plugin helps to create distribution packages where the application runs on an OSGi container. It also makes it possible to run JUnit tests provided as OSGi services inside the established OSGi environment without the need of restarting the container between each test.</p>
             </answer>
         </faq>
         <faq id="where-can-i-find-example">
             <question>Where can I find a real life example?</question>
             <answer>
-                <p>There are many <a href="http://everit.org/osgi/samples/index.html">samples</a> projects inside everit-osgi. Also there there is a <a href="http://everit.org/osgi/dev/step-by-step-guide.html">step-by-step guide</a> that is a very good place to start.</p>
+                <p>There are many <a href="http://everit.org/osgi/samples/index.html">sample</a> projects inside everit-osgi. Also, there is a <a href="http://everit.org/osgi/dev/step-by-step-guide.html">step-by-step guide</a> which is a very good document to start width.</p>
             </answer>
         </faq>
     </part>

@@ -30,31 +30,31 @@
 	<h1>Usage</h1>
 	<h2>Dependency collection</h2>
 	<p>In case of dist or integration-test goals the plugin checks the
-		project which the goal was started on with all of it's dependencies
-		except provided scope if they are OSGi bundles. The OSGi bundles will
-		be deployed to the generated environment where the checks ran
-		successfully. A dependency is an OSGi bundle if it has the
-		Bundle-SymbolicName and Bundle-Version manifest headers defined.</p>
+		project which the goal was started with all of it's dependencies,
+		except for the provided scope if they are OSGi bundles. The OSGi
+		bundles will be deployed to the generated environment where the checks
+		ran successfully. A dependency is an OSGi bundle if it has the
+		Bundle-SymbolicName and the Bundle-Version manifest headers defined.</p>
 	<h2>Distribution packages</h2>
 	<p>
 		In the goals this plugin uses distribution packages. A distribution
 		package is a simple ZIP file available in a maven repository with the
-		dependencies and configuration files of a framework. By default there
-		is an Equinox based distribution package. To see how to create your
-		own distribution package please see the <a href="distpackage.html">distribution
-			package guide</a>.
+		dependencies and configuration files of the framework. By default,
+		there is an Equinox based distribution package. To see how to create
+		your own distribution package, please refer to the <a
+			href="distpackage.html">distribution package guide</a>.
 	</p>
 
 	<h2>Environments</h2>
 
-	<p>In the configuration part of the maven plugin it is possible to
-		define multiple environments. An environment is based on a framework
-		that is basically a link to a distribution package. If no environment
-		is configured for the plugin a default Equinox environment with the id
-		'equinox' is used.</p>
+	<p>In the configuration part of the maven plugin, it is possible to
+		define multiple environments. An environment is based on a framework,
+		which is basically a link to a distribution package. If no environment
+		is configured for the plugin, the default Equinox environment with the
+		id 'equinox' is used.</p>
 	<h3>Default configuration</h3>
-	<p>The most simple configuration where no custom environment is
-		defined is the following:</p>
+	<p>In the following, most simple configuration, where no custom
+		environment is defined:</p>
 	<div class="source">
 		<pre>
 &lt;plugin&gt;
@@ -85,7 +85,7 @@
 	</div>
 	<h3>Environment settings</h3>
 	<p>A plugin configuration may contain multiple environment
-		configuration. The environment can be well configured. Here is the
+		configurations. The environment can be configured deeply. Here is the
 		list of entries that can be used inside an environment:</p>
 	<table>
 		<thead>
@@ -98,16 +98,16 @@
 			<tr>
 				<td><p>id</p></td>
 				<td><p>The id of the environment. This must be unique in
-						the pom.xml. Subfolders are created for each environment during
-						running the dist or the integration-test goals. Therefore the id
-						should have a value that is valid for creating a folder. It is not
-						a good idea to use spaces inside.</p></td>
+						the pom.xml. Sub-folders are created for each environment during
+						the run of the dist or the integration-test goals. Therefore, the
+						id should have a value that is valid for creating a folder, so it
+						is not a good idea to use spaces or special characters inside.</p></td>
 			</tr>
 			<tr>
 				<td><p>framework</p></td>
-				<td><p>The distribution package name that we should work
-						with. Based on this value the plugin will get a maven dependency.
-						To define a framework, you can use one of the formats:</p>
+				<td><p>The distribution package name we should work with.
+						Based on this value the plugin will get a maven dependency. To
+						define a framework, you can use one of the formats below:</p>
 					<ul>
 						<li style="with: 100%;"><p>
 								<span style="font-weight: bold;">Full:</span> You can define the
@@ -121,7 +121,7 @@
 								META-INF/eosgi-framework.properties files. You can find a sample
 								file like this in the jar file of the plugin. These properties
 								files contain short-name=full-name entries. A typical short name
-								is 'equinox' that is defined in the plugin jar.
+								is 'equinox', that is also defined in the plugin jar.
 							</p></li>
 					</ul></td>
 			</tr>
@@ -129,12 +129,12 @@
 				<td><p>timeout</p></td>
 				<td><p>This setting is only used when the environment is
 						started with the integration-test goal. The plugin will wait until
-						all of the tests run in the test environment. It can happen that
+						all of the tests run in the test environment. It may happen that
 						due to an error the test OSGi framework never runs the tests
-						(missing dependencies, wiring issues, etc.). In this case the
-						plugin kills the environment after the defined timeout. The
-						timeout should be specified in milliseconds. The default value is
-						five minutes that is 300000 milliseconds.</p></td>
+						(missing dependencies, wiring issues, etc.). In this case, the
+						plugin kills the environment when reaching the defined timeout.
+						The timeout should be specified in milliseconds. The default value
+						is five minutes that is 300000 milliseconds.</p></td>
 			</tr>
 			<tr>
 				<td><p>frameworkStartLevel</p></td>
@@ -147,15 +147,15 @@
 			</tr>
 			<tr>
 				<td><p>bundleSettings</p></td>
-				<td><p>It is possible to add special information for
-						bundles like the startLevel. See later.</p></td>
+				<td><p>It is possible to add special information to
+						bundles, like the startLevel. Explained later.</p></td>
 			</tr>
 			<tr>
 				<td><p>bundleSettings</p></td>
 				<td>
-					<p>Currently only the startLevel can be set to the bundle as a
-						special property. To have a special setting for a bundle, insert
-						the following snippet to any environment:</p>
+					<p>Currently, only the startLevel can be set to the bundle as a
+						special property. To be able to add a special setting to a bundle,
+						insert the following snippet to any environment:</p>
 					<div class="source" style="width: 100%;">
 						<pre>
 &lt;environment&gt;
@@ -172,16 +172,16 @@
 					</div>
 					<p>The version element is optional. If it is not set, the
 						setting will be applied to all versions of the bundles with the
-						same symbolic names.</p>
+						identical symbolic names.</p>
 				</td>
 			</tr>
 			<tr>
 				<td><p>systemProperties</p></td>
 				<td><p>Java system properties that will be passed to the
-						OSGi container. There should be any xml element inside where the
-						name of the element will be the name of the system property and
-						the value of the element will be the value of the system property.
-						An example:</p>
+						OSGi container. There should be one or more xml elements inside,
+						where the name of the element will be the name of the system
+						property, and the value of the element will be the value of the
+						system property. An example:</p>
 					<div class="source" style="width: 100%;">
 						<pre>
 &lt;environment&gt;
@@ -193,9 +193,9 @@
 &lt;/environment&gt;
 						</pre>
 					</div>
-					<p>The definition will define two system properties just like
-						you would define "-Djetty.port=8081 -Dfile.encoding=UTF8" when you
-						start a java application from the command line.</p></td>
+					<p>The definition will define two system properties the same
+						way one would define "-Djetty.port=8081 -Dfile.encoding=UTF8" when
+						you start a java application from the command line.</p></td>
 			</tr>
 			<tr>
 				<td><p>vmOptions</p></td>
@@ -217,8 +217,9 @@
 			</tr>
 		</tbody>
 	</table>
-	<p>There are additional settings that can be defined for goals. To
-		see them please check the documentation of the goal you want to run!</p>
+	<p>There are additional settings that can be defined for the goals.
+		To see them, please check the documentation of the goal you want to
+		run!</p>
 	<h2>Integrate tests as a maven compilation lifecycle</h2>
 	<h3>Configuration of the osgi plugin</h3>
 	<p>In order to run the integration-test goal at the integration
@@ -242,15 +243,15 @@
 			</pre>
 	</div>
 	<p>The configuration of the plugin (with the environments) can go
-		on the plugin level or into the execution.</p>
+		on the plugin level or on the execution level.</p>
 	<h3>Defining the number of expected tests</h3>
-	<p>When the integration-test goal runs it will be successful if the
-		number of successful tests is equal to the amount that are defined in
-		the bundle headers. When an OSGi bundle dependency or the current
-		header has the manifest header "EOSGi-TestNum" it adds the value of
-		this header entry to the total number of expected tests count.
-		Normally you define this header in your bundle project with the
-		maven-bundle-plugin like the following:</p>
+	<p>When the integration-test goal runs, it will be successful if
+		the number of successful tests is equal to the amount defined in the
+		bundle headers. When an OSGi bundle dependency or the current header
+		has the manifest header "EOSGi-TestNum", it adds the value of this
+		header entry to the total number of expected test count. Normally, you
+		define this header in your bundle project with the maven-bundle-plugin
+		like below:</p>
 	<div class="source">
 		<pre>
 &lt;plugin&gt;
@@ -271,12 +272,12 @@
 			</pre>
 	</div>
 	<p>The snippet above means that the bundle has two expected test
-		results. Please not that in your big project this header does not have
+		results. Please note that in a large project this header does not have
 		to be defined in the same project as the one containing your test
-		classes. It can happen that one of the bundle contains the test code
+		classes. It can happen that one of the bundles contains the test code
 		but the OSGi test services are provided by another bundle multiple
-		times. In that case it is better to define the manifest header in the
-		bundle where we know how many test services will be provided.</p>
+		times. In that case, it is better to define the manifest header in the
+		bundle, where we know how many test services will be provided exactly.</p>
 	<h2>Jacoco configuration</h2>
 	<p>There is a possibility to add coverage results to projects. To
 		do that, insert the following to the plugin configuration:</p>
@@ -298,11 +299,11 @@
 			</pre>
 	</div>
 	<p>
-		All setting of jacoco is optional. To get more information about the
-		settings see the <a
+		All settings of jacoco are optional. To get more information about the
+		settings, read the <a
 			href="http://www.eclemma.org/jacoco/trunk/doc/agent.html">Jacoco
-			java agent documentation</a> as the parameters are passed to the agent.
-		The output is set to the
+			java agent documentation</a> as the parameters are passed directly to the
+		agent. The output is set to the
 		target/eosgi-itest-reports/environmentId/jacoco.exec file.
 	</p>
 </body>

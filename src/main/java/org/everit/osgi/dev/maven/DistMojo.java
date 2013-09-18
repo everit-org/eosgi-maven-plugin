@@ -64,8 +64,9 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
 import org.everit.osgi.dev.maven.util.DistUtil;
 
 /**
- * Creates a distribution package for the project. A distribution packages may be provided as Environment parameters or
- * the default 'equinox' is used. The structure of the distribution package may be different for different types.
+ * Creates a distribution package for the project. Distribution packages may be provided as Environment parameters or
+ * 'equinox', the default option, -may also be used. The structure of the distribution package may be different for
+ * different types.
  * 
  * @goal dist
  * @phase package
@@ -149,16 +150,16 @@ public class DistMojo extends AbstractOSGIMojo {
     public DistMojo() {
         super();
         try {
-            distConfigJAXBContext = JAXBContext.newInstance(ObjectFactory.class.getPackage().getName(),
-                    ObjectFactory.class.getClassLoader());
+            distConfigJAXBContext =
+                    JAXBContext.newInstance(ObjectFactory.class.getPackage().getName(),
+                            ObjectFactory.class.getClassLoader());
         } catch (JAXBException e) {
             throw new RuntimeException("Could not create JAXB Context for distribution configuration file", e);
         }
     }
 
     protected List<DistributableBundleArtifact> convertBundleArtifactsToDistributed(
-            final EnvironmentConfiguration environment,
-            final List<BundleArtifact> artifacts) {
+            final EnvironmentConfiguration environment, final List<BundleArtifact> artifacts) {
 
         List<DistributableBundleArtifact> distributedBundleArtifacts = new ArrayList<DistributableBundleArtifact>();
         for (BundleArtifact artifact : artifacts) {
@@ -195,11 +196,11 @@ public class DistMojo extends AbstractOSGIMojo {
                         DistUtil.copyDirectory(sourceDistPathFile, distFolderFile);
                     }
                 }
-                List<DistributableBundleArtifact> distributedBundleArtifacts = convertBundleArtifactsToDistributed(
-                        environment, bundleArtifacts);
+                List<DistributableBundleArtifact> distributedBundleArtifacts =
+                        convertBundleArtifactsToDistributed(environment, bundleArtifacts);
 
-                DistributionPackage distributionPackage = parseConfiguration(distFolderFile,
-                        distributedBundleArtifacts, environment);
+                DistributionPackage distributionPackage =
+                        parseConfiguration(distFolderFile, distributedBundleArtifacts, environment);
 
                 Artifacts artifacts = distributionPackage.getArtifacts();
                 if (artifacts != null) {
@@ -220,8 +221,7 @@ public class DistMojo extends AbstractOSGIMojo {
                     try {
                         distPackageZipFile.close();
                     } catch (IOException e) {
-                        getLog().error("Could not close distribution package zip file: "
-                                + distPackageZipFile, e);
+                        getLog().error("Could not close distribution package zip file: " + distPackageZipFile, e);
                     }
                 }
             }
@@ -248,7 +248,7 @@ public class DistMojo extends AbstractOSGIMojo {
             }
         }
         if (matchedSettings != null) {
-            
+
             distributableBundleArtifact.setStartLevel(matchedSettings.getStartLevel());
         }
         return distributableBundleArtifact;
@@ -275,8 +275,7 @@ public class DistMojo extends AbstractOSGIMojo {
     }
 
     protected DistributionPackage parseConfiguration(final File distFolderFile,
-            final List<DistributableBundleArtifact> bundleArtifacts,
-            final EnvironmentConfiguration environment)
+            final List<DistributableBundleArtifact> bundleArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
@@ -286,8 +285,7 @@ public class DistMojo extends AbstractOSGIMojo {
         try {
             DistUtil.replaceFileWithParsed(configFile, context, "UTF8");
         } catch (IOException e) {
-            throw new MojoExecutionException("Could not run velocity on configuration file: " + configFile.getName(),
-                    e);
+            throw new MojoExecutionException("Could not run velocity on configuration file: " + configFile.getName(), e);
         }
         InputStream inputStream = null;
         try {
@@ -355,8 +353,8 @@ public class DistMojo extends AbstractOSGIMojo {
      *             if a read error occurs.
      */
     protected Properties readDefaultFrameworkPops() throws IOException {
-        Enumeration<URL> resources = this.getClass().getClassLoader()
-                .getResources("META-INF/eosgi-frameworks.properties");
+        Enumeration<URL> resources =
+                this.getClass().getClassLoader().getResources("META-INF/eosgi-frameworks.properties");
         Properties result = new Properties();
         while (resources.hasMoreElements()) {
             URL resource = resources.nextElement();
@@ -375,8 +373,7 @@ public class DistMojo extends AbstractOSGIMojo {
     }
 
     protected void resolveAndCopyArtifacts(
-            final List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts,
-            final File envDistFolderFile)
+            final List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts, final File envDistFolderFile)
             throws MojoExecutionException {
         Map<File, File> fileCopyMap = new HashMap<File, File>();
         for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
@@ -387,13 +384,13 @@ public class DistMojo extends AbstractOSGIMojo {
             }
             Artifact mavenArtifact = null;
             if (artifact.getClassifier() == null) {
-                mavenArtifact = artifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-                        artifact.getVersion(),
-                        "compile", artifactType);
+                mavenArtifact =
+                        artifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(),
+                                artifact.getVersion(), "compile", artifactType);
             } else {
-                mavenArtifact = artifactFactory.createArtifactWithClassifier(artifact.getGroupId(),
-                        artifact.getArtifactId(),
-                        artifact.getVersion(), artifactType, artifact.getClassifier());
+                mavenArtifact =
+                        artifactFactory.createArtifactWithClassifier(artifact.getGroupId(), artifact.getArtifactId(),
+                                artifact.getVersion(), artifactType, artifact.getClassifier());
 
             }
             try {
@@ -433,13 +430,14 @@ public class DistMojo extends AbstractOSGIMojo {
         } catch (IOException e) {
             throw new MojoExecutionException("Could not get distribution package", e);
         }
-        Artifact distPackageArtifact = artifactFactory.createArtifact(distPackageIdParts[0], distPackageIdParts[1],
-                distPackageIdParts[2], "compile", "zip");
+        Artifact distPackageArtifact =
+                artifactFactory.createArtifact(distPackageIdParts[0], distPackageIdParts[1], distPackageIdParts[2],
+                        "compile", "zip");
 
-        ArtifactRepository artifactRepository = artifactRepositoryFactory.createArtifactRepository(
-                "everit.groups.public",
-                "http://repository.everit.biz/nexus/content/groups/public", new DefaultRepositoryLayout(),
-                new ArtifactRepositoryPolicy(), new ArtifactRepositoryPolicy());
+        ArtifactRepository artifactRepository =
+                artifactRepositoryFactory.createArtifactRepository("everit.groups.public",
+                        "http://repository.everit.biz/nexus/content/groups/public", new DefaultRepositoryLayout(),
+                        new ArtifactRepositoryPolicy(), new ArtifactRepositoryPolicy());
 
         List<ArtifactRepository> tmpRemoteRepositories = new ArrayList<ArtifactRepository>(remoteRepositories);
         tmpRemoteRepositories.add(artifactRepository);
@@ -473,10 +471,8 @@ public class DistMojo extends AbstractOSGIMojo {
             if (defaultFrameworkDistPackage == null) {
                 getLog().error(
                         "Could not find entry in any of the /META-INF/eosgi-frameworks.properites configuration "
-                                + "files on the classpath for the framework id "
-                                + frameworkArtifact);
-                throw new MojoExecutionException("Could not find framework dist package [" + frameworkArtifact
-                        + "]");
+                                + "files on the classpath for the framework id " + frameworkArtifact);
+                throw new MojoExecutionException("Could not find framework dist package [" + frameworkArtifact + "]");
             } else {
                 distPackageParts = defaultFrameworkDistPackage.split("\\:");
                 getLog().info(
