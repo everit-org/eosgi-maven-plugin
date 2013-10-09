@@ -1,5 +1,7 @@
 package org.everit.osgi.dev.maven;
 
+import org.apache.maven.plugins.annotations.Parameter;
+
 /*
  * Copyright (c) 2011, Everit Kft.
  *
@@ -26,23 +28,23 @@ public class BundleSettings {
     /**
      * The start level of the bundle or if left empty, the framework default startlevel will be used.
      * 
-     * @parameter
      */
+    @Parameter
     private Integer startLevel;
 
     /**
      * The Bundle-SymbolicName, a required parameter.
      * 
-     * @parameter
      */
+    @Parameter
     private String symbolicName;
 
     /**
      * The version of the bundle. If left empty, all bundles with the specified symbolic name will be relevant. At the
      * moment only exact values are suppoted, range support may come in a future version if requested by many users.
      * 
-     * @parameter
      */
+    @Parameter
     private String version;
 
     public Integer getStartLevel() {

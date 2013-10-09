@@ -1,10 +1,5 @@
 package org.everit.osgi.dev.maven;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 /*
  * Copyright (c) 2011, Everit Kft.
  *
@@ -26,6 +21,13 @@ import java.util.Map;
  * MA 02110-1301  USA
  */
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.maven.plugins.annotations.Parameter;
+
 /**
  * The OSGI environment that is specified in the pom.xml for the plugin. *
  */
@@ -34,57 +36,57 @@ public class EnvironmentConfiguration {
     /**
      * Setting non-default behaviors for bundles. For more information see the javadoc of {@link BundleSettings} class.
      * 
-     * @parameter
      */
+    @Parameter
     private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
 
     /**
      * The default startlevel for newly installed bundles
      * 
-     * @parameter
      */
+    @Parameter
     private Integer bundleStartLevel;
 
     /**
      * The name of the osgi framework. Currently equinox is supported. Default is equinox.
      * 
-     * @parameter
      */
+    @Parameter
     private String framework;
 
     /**
      * The default start level of the OSGi framework.
      * 
-     * @parameter
      */
+    @Parameter
     private Integer frameworkStartLevel;
 
     /**
      * The id that will be used to identify this configuration in system property of the framework.
      * 
-     * @parameter
      */
+    @Parameter
     private String id;
 
     /**
      * System properties that will be added to the JVM of started OSGI container.
      * 
-     * @parameter
      */
+    @Parameter
     private Map<String, String> systemProperties = new HashMap<String, String>();
 
     /**
      * The timeout in milliseconds after the Tests should stop for sure. Default value is five minutes.
      * 
-     * @parameter
      */
+    @Parameter
     private long timeout = 300000;
 
     /**
      * The JVM options that will be applied during starting the OSGI Container.
      * 
-     * @parameter
      */
+    @Parameter
     private List<String> vmOptions;
 
     public List<BundleSettings> getBundleSettings() {

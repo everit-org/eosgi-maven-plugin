@@ -1,5 +1,7 @@
 package org.everit.osgi.dev.maven;
 
+import org.apache.maven.plugins.annotations.Parameter;
+
 /*
  * Copyright (c) 2011, Everit Kft.
  *
@@ -23,24 +25,16 @@ package org.everit.osgi.dev.maven;
 
 public class JacocoSettings {
 
-    /**
-     * @parameter
-     */
+    @Parameter
     private boolean append = true;
 
-    /**
-     * @parameter
-     */
+    @Parameter
     private boolean dumponexit = true;
 
-    /**
-     * @parameter
-     */
+    @Parameter
     private String excludes;
 
-    /**
-     * @parameter
-     */
+    @Parameter
     private String includes;
 
     public String getExcludes() {
