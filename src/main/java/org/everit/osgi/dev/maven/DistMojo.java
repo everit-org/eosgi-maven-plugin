@@ -54,6 +54,11 @@ import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.velocity.VelocityContext;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifacts;
@@ -67,32 +72,26 @@ import org.everit.osgi.dev.maven.util.DistUtil;
  * Creates a distribution package for the project. Distribution packages may be provided as Environment parameters or
  * 'equinox', the default option, -may also be used. The structure of the distribution package may be different for
  * different types.
- * 
- * @goal dist
- * @phase package
- * @requiresProject true
- * @requiresDependencyResolution compile
- * @execute phase="package"
  */
+@Mojo(name = "dist", defaultPhase = LifecyclePhase.PACKAGE, requiresProject = true,
+        requiresDependencyResolution = ResolutionScope.COMPILE)
 public class DistMojo extends AbstractOSGIMojo {
 
-    /** @component */
+    @Component
     protected ArtifactFactory artifactFactory;
 
-    /** @component */
+    @Component
     protected ArtifactRepositoryFactory artifactRepositoryFactory;
 
-    /**
-     * @component
-     */
+    @Component
     protected ArtifactResolver artifactResolver;
 
     /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
      * values: link, file.
      * 
-     * @parameter expression="${eosgi.copyMode}" default-value="file"
      */
+    @Parameter(property = "eosgi.copyMode", defaultValue = "file")
     protected String copyMode;
 
     protected final JAXBContext distConfigJAXBContext;
@@ -101,8 +100,8 @@ public class DistMojo extends AbstractOSGIMojo {
      * Path to folder where the distribution will be generated. The content of this folder will be overridden if the
      * files with same name already exist.
      * 
-     * @parameter expression="${eosgi.distFolder}" default-value="${project.build.directory}/eosgi-dist"
      */
+    @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
     protected String distFolder;
 
     protected List<DistributedEnvironment> distributedEnvironments;
@@ -111,40 +110,39 @@ public class DistMojo extends AbstractOSGIMojo {
      * The path of the zip file in which the distribution package will be generated. If the zip file already exists it
      * will be overridden. In zip distribution only copyMode file works.
      * 
-     * @parameter expression="${eosgi.distZipUrl}"
-     *            default-value="${project.build.directory}/${project.artifactId}-dist.zip"
      */
+    @Parameter(property = "eosgi.distZipUrl",
+            defaultValue = "${project.build.directory}/${project.artifactId}-dist.zip")
     protected String distZipPath;
 
-    /**
-     * @parameter expression="${executedProject}"
-     */
+    @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
 
     /**
      * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
      * 
-     * @parameter expression="${eosgi.includeCurrentProject}" default-value="false"
      */
+    @Parameter(property = "eosgi.includeCurrentProject", defaultValue = "false")
     protected boolean includeCurrentProject = false;
 
     /**
      * Whether to include the test runner and it's dependencies.
      * 
-     * @parameter expression="${eosgi.includeTestRunner}" default-value="false"
      */
+    @Parameter(property = "eosgi.includeTestRunner", defaultValue = "false")
     protected boolean includeTestRunner = false;
 
-    /** @parameter default-value="${localRepository}" */
+    @Parameter(defaultValue = "${localRepository}")
     protected ArtifactRepository localRepository;
-    /** @parameter default-value="${project.remoteArtifactRepositories}" */
+
+    @Parameter(defaultValue = "${project.remoteArtifactRepositories}")
     protected List<ArtifactRepository> remoteRepositories;
 
     /**
      * The directory where there may be additional files to create the distribution package.
      * 
-     * @parameter expression="${eosgi.sourceDistPath}" default-value="${basedir}/src/dist/"
      */
+    @Parameter(property = "eosgi.sourceDistPath", defaultValue = "${basedir}/src/dist/")
     protected String sourceDistPath;
 
     public DistMojo() {

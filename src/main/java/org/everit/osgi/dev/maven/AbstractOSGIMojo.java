@@ -33,40 +33,34 @@ import java.util.jar.Manifest;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.osgi.framework.Constants;
 
 /**
  * Abstract Mojo that collects the OSGI bundle dependencies of the current projects except scope provided.
- * 
- * @requiresProject true
- * @requiresDependencyResolution test
  */
 public abstract class AbstractOSGIMojo extends AbstractMojo {
 
     /**
      * The environments on which the tests should run.
      * 
-     * @parameter
      */
+    @Parameter
     private EnvironmentConfiguration[] environments;
 
     /**
      * Map of plugin artifacts.
      * 
-     * @parameter expression="${plugin.artifactMap}"
-     * @required
-     * @readonly
      */
+    @Parameter(property="pluginArtifactMap", required = true, readonly = true)
     protected Map<String, Artifact> pluginArtifactMap;
 
     /**
      * The Maven project.
      * 
-     * @parameter expression="${project}"
-     * @readonly
-     * @required
      */
+    @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
 
     /**

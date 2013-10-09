@@ -43,6 +43,10 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Command;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Launcher;
@@ -54,13 +58,8 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
 
-/**
- * @phase integration-test
- * @goal integration-test
- * @requiresProject true
- * @requiresDependencyResolution test
- * @execute phase="package"
- */
+@Mojo(name = "integration-test", defaultPhase = LifecyclePhase.INTEGRATION_TEST, requiresProject = true,
+        requiresDependencyResolution = ResolutionScope.TEST)
 public class IntegrationTestMojo extends DistMojo {
 
     private class ShutdownHook extends Thread {
@@ -179,51 +178,43 @@ public class IntegrationTestMojo extends DistMojo {
     /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
      * values: link, file.
-     * 
-     * @parameter expression="${eosgi.copyMode}" default-value="link"
      */
+    @Parameter(property = "eosgi.copyMode", defaultValue = "link")
     protected String copyMode;
 
     /**
      * Path to folder where the distribution will be generated. The content of this folder will be overridden if the
      * files with same name already exist.
-     * 
-     * @parameter expression="${eosgi.testDistFolder}" default-value="${project.build.directory}/eosgi-itests-dist"
      */
+    @Parameter(property = "eosgi.testDistFolder", defaultValue = "${project.build.directory}/eosgi-itests-dist")
     protected String distFolder;
 
-    /**
-     * @parameter expression="${executedProject}"
-     */
+    @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
 
     /**
      * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
-     * 
-     * @parameter expression="${eosgi.includeCurrentProject}" default-value="true"
      */
+    @Parameter(property = "eosgi.includeCurrentProject", defaultValue = "true")
     protected boolean includeCurrentProject = true;
 
     /**
      * Whether to include the test runner and it's dependencies.
-     * 
-     * @parameter expression="${eosgi.includeTestRunner}" default-value="true"
      */
+    @Parameter(property = "eosgi.includeTestRunner", defaultValue = "true")
     protected boolean includeTestRunner = true;
 
     /**
      * The jacoco code coverage generation settings. To see the possible settings see {@link JacocoSettings}.
-     * 
-     * @parameter
      */
+    @Parameter
     protected JacocoSettings jacoco;
 
     /**
      * The folder where the integration test reports will be placed. Please note that the content of this folder will be
      * deleted before running the tests.
-     * 
-     * @parameter expression="${eosgi.testReportFolder}" default-value="${project.build.directory}/eosgi-itests-reports"
      */
+    @Parameter(property = "eosgi.testReportFolder", defaultValue = "${project.build.directory}/eosgi-itests-reports")
     protected String testReportFolder;
 
     private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
