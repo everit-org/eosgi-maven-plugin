@@ -53,7 +53,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
      * Map of plugin artifacts.
      * 
      */
-    @Parameter(property="pluginArtifactMap", required = true, readonly = true)
+    @Parameter(defaultValue="${plugin.artifactMap}", required = true, readonly = true)
     protected Map<String, Artifact> pluginArtifactMap;
 
     /**
@@ -167,9 +167,9 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
         }
 
         if (includeTestRunner) {
-            Artifact junit4RunnerArtifact = pluginArtifactMap
+            Artifact testRunnerArtifact = pluginArtifactMap
                     .get("org.everit.osgi.dev:org.everit.osgi.dev.testrunner");
-            availableArtifacts.add(junit4RunnerArtifact);
+            availableArtifacts.add(testRunnerArtifact);
             Artifact junit4Artifact = pluginArtifactMap.get("org.junit:com.springsource.org.junit");
             availableArtifacts.add(junit4Artifact);
         }
@@ -179,6 +179,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
         boolean trackerAvailable = false;
         List<BundleArtifact> result = new ArrayList<BundleArtifact>();
         for (Artifact artifact : availableArtifacts) {
+            System.out.println("SCOPE_PROVIDED: " + Artifact.SCOPE_PROVIDED + "; Artifact: " + artifact);
             if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
                 BundleArtifact bundleArtifact = checkBundle(artifact);
                 if (bundleArtifact != null) {
