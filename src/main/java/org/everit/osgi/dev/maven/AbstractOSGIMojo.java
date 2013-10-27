@@ -53,7 +53,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
      * Map of plugin artifacts.
      * 
      */
-    @Parameter(defaultValue="${plugin.artifactMap}", required = true, readonly = true)
+    @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
     protected Map<String, Artifact> pluginArtifactMap;
 
     /**
@@ -75,8 +75,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
     protected BundleArtifact checkBundle(final Artifact artifact) {
         if ("pom".equals(artifact.getType())) {
             getLog().debug(
-                    "Artifact ["
-                            + artifact.getId()
+                    "Artifact [" + artifact.getId()
                             + "] is a pom therefore it will be excluded from the OSGI bundles. "
                             + "The dependencies of this dependency will be resolved transitively.");
             return null;
@@ -93,9 +92,10 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
             jarFile = new JarFile(bundleFile);
             Manifest manifest = jarFile.getManifest();
             if (manifest == null) {
-                getLog().warn("Bundle does not have a manifest "
-                        + "(it will be excluded from the bundles in the OSGI integration test): "
-                        + bundleFile.toString());
+                getLog().warn(
+                        "Bundle does not have a manifest "
+                                + "(it will be excluded from the bundles in the OSGI integration test): "
+                                + bundleFile.toString());
                 return null;
             }
             Attributes mainAttributes = manifest.getMainAttributes();
@@ -140,9 +140,7 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
                 try {
                     jarFile.close();
                 } catch (IOException e) {
-                    getLog().warn(
-                            "Error during closing bundleFile: "
-                                    + jarFile.toString(), e);
+                    getLog().warn("Error during closing bundleFile: " + jarFile.toString(), e);
                 }
             }
         }
@@ -167,11 +165,26 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
         }
 
         if (includeTestRunner) {
-            Artifact testRunnerArtifact = pluginArtifactMap
-                    .get("org.everit.osgi.dev:org.everit.osgi.dev.testrunner");
-            availableArtifacts.add(testRunnerArtifact);
-            Artifact junit4Artifact = pluginArtifactMap.get("org.junit:com.springsource.org.junit");
-            availableArtifacts.add(junit4Artifact);
+            Artifact testRunnerArtifact =
+                    (Artifact) project.getArtifactMap().get("org.everit.osgi.dev:org.everit.osgi.dev.testrunner");
+
+            if (testRunnerArtifact == null) {
+                getLog().warn(
+                        "Test runner is not included into the project as a dependency. In case any of the test"
+                                + " engines (e.g. osgi-testrunner-junit4) was included, the testrunner would be"
+                                + " included transitively. Please check which engine you need and add it as"
+                                + " dependency. Now by default, adding test runner with JUnit support.");
+                testRunnerArtifact = pluginArtifactMap.get("org.everit.osgi.dev:org.everit.osgi.dev.testrunner");
+                availableArtifacts.add(testRunnerArtifact);
+
+                Artifact junit4Artifact = pluginArtifactMap.get("org.junit:com.springsource.org.junit");
+                availableArtifacts.add(junit4Artifact);
+
+                Artifact junit4TestEngineArtifact =
+                        pluginArtifactMap.get("org.everit.osgi.dev.testrunner:org.everit.osgi.dev.testrunner.junit4");
+                availableArtifacts.add(junit4TestEngineArtifact);
+            }
+
         }
 
         boolean slf4jImplAvailable = false;
@@ -179,7 +192,6 @@ public abstract class AbstractOSGIMojo extends AbstractMojo {
         boolean trackerAvailable = false;
         List<BundleArtifact> result = new ArrayList<BundleArtifact>();
         for (Artifact artifact : availableArtifacts) {
-            System.out.println("SCOPE_PROVIDED: " + Artifact.SCOPE_PROVIDED + "; Artifact: " + artifact);
             if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
                 BundleArtifact bundleArtifact = checkBundle(artifact);
                 if (bundleArtifact != null) {
