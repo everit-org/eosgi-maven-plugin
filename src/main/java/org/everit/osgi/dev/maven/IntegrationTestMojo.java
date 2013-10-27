@@ -52,8 +52,8 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.Command;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Launcher;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Launchers;
 import org.everit.osgi.dev.maven.util.DistUtil;
+import org.everit.osgi.dev.testrunner.Constants;
 import org.everit.osgi.dev.testrunner.internal.TestRunnerActivator;
-import org.everit.osgi.dev.testrunner.internal.blocking.BlockingManager;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -257,7 +257,7 @@ public class IntegrationTestMojo extends DistMojo {
     }
 
     private boolean checkExitError(final File resultFolder, final String environmentId) {
-        File exitErrorFile = new File(resultFolder, TestRunnerActivator.SYSTEM_EXIT_ERROR_FILE_NAME);
+        File exitErrorFile = new File(resultFolder, Constants.SYSTEM_EXIT_ERROR_FILE_NAME);
         if (exitErrorFile.exists()) {
             StringBuilder sb = new StringBuilder();
             FileInputStream fin = null;
@@ -335,8 +335,8 @@ public class IntegrationTestMojo extends DistMojo {
                 File resultFolder = new File(testReportFolderFile, distributedEnvironment.getEnvironment().getId());
                 resultFolder.mkdirs();
 
-                pb.environment().put(TestRunnerActivator.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
-                pb.environment().put(BlockingManager.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
+                pb.environment().put(Constants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
+                pb.environment().put(Constants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
                 UUID processUUID = UUID.randomUUID();
                 pb.environment().put(ENV_PROCESS_UNIQUE_ID, processUUID.toString());
 
