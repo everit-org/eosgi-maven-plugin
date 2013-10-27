@@ -49,11 +49,7 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "DistributionPackage", propOrder = {
-        "artifacts",
-        "parseables",
-        "launchers"
-})
+@XmlType(name = "DistributionPackage", propOrder = { "artifacts", "parseables", "launchers" })
 public class DistributionPackage {
 
     protected Artifacts artifacts;

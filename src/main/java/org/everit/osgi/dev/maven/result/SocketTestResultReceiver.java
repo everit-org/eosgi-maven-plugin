@@ -90,8 +90,7 @@ public class SocketTestResultReceiver implements Closeable {
                 String testContainerId = resultProps.getProperty("testContainerId");
 
                 if (testContainerId == null) {
-                    LOGGER.error("Response arrived from OSGI container without container id: "
-                            + resultProps.toString());
+                    LOGGER.error("Response arrived from OSGI container without container id: " + resultProps.toString());
                     return;
                 }
 
@@ -179,8 +178,7 @@ public class SocketTestResultReceiver implements Closeable {
         if (tmpAddress == null) {
             tmpAddress = InetAddress.getLocalHost();
         }
-        serverSocket = ServerSocketFactory.getDefault().createServerSocket(port, 10,
-                tmpAddress);
+        serverSocket = ServerSocketFactory.getDefault().createServerSocket(port, 10, tmpAddress);
         new Thread(new ServerSocketListener()).start();
     }
 

@@ -53,8 +53,7 @@ public class DistUtil {
 
     public static final String OS_WINDOWS = "windows";
 
-    public static void copyDirectory(final File sourceLocation, final File targetLocation)
-            throws IOException {
+    public static void copyDirectory(final File sourceLocation, final File targetLocation) throws IOException {
 
         if (sourceLocation.isDirectory()) {
             if (!targetLocation.exists()) {
@@ -63,8 +62,7 @@ public class DistUtil {
 
             String[] children = sourceLocation.list();
             for (int i = 0; i < children.length; i++) {
-                DistUtil.copyDirectory(new File(sourceLocation, children[i]),
-                        new File(targetLocation, children[i]));
+                DistUtil.copyDirectory(new File(sourceLocation, children[i]), new File(targetLocation, children[i]));
             }
         } else {
 
@@ -143,8 +141,7 @@ public class DistUtil {
     }
 
     private static File createShortCutCmdFile(final File tmpDir, final String fileName,
-            final Map<File, File> sourceAndTargetFiles)
-            throws IOException {
+            final Map<File, File> sourceAndTargetFiles) throws IOException {
         File file = new File(tmpDir, fileName);
         FileOutputStream fout = new FileOutputStream(file);
         Charset defaultCharset = Charset.defaultCharset();
@@ -166,8 +163,7 @@ public class DistUtil {
     }
 
     public static void createSymbolicLinks(final Map<File, File> sourceAndTargetFileMap,
-            final Map<String, Artifact> artifactMap, final Log log)
-            throws MojoExecutionException {
+            final Map<String, Artifact> artifactMap, final Log log) throws MojoExecutionException {
 
         String javaSpecVersion = System.getProperty("java.vm.specification.version");
 
@@ -180,9 +176,8 @@ public class DistUtil {
         if (!symbolicLinksCreated) {
             if (DistUtil.isWindowsVistaOrGreater()) {
                 if (java7Compatible) {
-                    log.warn(
-                            "Could not create symbolic links. As this is a windows " +
-                                    "system trying with higher privileges.");
+                    log.warn("Could not create symbolic links. As this is a windows "
+                            + "system trying with higher privileges.");
                 } else {
                     log.info("As there is only Java 6 and windows, trying to run command line symlink creation");
                 }
@@ -200,8 +195,9 @@ public class DistUtil {
                 Runtime runtime = Runtime.getRuntime();
                 for (Entry<File, File> entry : sourceAndTargetFileMap.entrySet()) {
                     try {
-                        Process process = runtime.exec(new String[] { "ln", "-s",
-                                entry.getKey().getAbsolutePath(), entry.getValue().getAbsolutePath() });
+                        Process process =
+                                runtime.exec(new String[] { "ln", "-s", entry.getKey().getAbsolutePath(),
+                                        entry.getValue().getAbsolutePath() });
                         process.waitFor();
                         int exitCode = process.exitValue();
                         if (exitCode != 0) {
@@ -216,9 +212,9 @@ public class DistUtil {
                     }
                 }
             } else {
-                throw new MojoExecutionException("Symbolic link generation not supported with your Java version " +
-                        "andOperating systme. You need one of the followings: Java 1.7 or earlier Java with Linux /" +
-                        " Windows Vista or later.");
+                throw new MojoExecutionException("Symbolic link generation not supported with your Java version "
+                        + "andOperating systme. You need one of the followings: Java 1.7 or earlier Java with Linux /"
+                        + " Windows Vista or later.");
             }
         }
 
@@ -262,8 +258,7 @@ public class DistUtil {
     }
 
     public static final void replaceFileWithParsed(final File parseableFile, final VelocityContext context,
-            final String encoding)
-            throws IOException {
+            final String encoding) throws IOException {
         VelocityEngine ve = new VelocityEngine();
         File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
         FileOutputStream fout = null;
@@ -329,11 +324,8 @@ public class DistUtil {
     }
 
     private static void tryRunningWithElevate(final Map<File, File> sourceAndTargetFileMap,
-            final Map<String, Artifact> artifactMap, final Log log)
-            throws IOException,
-            MojoExecutionException {
-        Artifact elevateArtifact = artifactMap
-                .get("com.jpassing:elevate");
+            final Map<String, Artifact> artifactMap, final Log log) throws IOException, MojoExecutionException {
+        Artifact elevateArtifact = artifactMap.get("com.jpassing:elevate");
         ZipFile elevateZipFile = new ZipFile(elevateArtifact.getFile());
         String tempDir = System.getProperty("java.io.tmpdir");
         File tmpDirFile = new File(tempDir);
@@ -356,8 +348,8 @@ public class DistUtil {
 
         File cmdFile = DistUtil.createShortCutCmdFile(elevateDirFile, "dolinks.cmd", sourceAndTargetFileMap);
         cmdFile.deleteOnExit();
-        ProcessBuilder processBuilder = new ProcessBuilder(elevateExeFile.getAbsolutePath(), "-wait",
-                cmdFile.getAbsolutePath());
+        ProcessBuilder processBuilder =
+                new ProcessBuilder(elevateExeFile.getAbsolutePath(), "-wait", cmdFile.getAbsolutePath());
         log.info("Running: " + processBuilder.command());
         Process process = processBuilder.start();
         try {

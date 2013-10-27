@@ -71,8 +71,8 @@ public class JacocoSettings {
 
     @Override
     public String toString() {
-        return "JacocoSettings [append=" + append + ", includes=" + includes + ", excludes="
-                + excludes + ", dumponexit=" + dumponexit + "]";
+        return "JacocoSettings [append=" + append + ", includes=" + includes + ", excludes=" + excludes
+                + ", dumponexit=" + dumponexit + "]";
     }
 
 }

@@ -156,9 +156,9 @@ public class EnvironmentConfiguration {
     @Override
     public String toString() {
         return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", timeout=" + timeout
-                + ", frameworkStartLevel=" + frameworkStartLevel + ", defaultBundleStartLevel="
-                + bundleStartLevel + ", bundleSettings=" + bundleSettings + ", vmOptions=" + vmOptions
-                + ", systemProperties=" + systemProperties + "]";
+                + ", frameworkStartLevel=" + frameworkStartLevel + ", defaultBundleStartLevel=" + bundleStartLevel
+                + ", bundleSettings=" + bundleSettings + ", vmOptions=" + vmOptions + ", systemProperties="
+                + systemProperties + "]";
     }
 
 }

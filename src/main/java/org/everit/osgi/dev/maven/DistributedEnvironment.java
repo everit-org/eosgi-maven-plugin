@@ -40,8 +40,8 @@ public class DistributedEnvironment {
     }
 
     public DistributedEnvironment(final EnvironmentConfiguration environment,
-            final DistributionPackage distributionPackage,
-            final File distributionFolder, final List<DistributableBundleArtifact> bundleArtifacts) {
+            final DistributionPackage distributionPackage, final File distributionFolder,
+            final List<DistributableBundleArtifact> bundleArtifacts) {
         this.environment = environment;
         this.distributionPackage = distributionPackage;
         this.distributionFolder = distributionFolder;

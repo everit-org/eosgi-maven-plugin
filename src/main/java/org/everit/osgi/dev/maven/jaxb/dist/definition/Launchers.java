@@ -50,9 +50,7 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Launchers", propOrder = {
-        "launcher"
-})
+@XmlType(name = "Launchers", propOrder = { "launcher" })
 public class Launchers {
 
     protected List<Launcher> launcher;

@@ -38,8 +38,7 @@ public class StreamRedirector implements Runnable {
     private boolean stopped = false;
 
     public StreamRedirector(final InputStream inputStream, final OutputStream outputStream,
-            final boolean closeInputStreamOnStop,
-            final boolean closeOutputStreamOnStop) {
+            final boolean closeInputStreamOnStop, final boolean closeOutputStreamOnStop) {
         super();
         this.inputStream = inputStream;
         this.outputStream = outputStream;

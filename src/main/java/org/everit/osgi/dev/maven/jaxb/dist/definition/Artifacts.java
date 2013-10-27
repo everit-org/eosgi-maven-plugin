@@ -51,9 +51,7 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Artifacts", propOrder = {
-        "artifact"
-})
+@XmlType(name = "Artifacts", propOrder = { "artifact" })
 public class Artifacts {
 
     @XmlElement(required = true)

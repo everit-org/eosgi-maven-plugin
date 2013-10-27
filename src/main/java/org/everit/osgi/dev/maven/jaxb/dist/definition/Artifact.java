@@ -57,13 +57,7 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Artifact", propOrder = {
-        "groupId",
-        "artifactId",
-        "version",
-        "type",
-        "classifier"
-})
+@XmlType(name = "Artifact", propOrder = { "groupId", "artifactId", "version", "type", "classifier" })
 public class Artifact {
 
     @XmlElement(required = true)

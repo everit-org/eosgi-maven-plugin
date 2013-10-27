@@ -53,7 +53,6 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.Launcher;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Launchers;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.testrunner.Constants;
-import org.everit.osgi.dev.testrunner.internal.TestRunnerActivator;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -119,8 +118,8 @@ public class IntegrationTestMojo extends DistMojo {
 
                 if ((currentTime - startTime) > timeout) {
                     logger.error("Timeout exceeded, forcing to stop server...");
-                    logger.info("If you need a higher timeout you can override the default five " +
-                            "minutes in the environment configuration");
+                    logger.info("If you need a higher timeout you can override the default five "
+                            + "minutes in the environment configuration");
                     stop();
                     timeoutHappen();
                 }
@@ -351,23 +350,23 @@ public class IntegrationTestMojo extends DistMojo {
                     killCommandFolder = new File(killCommandFolder, killFolder);
                 }
 
-                ProcessBuilder killPB = new ProcessBuilder(killCommand.getValue().split(" "))
-                        .directory(killCommandFolder);
+                ProcessBuilder killPB =
+                        new ProcessBuilder(killCommand.getValue().split(" ")).directory(killCommandFolder);
                 killPB.environment().put(ENV_PROCESS_UNIQUE_ID, processUUID.toString());
-                TimeoutChecker timeoutChecker = new TimeoutChecker(
-                        distributedEnvironment.getEnvironment().getTimeout(), killPB);
+                TimeoutChecker timeoutChecker =
+                        new TimeoutChecker(distributedEnvironment.getEnvironment().getTimeout(), killPB);
 
                 new Thread(timeoutChecker).start();
 
                 Process process = pb.start();
 
                 InputStream processOutput = process.getInputStream();
-                DeamonFileWriterStreamPoller deamonFileWriterStreamPoller = new DeamonFileWriterStreamPoller(
-                        processOutput, stdOutFile);
+                DeamonFileWriterStreamPoller deamonFileWriterStreamPoller =
+                        new DeamonFileWriterStreamPoller(processOutput, stdOutFile);
                 deamonFileWriterStreamPoller.start();
 
-                DeamonFileWriterStreamPoller deamonStdErrPoller = new DeamonFileWriterStreamPoller(
-                        process.getErrorStream(), stdErrFile);
+                DeamonFileWriterStreamPoller deamonStdErrPoller =
+                        new DeamonFileWriterStreamPoller(process.getErrorStream(), stdErrFile);
                 deamonStdErrPoller.start();
 
                 int exitValue = 0;
@@ -414,14 +413,12 @@ public class IntegrationTestMojo extends DistMojo {
             }
         }
 
-        StringBuilder testLogTextSB = new StringBuilder(
-                "\n-------------------------------------------------------\n");
-        testLogTextSB
-                .append("I N T E G R A T I O N   T E S T S   ( O S G I)\n")
-                .append("-------------------------------------------------------\n\n")
-                .append("Results:\n\n").append("Tests run: ").append(resultSum.tests).append(", Failures: ")
-                .append(resultSum.failure).append(", Errors: ").append(resultSum.error).append(", Skipped: ")
-                .append(resultSum.skipped).append("\n");
+        StringBuilder testLogTextSB = new StringBuilder("\n-------------------------------------------------------\n");
+        testLogTextSB.append("I N T E G R A T I O N   T E S T S   ( O S G I)\n")
+                .append("-------------------------------------------------------\n\n").append("Results:\n\n")
+                .append("Tests run: ").append(resultSum.tests).append(", Failures: ").append(resultSum.failure)
+                .append(", Errors: ").append(resultSum.error).append(", Skipped: ").append(resultSum.skipped)
+                .append("\n");
         getLog().info(testLogTextSB.toString());
 
         if ((resultSum.error > 0) || (resultSum.failure > 0)) {
@@ -467,8 +464,7 @@ public class IntegrationTestMojo extends DistMojo {
         if (jacoco != null) {
             File globalReportFolderFile = new File(testReportFolder);
 
-            Artifact jacocoAgentArtifact = pluginArtifactMap
-                    .get("org.jacoco:org.jacoco.agent");
+            Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
             File jacocoAgentFile = jacocoAgentArtifact.getFile();
             String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
 
@@ -526,13 +522,10 @@ public class IntegrationTestMojo extends DistMojo {
                         String failures = testSuite.getAttribute("failures");
                         String skipped = testSuite.getAttribute("skipped");
 
-                        if ((tests == null) || "".equals(tests)
-                                || (errors == null) || "".equals(errors)
-                                || (failures == null) || "".equals(failures)
-                                || (skipped == null) || "".equals(skipped)) {
+                        if ((tests == null) || "".equals(tests) || (errors == null) || "".equals(errors)
+                                || (failures == null) || "".equals(failures) || (skipped == null) || "".equals(skipped)) {
 
-                            throw new MojoFailureException("Invalid test result file "
-                                    + resultFile.getAbsolutePath()
+                            throw new MojoFailureException("Invalid test result file " + resultFile.getAbsolutePath()
                                     + ". One of the attributes in testSuite is not defined.");
                         }
 
@@ -542,8 +535,7 @@ public class IntegrationTestMojo extends DistMojo {
                             results.error += Integer.parseInt(errors);
                             results.skipped += Integer.parseInt(skipped);
                         } catch (NumberFormatException e) {
-                            throw new MojoFailureException("Invalid test result file "
-                                    + resultFile.getAbsolutePath()
+                            throw new MojoFailureException("Invalid test result file " + resultFile.getAbsolutePath()
                                     + ". The testSuite does not contains invalid attribute.");
                         }
                     } catch (SAXException e) {

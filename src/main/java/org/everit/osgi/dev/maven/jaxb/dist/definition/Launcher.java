@@ -60,10 +60,7 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Launcher", propOrder = {
-        "startCommand",
-        "killCommand"
-})
+@XmlType(name = "Launcher", propOrder = { "startCommand", "killCommand" })
 public class Launcher {
 
     @XmlElement(required = true)

@@ -47,9 +47,7 @@ import javax.xml.bind.annotation.XmlValue;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Command", propOrder = {
-        "value"
-})
+@XmlType(name = "Command", propOrder = { "value" })
 public class Command {
 
     @XmlAttribute(name = "folder")

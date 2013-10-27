@@ -51,9 +51,7 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Parseables", propOrder = {
-        "parseable"
-})
+@XmlType(name = "Parseables", propOrder = { "parseable" })
 public class Parseables {
 
     @XmlElement(required = true)
