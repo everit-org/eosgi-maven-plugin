@@ -25,30 +25,30 @@ import java.util.jar.Manifest;
 
 import org.apache.maven.artifact.Artifact;
 
-public class DistributableBundleArtifact {
+public class ArtifactWithSettings {
 
-    private BundleArtifact bundleArtifact;
+    private ProcessedArtifact processedArtifact;
 
     private Integer startLevel;
 
     public Artifact getArtifact() {
-        return bundleArtifact.getArtifact();
+        return processedArtifact.getArtifact();
     }
 
     public String getExportPackage() {
-        return bundleArtifact.getExportPackage();
+        return processedArtifact.getExportPackage();
     }
 
     public String getFragmentHost() {
-        return bundleArtifact.getFragmentHost();
+        return processedArtifact.getFragmentHost();
     }
 
     public String getImportPackage() {
-        return bundleArtifact.getImportPackage();
+        return processedArtifact.getImportPackage();
     }
 
     public Manifest getManifest() {
-        return bundleArtifact.getManifest();
+        return processedArtifact.getManifest();
     }
 
     public Integer getStartLevel() {
@@ -56,15 +56,15 @@ public class DistributableBundleArtifact {
     }
 
     public String getSymbolicName() {
-        return bundleArtifact.getSymbolicName();
+        return processedArtifact.getSymbolicName();
     }
 
     public String getVersion() {
-        return bundleArtifact.getVersion();
+        return processedArtifact.getVersion();
     }
 
-    public void setBundleArtifact(final BundleArtifact bundleArtifact) {
-        this.bundleArtifact = bundleArtifact;
+    public void setBundleArtifact(final ProcessedArtifact bundleArtifact) {
+        this.processedArtifact = bundleArtifact;
     }
 
     public void setStartLevel(final Integer startLevel) {

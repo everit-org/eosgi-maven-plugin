@@ -21,9 +21,9 @@
     MA 02110-1301  USA
 
 -->
-<schema targetNamespace="http://everit.org/eosgi/dist/definition/1.0.0"
+<schema targetNamespace="http://everit.org/eosgi/dist/definition/2.0.0"
     elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema"
-    xmlns:tns="http://everit.org/eosgi/dist/definition/1.0.0">
+    xmlns:tns="http://everit.org/eosgi/dist/definition/2.0.0">
 
     <element name="distributionPackage" type="tns:DistributionPackage">
         <annotation>
@@ -33,43 +33,45 @@
     </element>
 
     <complexType name="DistributionPackage">
-        <sequence maxOccurs="1" minOccurs="0">
-            <element name="artifacts" type="tns:Artifacts"
-                maxOccurs="1" minOccurs="0">
-                <annotation>
-                    <documentation>
-                        Artifacts that should be resolved
-                        (downloaded and copied) into the distribution
-                        package.
-                    </documentation>
-                </annotation>
-            </element>
-            <element name="parseables" type="tns:Parseables"
-                maxOccurs="1" minOccurs="0"></element>
-            <element name="launchers" type="tns:Launchers"
-                minOccurs="0" maxOccurs="1">
-                <annotation>
-                    <documentation>
-                        Start command is necessary to be able
-                        to start integration tests on server.
-                    </documentation>
-                </annotation>
-            </element>
-        </sequence>
+      <sequence maxOccurs="1" minOccurs="0">
+        <element name="artifacts" type="tns:Artifacts" maxOccurs="1" minOccurs="0">
+          <annotation>
+            <documentation>
+              Artifacts that should be resolved (downloaded and copied) into the distribution package.
+            </documentation>
+          </annotation>
+        </element>
+        <element name="parseables" type="tns:Parseables" maxOccurs="1" minOccurs="0"></element>
+        <element name="launchers" type="tns:Launchers" minOccurs="0" maxOccurs="1">
+          <annotation>
+            <documentation>Start command is necessary to be able to start integration tests on server.</documentation>
+          </annotation>
+        </element>
+      </sequence>
+      <attribute name="copyMode" use="required">
+            <annotation>
+              <documentation>The default method of placing artifacts into the distribution package. It might be file (normal copy) or symbolicLink. The files that are parsed or come from unpacking are copied as files always.</documentation>
+            </annotation>
+            <simpleType>
+          <restriction base="string">
+            <enumeration value="file"></enumeration>
+            <enumeration value="symbolicLink"></enumeration>
+          </restriction>
+        </simpleType>
+      </attribute>
     </complexType>
 
     <complexType name="Artifact">
         <sequence>
-            <element name="groupId" type="string" minOccurs="1"
-                maxOccurs="1"></element>
-            <element name="artifactId" type="string" minOccurs="1"
-                maxOccurs="1"></element>
-            <element name="version" type="string" minOccurs="1"
-                maxOccurs="1"></element>
-            <element name="type" type="string" minOccurs="0"
-                maxOccurs="1"></element>
-            <element name="classifier" type="string" minOccurs="0"
-                maxOccurs="1"></element>
+          <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
+          <element name="artifactId" type="string" minOccurs="1" maxOccurs="1"></element>
+          <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
+          <element name="type" type="string" minOccurs="0" maxOccurs="1"></element>
+          <element name="classifier" type="string" minOccurs="0" maxOccurs="1"></element>
+          <element name="osgiAction" type="tns:OSGiAction" minOccurs="0" maxOccurs="1">
+            <annotation>
+              <documentation>In case this is an OSGi bundle, additional behavior can be defined.</documentation>
+            </annotation></element>
         </sequence>
         <attribute name="targetFolder" type="string">
             <annotation>
@@ -78,9 +80,6 @@
             </annotation>
         </attribute>
         <attribute name="targetFile" type="string"></attribute>
-        <attribute name="start" type="boolean" use="optional"
-            default="true"></attribute>
-        <attribute name="startLevel" type="int"></attribute>
     </complexType>
 
     <complexType name="Artifacts">
@@ -134,5 +133,10 @@
                 <attribute name="folder" type="string" use="optional"></attribute>
             </extension>
         </simpleContent>
+    </complexType>
+
+    <complexType name="OSGiAction">
+      <attribute name="start" type="boolean" use="required"></attribute>
+      <attribute name="startLevel" type="int" use="optional"></attribute>
     </complexType>
 </schema>

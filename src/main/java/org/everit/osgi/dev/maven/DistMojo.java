@@ -1,26 +1,5 @@
 package org.everit.osgi.dev.maven;
 
-/*
- * Copyright (c) 2011, Everit Kft.
- *
- * All rights reserved.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301  USA
- */
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -67,6 +46,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
 import org.everit.osgi.dev.maven.util.DistUtil;
+import org.everit.osgi.dev.maven.util.EOsgiConstants;
 
 /**
  * Creates a distribution package for the project. Distribution packages may be provided as Environment parameters or
@@ -75,7 +55,7 @@ import org.everit.osgi.dev.maven.util.DistUtil;
  */
 @Mojo(name = "dist", defaultPhase = LifecyclePhase.PACKAGE, requiresProject = true,
         requiresDependencyResolution = ResolutionScope.COMPILE)
-public class DistMojo extends AbstractOSGIMojo {
+public class DistMojo extends AbstractOSGiMojo {
 
     @Component
     protected ArtifactFactory artifactFactory;
@@ -87,11 +67,25 @@ public class DistMojo extends AbstractOSGIMojo {
     protected ArtifactResolver artifactResolver;
 
     /**
+     * Comma separated list of ports of currently running OSGi containers. Such ports are normally opened with
+     * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
+     */
+    @Parameter(property = "eosgi.servicePort")
+    protected String servicePort;
+
+    /**
+     * Comma separated list of the id of the environments that should be processed. Default is * that means all
+     * environments.
+     */
+    @Parameter(property = "eosgi.environmentId")
+    protected String environmentId = "*";
+
+    /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
-     * values: link, file.
+     * values: symbolicLink, file.
      * 
      */
-    @Parameter(property = "eosgi.copyMode", defaultValue = "file")
+    @Parameter(property = "eosgi.copyMode", defaultValue = EOsgiConstants.COPYMODE_FILE)
     protected String copyMode;
 
     protected final JAXBContext distConfigJAXBContext;
@@ -106,31 +100,8 @@ public class DistMojo extends AbstractOSGIMojo {
 
     protected List<DistributedEnvironment> distributedEnvironments;
 
-    /**
-     * The path of the zip file in which the distribution package will be generated. If the zip file already exists it
-     * will be overridden. In zip distribution only copyMode file works.
-     * 
-     */
-    @Parameter(property = "eosgi.distZipUrl",
-            defaultValue = "${project.build.directory}/${project.artifactId}-dist.zip")
-    protected String distZipPath;
-
     @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
-
-    /**
-     * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
-     * 
-     */
-    @Parameter(property = "eosgi.includeCurrentProject", defaultValue = "false")
-    protected boolean includeCurrentProject = false;
-
-    /**
-     * Whether to include the test runner and it's dependencies.
-     * 
-     */
-    @Parameter(property = "eosgi.includeTestRunner", defaultValue = "false")
-    protected boolean includeTestRunner = false;
 
     @Parameter(defaultValue = "${localRepository}")
     protected ArtifactRepository localRepository;
@@ -146,7 +117,6 @@ public class DistMojo extends AbstractOSGIMojo {
     protected String sourceDistPath;
 
     public DistMojo() {
-        super();
         try {
             distConfigJAXBContext =
                     JAXBContext.newInstance(ObjectFactory.class.getPackage().getName(),
@@ -156,11 +126,11 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected List<DistributableBundleArtifact> convertBundleArtifactsToDistributed(
-            final EnvironmentConfiguration environment, final List<BundleArtifact> artifacts) {
+    protected List<ArtifactWithSettings> convertBundleArtifactsToDistributed(
+            final EnvironmentConfiguration environment, final List<ProcessedArtifact> artifacts) {
 
-        List<DistributableBundleArtifact> distributedBundleArtifacts = new ArrayList<DistributableBundleArtifact>();
-        for (BundleArtifact artifact : artifacts) {
+        List<ArtifactWithSettings> distributedBundleArtifacts = new ArrayList<ArtifactWithSettings>();
+        for (ProcessedArtifact artifact : artifacts) {
             distributedBundleArtifacts.add(generateDistributedArtifact(environment, artifact));
         }
         return distributedBundleArtifacts;
@@ -168,10 +138,10 @@ public class DistMojo extends AbstractOSGIMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        List<BundleArtifact> bundleArtifacts;
+        List<ProcessedArtifact> bundleArtifacts;
         File globalDistFolderFile = new File(getDistFolder());
         try {
-            bundleArtifacts = getBundleArtifacts(isIncludeCurrentProject(), isIncludeTestRunner());
+            bundleArtifacts = getProcessedArtifacts();
         } catch (MalformedURLException e) {
             throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
         }
@@ -194,7 +164,7 @@ public class DistMojo extends AbstractOSGIMojo {
                         DistUtil.copyDirectory(sourceDistPathFile, distFolderFile);
                     }
                 }
-                List<DistributableBundleArtifact> distributedBundleArtifacts =
+                List<ArtifactWithSettings> distributedBundleArtifacts =
                         convertBundleArtifactsToDistributed(environment, bundleArtifacts);
 
                 DistributionPackage distributionPackage =
@@ -226,12 +196,12 @@ public class DistMojo extends AbstractOSGIMojo {
         }
     }
 
-    protected DistributableBundleArtifact generateDistributedArtifact(final EnvironmentConfiguration environment,
-            final BundleArtifact artifact) {
+    protected ArtifactWithSettings generateDistributedArtifact(final EnvironmentConfiguration environment,
+            final ProcessedArtifact artifact) {
 
         getLog().debug("Converting artifact to distributable bundle artifact: " + artifact.toString());
 
-        DistributableBundleArtifact distributableBundleArtifact = new DistributableBundleArtifact();
+        ArtifactWithSettings distributableBundleArtifact = new ArtifactWithSettings();
         distributableBundleArtifact.setBundleArtifact(artifact);
 
         // Getting the start level
@@ -264,16 +234,8 @@ public class DistMojo extends AbstractOSGIMojo {
         return distributedEnvironments;
     }
 
-    public boolean isIncludeCurrentProject() {
-        return includeCurrentProject;
-    }
-
-    public boolean isIncludeTestRunner() {
-        return includeTestRunner;
-    }
-
     protected DistributionPackage parseConfiguration(final File distFolderFile,
-            final List<DistributableBundleArtifact> bundleArtifacts, final EnvironmentConfiguration environment)
+            final List<ArtifactWithSettings> bundleArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
@@ -317,7 +279,7 @@ public class DistMojo extends AbstractOSGIMojo {
     }
 
     protected void parseParseables(final DistributionPackage distributionPackage, final File distFolderFile,
-            final List<DistributableBundleArtifact> bundleArtifacts, final EnvironmentConfiguration environment)
+            final List<ArtifactWithSettings> bundleArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         VelocityContext context = new VelocityContext();
         context.put("bundleArtifacts", bundleArtifacts);
@@ -408,7 +370,7 @@ public class DistMojo extends AbstractOSGIMojo {
             File targetFile = new File(targetFileFolder, targetFileName);
             fileCopyMap.put(mavenArtifact.getFile(), targetFile);
         }
-        if ("link".equals(getCopyMode())) {
+        if (EOsgiConstants.COPYMODE_SYMBOLIC_LINK.equals(getCopyMode())) {
             DistUtil.createSymbolicLinks(fileCopyMap, pluginArtifactMap, getLog());
         } else {
             for (Entry<File, File> fileCopyEntry : fileCopyMap.entrySet()) {

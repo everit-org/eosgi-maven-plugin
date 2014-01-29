@@ -1,26 +1,5 @@
 package org.everit.osgi.dev.maven;
 
-/*
- * Copyright (c) 2011, Everit Kft.
- *
- * All rights reserved.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301  USA
- */
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -52,7 +31,8 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.Command;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Launcher;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Launchers;
 import org.everit.osgi.dev.maven.util.DistUtil;
-import org.everit.osgi.dev.testrunner.Constants;
+import org.everit.osgi.dev.maven.util.EOsgiConstants;
+import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -176,32 +156,13 @@ public class IntegrationTestMojo extends DistMojo {
 
     /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
-     * values: link, file.
+     * values: symbolicLink, file.
      */
-    @Parameter(property = "eosgi.copyMode", defaultValue = "link")
+    @Parameter(property = "eosgi.copyMode", defaultValue = EOsgiConstants.COPYMODE_SYMBOLIC_LINK)
     protected String copyMode;
-
-    /**
-     * Path to folder where the distribution will be generated. The content of this folder will be overridden if the
-     * files with same name already exist.
-     */
-    @Parameter(property = "eosgi.testDistFolder", defaultValue = "${project.build.directory}/eosgi-itests-dist")
-    protected String distFolder;
 
     @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
-
-    /**
-     * Whether to include the artifact of the current project or not. If false only the dependencies will be processed.
-     */
-    @Parameter(property = "eosgi.includeCurrentProject", defaultValue = "true")
-    protected boolean includeCurrentProject = true;
-
-    /**
-     * Whether to include the test runner and it's dependencies.
-     */
-    @Parameter(property = "eosgi.includeTestRunner", defaultValue = "true")
-    protected boolean includeTestRunner = true;
 
     /**
      * The jacoco code coverage generation settings. To see the possible settings see {@link JacocoSettings}.
@@ -218,7 +179,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
         int result = 0;
-        for (DistributableBundleArtifact bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
+        for (ArtifactWithSettings bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
             Attributes mainAttributes = bundleArtifact.getManifest().getMainAttributes();
             String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
             if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
@@ -256,7 +217,7 @@ public class IntegrationTestMojo extends DistMojo {
     }
 
     private boolean checkExitError(final File resultFolder, final String environmentId) {
-        File exitErrorFile = new File(resultFolder, Constants.SYSTEM_EXIT_ERROR_FILE_NAME);
+        File exitErrorFile = new File(resultFolder, TestRunnerConstants.SYSTEM_EXIT_ERROR_FILE_NAME);
         if (exitErrorFile.exists()) {
             StringBuilder sb = new StringBuilder();
             FileInputStream fin = null;
@@ -334,8 +295,8 @@ public class IntegrationTestMojo extends DistMojo {
                 File resultFolder = new File(testReportFolderFile, distributedEnvironment.getEnvironment().getId());
                 resultFolder.mkdirs();
 
-                pb.environment().put(Constants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
-                pb.environment().put(Constants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
+                pb.environment().put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
+                pb.environment().put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
                 UUID processUUID = UUID.randomUUID();
                 pb.environment().put(ENV_PROCESS_UNIQUE_ID, processUUID.toString());
 
@@ -441,23 +402,8 @@ public class IntegrationTestMojo extends DistMojo {
         return copyMode;
     }
 
-    @Override
-    public String getDistFolder() {
-        return distFolder;
-    }
-
     public JacocoSettings getJacoco() {
         return jacoco;
-    }
-
-    @Override
-    public boolean isIncludeCurrentProject() {
-        return includeCurrentProject;
-    }
-
-    @Override
-    public boolean isIncludeTestRunner() {
-        return includeTestRunner;
     }
 
     private void processJacocoSettings() {
