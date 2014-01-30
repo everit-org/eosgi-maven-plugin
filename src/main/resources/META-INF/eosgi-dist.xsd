@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2011, Everit Kft.
+    This file is part of Everit Maven OSGi plugin.
 
-    All rights reserved.
+    Everit Maven OSGi plugin is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-    This library is free software; you can redistribute it and/or
-    modify it under the terms of the GNU Lesser General Public
-    License as published by the Free Software Foundation; either
-    version 3 of the License, or (at your option) any later version.
-
-    This library is distributed in the hope that it will be useful,
+    Everit Maven OSGi plugin is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-    Lesser General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
 
-    You should have received a copy of the GNU Lesser General Public
-    License along with this library; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-    MA 02110-1301  USA
+    You should have received a copy of the GNU Lesser General Public License
+    along with Everit Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
 
 -->
 <schema targetNamespace="http://everit.org/eosgi/dist/definition/2.0.0"
@@ -48,17 +44,7 @@
           </annotation>
         </element>
       </sequence>
-      <attribute name="copyMode" use="required">
-            <annotation>
-              <documentation>The default method of placing artifacts into the distribution package. It might be file (normal copy) or symbolicLink. The files that are parsed or come from unpacking are copied as files always.</documentation>
-            </annotation>
-            <simpleType>
-          <restriction base="string">
-            <enumeration value="file"></enumeration>
-            <enumeration value="symbolicLink"></enumeration>
-          </restriction>
-        </simpleType>
-      </attribute>
+      <attribute name="copyMode" type="tns:CopyMode" use="required"></attribute>
     </complexType>
 
     <complexType name="Artifact">
@@ -139,4 +125,11 @@
       <attribute name="start" type="boolean" use="required"></attribute>
       <attribute name="startLevel" type="int" use="optional"></attribute>
     </complexType>
+
+    <simpleType name="CopyMode">
+      <restriction base="string">
+        <enumeration value="file"></enumeration>
+        <enumeration value="symbolicLink"></enumeration>
+      </restriction>
+    </simpleType>
 </schema>

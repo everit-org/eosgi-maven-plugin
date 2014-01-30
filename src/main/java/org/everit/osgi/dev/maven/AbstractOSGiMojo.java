@@ -1,3 +1,19 @@
+/**
+ * This file is part of Everit Maven OSGi plugin.
+ *
+ * Everit Maven OSGi plugin is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Everit Maven OSGi plugin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Everit Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.everit.osgi.dev.maven;
 
 import java.io.File;
@@ -25,7 +41,16 @@ public abstract class AbstractOSGiMojo extends AbstractMojo {
      * The environments on which the tests should run.
      */
     @Parameter
-    private EnvironmentConfiguration[] environments;
+    protected EnvironmentConfiguration[] environments;
+
+    private EnvironmentConfiguration[] environmentsToProcess;
+
+    /**
+     * Comma separated list of the id of the environments that should be processed. Default is * that means all
+     * environments.
+     */
+    @Parameter(property = "eosgi.environmentIds", defaultValue = "*")
+    protected String environmentIds = "*";
 
     /**
      * Map of plugin artifacts.
@@ -126,11 +151,12 @@ public abstract class AbstractOSGiMojo extends AbstractMojo {
         for (Artifact artifact : availableArtifacts) {
             if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
                 ProcessedArtifact processedArtifact = processArtifact(artifact);
-                if (processedArtifact != null) {
-                    result.add(processedArtifact);
-                }
+                result.add(processedArtifact);
             }
         }
+
+        ProcessedArtifact processedArtifact = processArtifact(project.getArtifact());
+        result.add(processedArtifact);
 
         return result;
     }
@@ -142,11 +168,42 @@ public abstract class AbstractOSGiMojo extends AbstractMojo {
         return defaultEnvironment;
     }
 
-    public EnvironmentConfiguration[] getEnvironments() {
-        if ((environments == null) || (environments.length == 0)) {
-            environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
+    /**
+     * Getting an array of the environment configurations that should be processed based on the value of the
+     * {@link #environmentIds} parameter. The value, that is returned, is calculated the first time the function is
+     * called.
+     * 
+     * @return The array of environment ids that should be processed.
+     */
+    protected EnvironmentConfiguration[] getEnvironmentsToProcess() {
+        if (environmentsToProcess != null) {
+            return environmentsToProcess;
         }
-        return environments;
+
+        if ("*".equals(environmentIds)) {
+            environmentsToProcess = environments;
+        } else {
+            String[] environmentIdArray = environmentIds.trim().split(",");
+
+            EnvironmentConfiguration[] tmpEnvironments = environments;
+            if ((tmpEnvironments == null) || (tmpEnvironments.length == 0)) {
+                tmpEnvironments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
+            }
+            List<EnvironmentConfiguration> result = new ArrayList<EnvironmentConfiguration>();
+            for (int i = 0; i < tmpEnvironments.length; i++) {
+                boolean found = false;
+                int j = 0, n = environmentIdArray.length;
+                while (!found && j < n) {
+                    if (environmentIdArray[j].equals(environments[j].getId())) {
+                        found = true;
+                        result.add(environments[i]);
+                    }
+                    j++;
+                }
+            }
+            environmentsToProcess = result.toArray(new EnvironmentConfiguration[result.size()]);
+        }
+        return environmentsToProcess;
     }
 
     /**

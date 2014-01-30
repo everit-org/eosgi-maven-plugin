@@ -1,7 +1,22 @@
+/**
+ * This file is part of Everit Maven OSGi plugin.
+ *
+ * Everit Maven OSGi plugin is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Everit Maven OSGi plugin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Everit Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.everit.osgi.dev.maven;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -14,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import javax.xml.bind.JAXBContext;
@@ -26,8 +40,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
@@ -41,6 +53,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.velocity.VelocityContext;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifacts;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyMode;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
@@ -70,22 +83,15 @@ public class DistMojo extends AbstractOSGiMojo {
      * Comma separated list of ports of currently running OSGi containers. Such ports are normally opened with
      * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
      */
-    @Parameter(property = "eosgi.servicePort")
-    protected String servicePort;
-
-    /**
-     * Comma separated list of the id of the environments that should be processed. Default is * that means all
-     * environments.
-     */
-    @Parameter(property = "eosgi.environmentId")
-    protected String environmentId = "*";
+    @Parameter(property = "eosgi.upgradePorts")
+    protected String upgradePorts;
 
     /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
-     * values: symbolicLink, file.
-     * 
+     * values: symbolicLink, file. In case this is an incrementel update, the default mode is the same as the mode of
+     * the previous build. In case this is a clean build, the default mode is 'file'.
      */
-    @Parameter(property = "eosgi.copyMode", defaultValue = EOsgiConstants.COPYMODE_FILE)
+    @Parameter(property = "eosgi.copyMode")
     protected String copyMode;
 
     protected final JAXBContext distConfigJAXBContext;
@@ -136,27 +142,56 @@ public class DistMojo extends AbstractOSGiMojo {
         return distributedBundleArtifacts;
     }
 
+    protected DistributionPackage readDistConfig(File distFolderFile) throws MojoExecutionException {
+        File distConfigFile = new File(distFolderFile, "/.eosgi.dist.xml");
+        if (distConfigFile.exists()) {
+            try {
+                Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
+                Object distributionPackage = unmarshaller.unmarshal(distConfigFile);
+                if (distributionPackage instanceof JAXBElement) {
+                    distributionPackage = ((JAXBElement<DistributionPackage>) distributionPackage).getValue();
+                }
+                if (distributionPackage instanceof DistributionPackage) {
+                    return (DistributionPackage) distributionPackage;
+                } else {
+                    throw new MojoExecutionException("The root element in the provided distribution configuration file "
+                            + "is not the expected DistributionPackage element");
+                }
+            } catch (JAXBException e) {
+                throw new MojoExecutionException("Failed to process already existing distribution configuration file: "
+                        + distConfigFile.getAbsolutePath());
+            }
+        } else {
+            return null;
+        }
+    }
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        List<ProcessedArtifact> bundleArtifacts;
+        List<ProcessedArtifact> processedArtifacts;
         File globalDistFolderFile = new File(getDistFolder());
         try {
-            bundleArtifacts = getProcessedArtifacts();
+            processedArtifacts = getProcessedArtifacts();
         } catch (MalformedURLException e) {
             throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
         }
 
         distributedEnvironments = new ArrayList<DistributedEnvironment>();
-        for (EnvironmentConfiguration environment : getEnvironments()) {
+        for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
             Artifact distPackageArtifact = resolveDistPackage(environment);
             File distPackageFile = distPackageArtifact.getFile();
             File distFolderFile = new File(globalDistFolderFile, environment.getId());
 
+            CopyMode environmentCopyMode = CopyMode.fromValue(copyMode);
+            DistributionPackage existingDistConfig = readDistConfig(distFolderFile);
+            if (existingDistConfig != null) {
+                environmentCopyMode = existingDistConfig.getCopyMode();
+            }
+            
             ZipFile distPackageZipFile = null;
             try {
-
                 distPackageZipFile = new ZipFile(distPackageFile);
-                DistUtil.unpackZipFile(distPackageFile, distFolderFile, false);
+                DistUtil.unpackZipFile(distPackageFile, distFolderFile);
 
                 if (sourceDistPath != null) {
                     File sourceDistPathFile = new File(sourceDistPath);
@@ -165,22 +200,19 @@ public class DistMojo extends AbstractOSGiMojo {
                     }
                 }
                 List<ArtifactWithSettings> distributedBundleArtifacts =
-                        convertBundleArtifactsToDistributed(environment, bundleArtifacts);
+                        convertBundleArtifactsToDistributed(environment, processedArtifacts);
 
                 DistributionPackage distributionPackage =
                         parseConfiguration(distFolderFile, distributedBundleArtifacts, environment);
 
                 Artifacts artifacts = distributionPackage.getArtifacts();
                 if (artifacts != null) {
-                    resolveAndCopyArtifacts(artifacts.getArtifact(), distFolderFile);
+                    resolveAndCopyArtifacts(artifacts.getArtifact(), distFolderFile, environmentCopyMode);
                 }
                 parseParseables(distributionPackage, distFolderFile, distributedBundleArtifacts, environment);
                 distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
                         distFolderFile, distributedBundleArtifacts));
 
-            } catch (ZipException e) {
-                throw new MojoExecutionException("Could not uncompress distribution package file: "
-                        + distPackageFile.toString(), e);
             } catch (IOException e) {
                 throw new MojoExecutionException("Could not uncompress distribution package file: "
                         + distPackageFile.toString(), e);
@@ -247,35 +279,7 @@ public class DistMojo extends AbstractOSGiMojo {
         } catch (IOException e) {
             throw new MojoExecutionException("Could not run velocity on configuration file: " + configFile.getName(), e);
         }
-        InputStream inputStream = null;
-        try {
-            inputStream = new FileInputStream(configFile);
-            Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
-            Object distributionPackage = unmarshaller.unmarshal(inputStream);
-            if (distributionPackage instanceof JAXBElement) {
-                distributionPackage = ((JAXBElement<DistributionPackage>) distributionPackage).getValue();
-            }
-            if (distributionPackage instanceof DistributionPackage) {
-                return (DistributionPackage) distributionPackage;
-            } else {
-                throw new MojoExecutionException("The root element in the provided distribution configuration file "
-                        + "is not the expected DistributionPackage element");
-            }
-        } catch (IOException e) {
-            throw new MojoExecutionException("Could not read configuration file in distribution package: "
-                    + configFile.getName(), e);
-        } catch (JAXBException e) {
-            throw new MojoExecutionException("Could not read configuration file in distribution package: "
-                    + configFile.getName(), e);
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    getLog().error("Could not close zip stream: " + configFile.getName(), e);
-                }
-            }
-        }
+        return readDistConfig(distFolderFile);
     }
 
     protected void parseParseables(final DistributionPackage distributionPackage, final File distFolderFile,
@@ -333,7 +337,7 @@ public class DistMojo extends AbstractOSGiMojo {
     }
 
     protected void resolveAndCopyArtifacts(
-            final List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts, final File envDistFolderFile)
+            final List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts, final File envDistFolderFile, final CopyMode environmentCopyMode)
             throws MojoExecutionException {
         Map<File, File> fileCopyMap = new HashMap<File, File>();
         for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
@@ -370,6 +374,8 @@ public class DistMojo extends AbstractOSGiMojo {
             File targetFile = new File(targetFileFolder, targetFileName);
             fileCopyMap.put(mavenArtifact.getFile(), targetFile);
         }
+        
+        // TODO handle environmentCopyMode
         if (EOsgiConstants.COPYMODE_SYMBOLIC_LINK.equals(getCopyMode())) {
             DistUtil.createSymbolicLinks(fileCopyMap, pluginArtifactMap, getLog());
         } else {
@@ -394,15 +400,8 @@ public class DistMojo extends AbstractOSGiMojo {
                 artifactFactory.createArtifact(distPackageIdParts[0], distPackageIdParts[1], distPackageIdParts[2],
                         "compile", "zip");
 
-        ArtifactRepository artifactRepository =
-                artifactRepositoryFactory.createArtifactRepository("everit.groups.public",
-                        "http://repository.everit.biz/nexus/content/groups/public", new DefaultRepositoryLayout(),
-                        new ArtifactRepositoryPolicy(), new ArtifactRepositoryPolicy());
-
-        List<ArtifactRepository> tmpRemoteRepositories = new ArrayList<ArtifactRepository>(remoteRepositories);
-        tmpRemoteRepositories.add(artifactRepository);
         try {
-            artifactResolver.resolve(distPackageArtifact, tmpRemoteRepositories, localRepository);
+            artifactResolver.resolve(distPackageArtifact, remoteRepositories, localRepository);
         } catch (ArtifactResolutionException e) {
             throw new MojoExecutionException("Could not resolve distribution artifact: "
                     + distPackageArtifact.getArtifactId(), e);

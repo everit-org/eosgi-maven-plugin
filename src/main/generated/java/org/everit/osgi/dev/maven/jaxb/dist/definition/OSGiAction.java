@@ -15,16 +15,16 @@ import javax.xml.bind.annotation.XmlType;
 
 
 /**
- * <p>Java class for Parseable complex type.
+ * <p>Java class for OSGiAction complex type.
  * 
  * <p>The following schema fragment specifies the expected content contained within this class.
  * 
  * <pre>
- * &lt;complexType name="Parseable">
+ * &lt;complexType name="OSGiAction">
  *   &lt;complexContent>
  *     &lt;restriction base="{http://www.w3.org/2001/XMLSchema}anyType">
- *       &lt;attribute name="path" type="{http://www.w3.org/2001/XMLSchema}string" />
- *       &lt;attribute name="encoding" type="{http://www.w3.org/2001/XMLSchema}string" />
+ *       &lt;attribute name="start" use="required" type="{http://www.w3.org/2001/XMLSchema}boolean" />
+ *       &lt;attribute name="startLevel" type="{http://www.w3.org/2001/XMLSchema}int" />
  *     &lt;/restriction>
  *   &lt;/complexContent>
  * &lt;/complexType>
@@ -33,60 +33,52 @@ import javax.xml.bind.annotation.XmlType;
  * 
  */
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "Parseable")
-public class Parseable {
+@XmlType(name = "OSGiAction")
+public class OSGiAction {
 
-    @XmlAttribute(name = "path")
-    protected String path;
-    @XmlAttribute(name = "encoding")
-    protected String encoding;
+    @XmlAttribute(name = "start", required = true)
+    protected boolean start;
+    @XmlAttribute(name = "startLevel")
+    protected Integer startLevel;
 
     /**
-     * Gets the value of the path property.
+     * Gets the value of the start property.
+     * 
+     */
+    public boolean isStart() {
+        return start;
+    }
+
+    /**
+     * Sets the value of the start property.
+     * 
+     */
+    public void setStart(boolean value) {
+        this.start = value;
+    }
+
+    /**
+     * Gets the value of the startLevel property.
      * 
      * @return
      *     possible object is
-     *     {@link String }
+     *     {@link Integer }
      *     
      */
-    public String getPath() {
-        return path;
+    public Integer getStartLevel() {
+        return startLevel;
     }
 
     /**
-     * Sets the value of the path property.
+     * Sets the value of the startLevel property.
      * 
      * @param value
      *     allowed object is
-     *     {@link String }
+     *     {@link Integer }
      *     
      */
-    public void setPath(String value) {
-        this.path = value;
-    }
-
-    /**
-     * Gets the value of the encoding property.
-     * 
-     * @return
-     *     possible object is
-     *     {@link String }
-     *     
-     */
-    public String getEncoding() {
-        return encoding;
-    }
-
-    /**
-     * Sets the value of the encoding property.
-     * 
-     * @param value
-     *     allowed object is
-     *     {@link String }
-     *     
-     */
-    public void setEncoding(String value) {
-        this.encoding = value;
+    public void setStartLevel(Integer value) {
+        this.startLevel = value;
     }
 
 }

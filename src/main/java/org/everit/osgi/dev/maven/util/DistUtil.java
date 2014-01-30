@@ -1,13 +1,32 @@
+/**
+ * This file is part of Everit Maven OSGi plugin.
+ *
+ * Everit Maven OSGi plugin is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Everit Maven OSGi plugin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Everit Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.everit.osgi.dev.maven.util;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
 import java.util.Enumeration;
 import java.util.Map;
@@ -281,7 +300,7 @@ public class DistUtil {
         tmpFile.delete();
     }
 
-    private static void setUnixPermissionsOnFile(final File file, final ZipArchiveEntry entry) {
+    private static void setUnixPermissionsOnFileIfNecessary(final File file, final ZipArchiveEntry entry) {
         if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_FAT) {
             return;
         }
@@ -341,12 +360,11 @@ public class DistUtil {
         elevateDirFile.delete();
     }
 
-    public static final void unpackZipFile(final File file, final File destinationDirectory, final boolean override)
+    public static final void unpackZipFile(final File file, final File destinationDirectory)
             throws IOException {
         destinationDirectory.mkdirs();
         ZipFile zipFile = new ZipFile(file);
 
-        final int BUFFER_SIZE = 2000;
         try {
             Enumeration<? extends ZipArchiveEntry> entries = zipFile.getEntries();
             while (entries.hasMoreElements()) {
@@ -358,25 +376,73 @@ public class DistUtil {
                 } else {
                     File parentFolder = destFile.getParentFile();
                     parentFolder.mkdirs();
-                    if (override || !destFile.exists()) {
-                        InputStream inputStream = zipFile.getInputStream(entry);
-                        OutputStream destFileStream = new FileOutputStream(destFile);
-                        DistUtil.setUnixPermissionsOnFile(destFile, entry);
-                        try {
-                            DistUtil.copyStream(inputStream, destFileStream, BUFFER_SIZE);
-                        } finally {
-                            destFileStream.flush();
-                            destFileStream.close();
-                            inputStream.close();
-                        }
-
-                    }
+                    InputStream inputStream = zipFile.getInputStream(entry);
+                    overCopyFile(inputStream, destFile);
+                    DistUtil.setUnixPermissionsOnFileIfNecessary(destFile, entry);
                 }
 
             }
         } finally {
             zipFile.close();
         }
+    }
+
+    /**
+     * Copies an inputstream into a file. In case the file already exists, only those bytes are overwritten in the
+     * target file that are changed.
+     * 
+     * @param is
+     *            The inputstream of the source.
+     * @param targetFile
+     *            The file that will be overridden if it is necessary.
+     * @throws MojoExecutionException
+     * @throws IOException 
+     * @throws FileNotFoundException 
+     */
+    public static void overCopyFile(InputStream is, File targetFile) throws IOException {
+        long sum = 0;
+        byte[] buffer = new byte[1024];
+        try (RandomAccessFile targetRAF = new RandomAccessFile(targetFile, "rw");) {
+            long originalTargetLength = targetFile.length();
+            int r = is.read(buffer);
+            while (r > -1) {
+                sum += r;
+                byte[] bytesInTarget = tryReadingAmount(targetRAF, r);
+                if (!isBufferSame(buffer, r, bytesInTarget)) {
+                    targetRAF.seek(targetRAF.getFilePointer() - r);
+                    targetRAF.write(buffer, 0, r);
+                }
+
+                r = is.read(buffer);
+            }
+            if (sum < originalTargetLength) {
+                targetRAF.setLength(sum);
+            }
+        }
+    }
+
+    public static byte[] tryReadingAmount(RandomAccessFile is, int amount) throws IOException {
+        ByteArrayOutputStream bout = new ByteArrayOutputStream(amount);
+        byte[] buffer = new byte[amount];
+        int r = is.read(buffer);
+        while (r > -1 && bout.size() < amount) {
+            bout.write(buffer, 0, r);
+            r = is.read(buffer, 0, amount - bout.size());
+        }
+        return bout.toByteArray();
+    }
+
+    private static boolean isBufferSame(byte[] original, int originalLength, byte[] target) {
+        if (originalLength != target.length) {
+            return false;
+        }
+        int i = 0;
+        boolean same = true;
+        while (i < originalLength && same) {
+            same = original[i] == target[i];
+            i++;
+        }
+        return same;
     }
 
     private DistUtil() {
