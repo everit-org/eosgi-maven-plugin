@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -40,6 +41,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyMode;
 
 public class DistUtil {
 
@@ -51,7 +53,8 @@ public class DistUtil {
 
     public static final String OS_WINDOWS = "windows";
 
-    public static void copyDirectory(final File sourceLocation, final File targetLocation) throws IOException {
+    public static void copyDirectory(final File sourceLocation, final File targetLocation, final CopyMode copyMode)
+            throws IOException, MojoExecutionException {
 
         if (sourceLocation.isDirectory()) {
             if (!targetLocation.exists()) {
@@ -60,49 +63,20 @@ public class DistUtil {
 
             String[] children = sourceLocation.list();
             for (int i = 0; i < children.length; i++) {
-                DistUtil.copyDirectory(new File(sourceLocation, children[i]), new File(targetLocation, children[i]));
+                DistUtil.copyDirectory(new File(sourceLocation, children[i]), new File(targetLocation, children[i]),
+                        copyMode);
             }
         } else {
-
-            InputStream in = new FileInputStream(sourceLocation);
-            OutputStream out = new FileOutputStream(targetLocation);
-
-            // Copy the bits from instream to outstream
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
-            in.close();
-            out.close();
+            copyFile(sourceLocation, targetLocation, copyMode);
         }
     }
 
-    public static void copyFile(final File source, final File target, final Log log) throws MojoExecutionException {
-        FileInputStream fin = null;
-        FileOutputStream fout = null;
-        try {
-            fin = new FileInputStream(source);
-            fout = new FileOutputStream(target);
-            DistUtil.copyStream(fin, fout, 100000);
-        } catch (IOException e) {
-            throw new MojoExecutionException("Could not copy file " + source.getAbsolutePath() + " to "
-                    + target.getAbsolutePath(), e);
-        } finally {
-            if (fin != null) {
-                try {
-                    fin.close();
-                } catch (IOException e) {
-                    log.error(e);
-                }
-            }
-            if (fout != null) {
-                try {
-                    fout.close();
-                } catch (IOException e) {
-                    log.error(e);
-                }
-            }
+    public static void copyFile(final File source, final File target, final CopyMode copyMode)
+            throws MojoExecutionException {
+        if (CopyMode.FILE.equals(copyMode)) {
+            overCopyFile(source, target);
+        } else {
+            // TODO
         }
     }
 
@@ -249,10 +223,73 @@ public class DistUtil {
         return null;
     }
 
+    private static boolean isBufferSame(final byte[] original, final int originalLength, final byte[] target) {
+        if (originalLength != target.length) {
+            return false;
+        }
+        int i = 0;
+        boolean same = true;
+        while (i < originalLength && same) {
+            same = original[i] == target[i];
+            i++;
+        }
+        return same;
+    }
+
     private static boolean isWindowsVistaOrGreater() {
         String osname = System.getProperty("os.name").toLowerCase();
         String osversion = System.getProperty("os.version");
         return ((osname.indexOf("win") >= 0) && (osversion.compareTo("6.0") >= 0));
+    }
+
+    public static boolean overCopyFile(final File source, final File target) throws MojoExecutionException {
+        try (FileInputStream fin = new FileInputStream(source)) {
+            return overCopyFile(fin, target);
+        } catch (IOException e) {
+            throw new MojoExecutionException("Cannot copy file " + source.getAbsolutePath() + " to "
+                    + target.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * Copies an inputstream into a file. In case the file already exists, only those bytes are overwritten in the
+     * target file that are changed.
+     * 
+     * @param is
+     *            The inputstream of the source.
+     * @param targetFile
+     *            The file that will be overridden if it is necessary.
+     * @throws MojoExecutionException
+     * @throws IOException
+     * @throws FileNotFoundException
+     */
+    public static boolean overCopyFile(final InputStream is, final File targetFile) throws IOException {
+        boolean fileChanged = false;
+        boolean symbolicLink = Files.isSymbolicLink(targetFile.toPath());
+        if (symbolicLink) {
+            targetFile.delete();
+        }
+        long sum = 0;
+        byte[] buffer = new byte[1024];
+        try (RandomAccessFile targetRAF = new RandomAccessFile(targetFile, "rw");) {
+            long originalTargetLength = targetFile.length();
+            int r = is.read(buffer);
+            while (r > -1) {
+                sum += r;
+                byte[] bytesInTarget = tryReadingAmount(targetRAF, r);
+                if (!isBufferSame(buffer, r, bytesInTarget)) {
+                    fileChanged = true;
+                    targetRAF.seek(targetRAF.getFilePointer() - bytesInTarget.length);
+                    targetRAF.write(buffer, 0, r);
+                }
+
+                r = is.read(buffer);
+            }
+            if (sum < originalTargetLength) {
+                targetRAF.setLength(sum);
+            }
+        }
+        return fileChanged;
     }
 
     public static final void replaceFileWithParsed(final File parseableFile, final VelocityContext context,
@@ -288,7 +325,7 @@ public class DistUtil {
         try {
             fin = new FileInputStream(tmpFile);
             fout = new FileOutputStream(parseableFile);
-            DistUtil.copyStream(fin, fout, 2000);
+            DistUtil.copyStream(fin, fout, 2048);
         } finally {
             if (fin != null) {
                 fin.close();
@@ -319,6 +356,17 @@ public class DistUtil {
         doable = (unixPermissions & 0444) > 0;
         doableByOthers = (unixPermissions & 044) > 0;
         file.setReadable(doable, !doableByOthers);
+    }
+
+    public static byte[] tryReadingAmount(final RandomAccessFile is, final int amount) throws IOException {
+        ByteArrayOutputStream bout = new ByteArrayOutputStream(amount);
+        byte[] buffer = new byte[amount];
+        int r = is.read(buffer);
+        while (r > -1 && bout.size() < amount) {
+            bout.write(buffer, 0, r);
+            r = is.read(buffer, 0, amount - bout.size());
+        }
+        return bout.toByteArray();
     }
 
     private static void tryRunningWithElevate(final Map<File, File> sourceAndTargetFileMap,
@@ -385,64 +433,6 @@ public class DistUtil {
         } finally {
             zipFile.close();
         }
-    }
-
-    /**
-     * Copies an inputstream into a file. In case the file already exists, only those bytes are overwritten in the
-     * target file that are changed.
-     * 
-     * @param is
-     *            The inputstream of the source.
-     * @param targetFile
-     *            The file that will be overridden if it is necessary.
-     * @throws MojoExecutionException
-     * @throws IOException 
-     * @throws FileNotFoundException 
-     */
-    public static void overCopyFile(InputStream is, File targetFile) throws IOException {
-        long sum = 0;
-        byte[] buffer = new byte[1024];
-        try (RandomAccessFile targetRAF = new RandomAccessFile(targetFile, "rw");) {
-            long originalTargetLength = targetFile.length();
-            int r = is.read(buffer);
-            while (r > -1) {
-                sum += r;
-                byte[] bytesInTarget = tryReadingAmount(targetRAF, r);
-                if (!isBufferSame(buffer, r, bytesInTarget)) {
-                    targetRAF.seek(targetRAF.getFilePointer() - r);
-                    targetRAF.write(buffer, 0, r);
-                }
-
-                r = is.read(buffer);
-            }
-            if (sum < originalTargetLength) {
-                targetRAF.setLength(sum);
-            }
-        }
-    }
-
-    public static byte[] tryReadingAmount(RandomAccessFile is, int amount) throws IOException {
-        ByteArrayOutputStream bout = new ByteArrayOutputStream(amount);
-        byte[] buffer = new byte[amount];
-        int r = is.read(buffer);
-        while (r > -1 && bout.size() < amount) {
-            bout.write(buffer, 0, r);
-            r = is.read(buffer, 0, amount - bout.size());
-        }
-        return bout.toByteArray();
-    }
-
-    private static boolean isBufferSame(byte[] original, int originalLength, byte[] target) {
-        if (originalLength != target.length) {
-            return false;
-        }
-        int i = 0;
-        boolean same = true;
-        while (i < originalLength && same) {
-            same = original[i] == target[i];
-            i++;
-        }
-        return same;
     }
 
     private DistUtil() {

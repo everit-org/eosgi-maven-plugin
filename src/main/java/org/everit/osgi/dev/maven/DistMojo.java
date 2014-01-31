@@ -80,13 +80,6 @@ public class DistMojo extends AbstractOSGiMojo {
     protected ArtifactResolver artifactResolver;
 
     /**
-     * Comma separated list of ports of currently running OSGi containers. Such ports are normally opened with
-     * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
-     */
-    @Parameter(property = "eosgi.upgradePorts")
-    protected String upgradePorts;
-
-    /**
      * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
      * values: symbolicLink, file. In case this is an incrementel update, the default mode is the same as the mode of
      * the previous build. In case this is a clean build, the default mode is 'file'.
@@ -122,6 +115,13 @@ public class DistMojo extends AbstractOSGiMojo {
     @Parameter(property = "eosgi.sourceDistPath", defaultValue = "${basedir}/src/dist/")
     protected String sourceDistPath;
 
+    /**
+     * Comma separated list of ports of currently running OSGi containers. Such ports are normally opened with
+     * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
+     */
+    @Parameter(property = "eosgi.upgradePorts")
+    protected String upgradePorts;
+
     public DistMojo() {
         try {
             distConfigJAXBContext =
@@ -142,30 +142,6 @@ public class DistMojo extends AbstractOSGiMojo {
         return distributedBundleArtifacts;
     }
 
-    protected DistributionPackage readDistConfig(File distFolderFile) throws MojoExecutionException {
-        File distConfigFile = new File(distFolderFile, "/.eosgi.dist.xml");
-        if (distConfigFile.exists()) {
-            try {
-                Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
-                Object distributionPackage = unmarshaller.unmarshal(distConfigFile);
-                if (distributionPackage instanceof JAXBElement) {
-                    distributionPackage = ((JAXBElement<DistributionPackage>) distributionPackage).getValue();
-                }
-                if (distributionPackage instanceof DistributionPackage) {
-                    return (DistributionPackage) distributionPackage;
-                } else {
-                    throw new MojoExecutionException("The root element in the provided distribution configuration file "
-                            + "is not the expected DistributionPackage element");
-                }
-            } catch (JAXBException e) {
-                throw new MojoExecutionException("Failed to process already existing distribution configuration file: "
-                        + distConfigFile.getAbsolutePath());
-            }
-        } else {
-            return null;
-        }
-    }
-
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         List<ProcessedArtifact> processedArtifacts;
@@ -182,12 +158,15 @@ public class DistMojo extends AbstractOSGiMojo {
             File distPackageFile = distPackageArtifact.getFile();
             File distFolderFile = new File(globalDistFolderFile, environment.getId());
 
-            CopyMode environmentCopyMode = CopyMode.fromValue(copyMode);
+            CopyMode environmentCopyMode = (getCopyMode() != null) ? CopyMode.fromValue(getCopyMode()) : null;
             DistributionPackage existingDistConfig = readDistConfig(distFolderFile);
             if (existingDistConfig != null) {
                 environmentCopyMode = existingDistConfig.getCopyMode();
             }
-            
+            if (environmentCopyMode == null) {
+                environmentCopyMode = CopyMode.FILE;
+            }
+
             ZipFile distPackageZipFile = null;
             try {
                 distPackageZipFile = new ZipFile(distPackageFile);
@@ -196,19 +175,18 @@ public class DistMojo extends AbstractOSGiMojo {
                 if (sourceDistPath != null) {
                     File sourceDistPathFile = new File(sourceDistPath);
                     if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
-                        DistUtil.copyDirectory(sourceDistPathFile, distFolderFile);
+                        DistUtil.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
                     }
                 }
                 List<ArtifactWithSettings> distributedBundleArtifacts =
                         convertBundleArtifactsToDistributed(environment, processedArtifacts);
 
                 DistributionPackage distributionPackage =
-                        parseConfiguration(distFolderFile, distributedBundleArtifacts, environment);
+                        parseConfiguration(distFolderFile, distributedBundleArtifacts, environment,
+                                environmentCopyMode);
 
-                Artifacts artifacts = distributionPackage.getArtifacts();
-                if (artifacts != null) {
-                    resolveAndCopyArtifacts(artifacts.getArtifact(), distFolderFile, environmentCopyMode);
-                }
+                resolveAndCopyArtifacts(distributionPackage, distFolderFile);
+
                 parseParseables(distributionPackage, distFolderFile, distributedBundleArtifacts, environment);
                 distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
                         distFolderFile, distributedBundleArtifacts));
@@ -267,13 +245,15 @@ public class DistMojo extends AbstractOSGiMojo {
     }
 
     protected DistributionPackage parseConfiguration(final File distFolderFile,
-            final List<ArtifactWithSettings> bundleArtifacts, final EnvironmentConfiguration environment)
+            final List<ArtifactWithSettings> bundleArtifacts, final EnvironmentConfiguration environment,
+            final CopyMode copyMode)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
         VelocityContext context = new VelocityContext();
         context.put("bundleArtifacts", bundleArtifacts);
         context.put("environment", environment);
+        context.put("copyMode", copyMode.toString());
         try {
             DistUtil.replaceFileWithParsed(configFile, context, "UTF8");
         } catch (IOException e) {
@@ -336,9 +316,45 @@ public class DistMojo extends AbstractOSGiMojo {
         return result;
     }
 
-    protected void resolveAndCopyArtifacts(
-            final List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts, final File envDistFolderFile, final CopyMode environmentCopyMode)
+    protected DistributionPackage readDistConfig(final File distFolderFile) throws MojoExecutionException {
+        File distConfigFile = new File(distFolderFile, "/.eosgi.dist.xml");
+        if (distConfigFile.exists()) {
+            try {
+                Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
+                Object distributionPackage = unmarshaller.unmarshal(distConfigFile);
+                if (distributionPackage instanceof JAXBElement) {
+
+                    @SuppressWarnings("unchecked")
+                    JAXBElement<DistributionPackage> jaxbDistPack = (JAXBElement<DistributionPackage>) distributionPackage;
+                    distributionPackage = jaxbDistPack.getValue();
+                }
+                if (distributionPackage instanceof DistributionPackage) {
+                    return (DistributionPackage) distributionPackage;
+                } else {
+                    throw new MojoExecutionException(
+                            "The root element in the provided distribution configuration file "
+                                    + "is not the expected DistributionPackage element");
+                }
+            } catch (JAXBException e) {
+                throw new MojoExecutionException("Failed to process already existing distribution configuration file: "
+                        + distConfigFile.getAbsolutePath());
+            }
+        } else {
+            return null;
+        }
+    }
+
+    protected void resolveAndCopyArtifacts(final DistributionPackage distributionPackage, final File envDistFolderFile)
             throws MojoExecutionException {
+
+        Artifacts artifactsJaxbObj = distributionPackage.getArtifacts();
+        if (artifactsJaxbObj == null) {
+            return;
+        }
+        List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts = artifactsJaxbObj
+                .getArtifact();
+
+        CopyMode environmentCopyMode = distributionPackage.getCopyMode();
         Map<File, File> fileCopyMap = new HashMap<File, File>();
         for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
 
@@ -374,17 +390,10 @@ public class DistMojo extends AbstractOSGiMojo {
             File targetFile = new File(targetFileFolder, targetFileName);
             fileCopyMap.put(mavenArtifact.getFile(), targetFile);
         }
-        
-        // TODO handle environmentCopyMode
-        if (EOsgiConstants.COPYMODE_SYMBOLIC_LINK.equals(getCopyMode())) {
-            DistUtil.createSymbolicLinks(fileCopyMap, pluginArtifactMap, getLog());
-        } else {
+
+        if (EOsgiConstants.COPYMODE_SYMBOLIC_LINK.equals(environmentCopyMode)) {
             for (Entry<File, File> fileCopyEntry : fileCopyMap.entrySet()) {
-                if (!fileCopyEntry.getValue().exists()) {
-                    DistUtil.copyFile(fileCopyEntry.getKey(), fileCopyEntry.getValue(), getLog());
-                } else {
-                    getLog().debug("Skipping to copy " + fileCopyEntry.getValue() + " as it already exists");
-                }
+                DistUtil.copyFile(fileCopyEntry.getKey(), fileCopyEntry.getValue(), environmentCopyMode);
             }
         }
     }
