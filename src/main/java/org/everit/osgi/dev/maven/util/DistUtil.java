@@ -24,21 +24,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Enumeration;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.UUID;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyMode;
@@ -74,122 +68,35 @@ public class DistUtil {
     public static void copyFile(final File source, final File target, final CopyMode copyMode)
             throws MojoExecutionException {
         if (CopyMode.FILE.equals(copyMode)) {
+            if (target.exists() && Files.isSymbolicLink(target.toPath())) {
+                target.delete();
+            }
             overCopyFile(source, target);
         } else {
-            // TODO
-        }
-    }
-
-    public static final void copyStream(final InputStream in, final OutputStream out, final int bufferSize)
-            throws IOException {
-        byte[] buffer = new byte[bufferSize];
-        int read = in.read(buffer);
-        while (read >= 0) {
-            out.write(buffer, 0, read);
-            read = in.read(buffer);
-        }
-    }
-
-    private static void copyZipEntry(final ZipFile zipFile, final String entryName, final File destFile)
-            throws IOException {
-        ZipArchiveEntry entry = zipFile.getEntry(entryName);
-        InputStream inputStream = zipFile.getInputStream(entry);
-        destFile.createNewFile();
-        FileOutputStream fout = null;
-        try {
-
-            fout = new FileOutputStream(destFile);
-            DistUtil.copyStream(inputStream, fout, 100000);
-        } finally {
             try {
-                inputStream.close();
-            } finally {
-                if (fout != null) {
-                    fout.close();
-                }
-            }
-        }
+                if (target.exists()) {
+                    Path targetPath = target.toPath();
 
-    }
+                    if (Files.isSymbolicLink(targetPath)) {
 
-    private static File createShortCutCmdFile(final File tmpDir, final String fileName,
-            final Map<File, File> sourceAndTargetFiles) throws IOException {
-        File file = new File(tmpDir, fileName);
-        FileOutputStream fout = new FileOutputStream(file);
-        Charset defaultCharset = Charset.defaultCharset();
-        try {
-            OutputStreamWriter writer = new OutputStreamWriter(fout, defaultCharset);
-            try {
-                for (Entry<File, File> entry : sourceAndTargetFiles.entrySet()) {
-                    writer.write("mklink \"" + entry.getValue().getAbsolutePath() + "\" \""
-                            + entry.getKey().getAbsolutePath() + "\"\n");
-                }
-            } finally {
-                writer.close();
-            }
-        } finally {
-
-            fout.close();
-        }
-        return file;
-    }
-
-    public static void createSymbolicLinks(final Map<File, File> sourceAndTargetFileMap,
-            final Map<String, Artifact> artifactMap, final Log log) throws MojoExecutionException {
-
-        String javaSpecVersion = System.getProperty("java.vm.specification.version");
-
-        boolean symbolicLinksCreated = false;
-        boolean java7Compatible = (javaSpecVersion.compareTo("1.7") >= 0);
-        if (java7Compatible) {
-            symbolicLinksCreated = Java7SymbolicLinkUtil.createSymbolicLinks(sourceAndTargetFileMap, artifactMap, log);
-        }
-
-        if (!symbolicLinksCreated) {
-            if (DistUtil.isWindowsVistaOrGreater()) {
-                if (java7Compatible) {
-                    log.warn("Could not create symbolic links. As this is a windows "
-                            + "system trying with higher privileges.");
-                } else {
-                    log.info("As there is only Java 6 and windows, trying to run command line symlink creation");
-                }
-                try {
-                    DistUtil.tryRunningWithElevate(sourceAndTargetFileMap, artifactMap, log);
-                } catch (IOException e1) {
-                    log.error("Could not run with elevated privileges", e1);
-                    throw new MojoExecutionException("Could not create", e1);
-                }
-            } else if (OS_LINUX_UNIX.equals(DistUtil.getOS())) {
-                if (java7Compatible) {
-                    throw new MojoExecutionException("Could not create symbolic links on linux with Java 7");
-                }
-                log.info("As there is only Java 6 and linux, trying to run ln -s command");
-                Runtime runtime = Runtime.getRuntime();
-                for (Entry<File, File> entry : sourceAndTargetFileMap.entrySet()) {
-                    try {
-                        Process process =
-                                runtime.exec(new String[] { "ln", "-s", entry.getKey().getAbsolutePath(),
-                                        entry.getValue().getAbsolutePath() });
-                        process.waitFor();
-                        int exitCode = process.exitValue();
-                        if (exitCode != 0) {
-                            throw new MojoExecutionException("Exit code of command 'ln -s "
-                                    + entry.getValue().getAbsolutePath() + " " + entry.getKey().getAbsolutePath()
-                                    + "' returned with exit code " + exitCode);
+                        Path symbolicLinkTarget = Files.readSymbolicLink(targetPath);
+                        File symbolicLinkTargetFile = symbolicLinkTarget.toFile();
+                        if (!symbolicLinkTargetFile.equals(source)) {
+                            target.delete();
+                            Files.createSymbolicLink(targetPath, source.toPath());
                         }
-                    } catch (IOException e) {
-                        throw new MojoExecutionException("Could not create symbolic links", e);
-                    } catch (InterruptedException e) {
-                        throw new MojoExecutionException("Could not create symbolic links", e);
+                    } else {
+                        target.delete();
+                        Files.createSymbolicLink(targetPath, source.toPath());
                     }
+                } else {
+                    Files.createSymbolicLink(target.toPath(), source.toPath());
                 }
-            } else {
-                throw new MojoExecutionException("Symbolic link generation not supported with your Java version "
-                        + "andOperating systme. You need one of the followings: Java 1.7 or earlier Java with Linux /"
-                        + " Windows Vista or later.");
+            } catch (IOException e) {
+                throw new MojoExecutionException("Could not check the target of the symbolic link "
+                        + target.getAbsolutePath(), e);
             }
         }
-
     }
 
     public static void deleteFolderRecurse(final File folder) {
@@ -236,10 +143,10 @@ public class DistUtil {
         return same;
     }
 
-    private static boolean isWindowsVistaOrGreater() {
+    public static boolean isSymlinkCreationSupported() {
         String osname = System.getProperty("os.name").toLowerCase();
         String osversion = System.getProperty("os.version");
-        return ((osname.indexOf("win") >= 0) && (osversion.compareTo("6.0") >= 0));
+        return ((osname.indexOf("win") < 0) || ((osname.indexOf("win") >= 0) && (osversion.compareTo("6.0") >= 0)));
     }
 
     public static boolean overCopyFile(final File source, final File target) throws MojoExecutionException {
@@ -293,7 +200,7 @@ public class DistUtil {
     }
 
     public static final void replaceFileWithParsed(final File parseableFile, final VelocityContext context,
-            final String encoding) throws IOException {
+            final String encoding) throws IOException, MojoExecutionException {
         VelocityEngine ve = new VelocityEngine();
         File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
         FileOutputStream fout = null;
@@ -320,20 +227,7 @@ public class DistUtil {
                 fout.close();
             }
         }
-        fin = null;
-        fout = null;
-        try {
-            fin = new FileInputStream(tmpFile);
-            fout = new FileOutputStream(parseableFile);
-            DistUtil.copyStream(fin, fout, 2048);
-        } finally {
-            if (fin != null) {
-                fin.close();
-            }
-            if (fout != null) {
-                fout.close();
-            }
-        }
+        DistUtil.copyFile(tmpFile, parseableFile, CopyMode.FILE);
         tmpFile.delete();
     }
 
@@ -367,45 +261,6 @@ public class DistUtil {
             r = is.read(buffer, 0, amount - bout.size());
         }
         return bout.toByteArray();
-    }
-
-    private static void tryRunningWithElevate(final Map<File, File> sourceAndTargetFileMap,
-            final Map<String, Artifact> artifactMap, final Log log) throws IOException, MojoExecutionException {
-        Artifact elevateArtifact = artifactMap.get("com.jpassing:elevate");
-        ZipFile elevateZipFile = new ZipFile(elevateArtifact.getFile());
-        String tempDir = System.getProperty("java.io.tmpdir");
-        File tmpDirFile = new File(tempDir);
-        File elevateDirFile = new File(tmpDirFile, "everit-linkFolder-" + UUID.randomUUID());
-        elevateDirFile.mkdirs();
-        elevateDirFile.deleteOnExit();
-        File elevateExeFile = new File(elevateDirFile, "elevate.exe");
-        elevateExeFile.deleteOnExit();
-        try {
-            if (System.getProperty("os.arch").indexOf("64") >= 0) {
-                log.info("We have a 64 bit operating system so copying the 64 bit elevate exe file");
-                DistUtil.copyZipEntry(elevateZipFile, "bin/x64/Release/Elevate.exe", elevateExeFile);
-            } else {
-                log.info("We have a 32 bit operating system so copying the 32 bit elevate exe file");
-                DistUtil.copyZipEntry(elevateZipFile, "bin/x64/Release/Elevate.exe", elevateExeFile);
-            }
-        } finally {
-            elevateZipFile.close();
-        }
-
-        File cmdFile = DistUtil.createShortCutCmdFile(elevateDirFile, "dolinks.cmd", sourceAndTargetFileMap);
-        cmdFile.deleteOnExit();
-        ProcessBuilder processBuilder =
-                new ProcessBuilder(elevateExeFile.getAbsolutePath(), "-wait", cmdFile.getAbsolutePath());
-        log.info("Running: " + processBuilder.command());
-        Process process = processBuilder.start();
-        try {
-            process.waitFor();
-        } catch (InterruptedException e) {
-            throw new MojoExecutionException("Could not run goal with elevated privileges", e);
-        }
-        cmdFile.delete();
-        elevateExeFile.delete();
-        elevateDirFile.delete();
     }
 
     public static final void unpackZipFile(final File file, final File destinationDirectory)

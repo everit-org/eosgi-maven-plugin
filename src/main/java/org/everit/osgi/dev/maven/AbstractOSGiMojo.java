@@ -38,19 +38,19 @@ import org.osgi.framework.Constants;
 public abstract class AbstractOSGiMojo extends AbstractMojo {
 
     /**
+     * Comma separated list of the id of the environments that should be processed. Default is * that means all
+     * environments.
+     */
+    @Parameter(property = "eosgi.environmentIds", defaultValue = "*")
+    protected String environmentIds = "*";
+
+    /**
      * The environments on which the tests should run.
      */
     @Parameter
     protected EnvironmentConfiguration[] environments;
 
     private EnvironmentConfiguration[] environmentsToProcess;
-
-    /**
-     * Comma separated list of the id of the environments that should be processed. Default is * that means all
-     * environments.
-     */
-    @Parameter(property = "eosgi.environmentIds", defaultValue = "*")
-    protected String environmentIds = "*";
 
     /**
      * Map of plugin artifacts.
@@ -63,6 +63,108 @@ public abstract class AbstractOSGiMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     protected MavenProject project;
+
+    protected EnvironmentConfiguration getDefaultEnvironment() {
+        getLog().info("There is no environment specified in the project. Creating equinox environment with"
+                + " default settings");
+        EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
+        defaultEnvironment.setId("equinox");
+        defaultEnvironment.setFramework("equinox");
+        return defaultEnvironment;
+    }
+
+    public EnvironmentConfiguration[] getEnvironments() {
+        if (environments == null || environments.length == 0) {
+            environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
+        }
+        return environments;
+    }
+
+    /**
+     * Getting an array of the environment configurations that should be processed based on the value of the
+     * {@link #environmentIds} parameter. The value, that is returned, is calculated the first time the function is
+     * called.
+     * 
+     * @return The array of environment ids that should be processed.
+     */
+    protected EnvironmentConfiguration[] getEnvironmentsToProcess() {
+        if (environmentsToProcess != null) {
+            return environmentsToProcess;
+        }
+
+        if ("*".equals(environmentIds)) {
+            environmentsToProcess = getEnvironments();
+        } else {
+            String[] environmentIdArray = environmentIds.trim().split(",");
+
+            EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
+
+            List<EnvironmentConfiguration> result = new ArrayList<EnvironmentConfiguration>();
+            for (int i = 0; i < tmpEnvironments.length; i++) {
+                boolean found = false;
+                int j = 0, n = environmentIdArray.length;
+                while (!found && j < n) {
+                    if (environmentIdArray[j].equals(tmpEnvironments[j].getId())) {
+                        found = true;
+                        result.add(tmpEnvironments[i]);
+                    }
+                    j++;
+                }
+            }
+            environmentsToProcess = result.toArray(new EnvironmentConfiguration[result.size()]);
+        }
+        return environmentsToProcess;
+    }
+
+    /**
+     * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
+     * called therefore the developer should not call it inside an iteration.
+     * 
+     * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
+     * @throws MalformedURLException
+     *             if the URL for the artifact is broken.
+     */
+    protected List<ProcessedArtifact> getProcessedArtifacts() throws MalformedURLException {
+        @SuppressWarnings("unchecked")
+        List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+        availableArtifacts.add(project.getArtifact());
+
+        List<ProcessedArtifact> result = new ArrayList<ProcessedArtifact>();
+        for (Artifact artifact : availableArtifacts) {
+            if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
+                ProcessedArtifact processedArtifact = processArtifact(artifact);
+                result.add(processedArtifact);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Getting the normalized version of an artifact. The artifact has to have at least three digits inside the version
+     * separated by dots. If there are less than two dots inside the version it is extended with the necessary numbers
+     * of ".0".
+     * 
+     * @param version
+     *            The version that is checked.
+     * @return A normalizad version.
+     */
+    protected String normalizeVersion(final String version) {
+        int dotCount = 0;
+        char[] versionCharArray = version.toCharArray();
+        for (int i = 0, n = versionCharArray.length; (i < n) && (dotCount < 2); i++) {
+            if (versionCharArray[i] == '.') {
+                dotCount++;
+            }
+        }
+        StringBuilder result = new StringBuilder(version);
+        if (dotCount < 2) {
+            result.append(".0");
+        }
+        if (dotCount < 1) {
+            result.append(".0");
+        }
+        return result.toString();
+    }
 
     /**
      * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
@@ -132,104 +234,5 @@ public abstract class AbstractOSGiMojo extends AbstractMojo {
                 }
             }
         }
-    }
-
-    /**
-     * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
-     * called therefore the developer should not call it inside an iteration.
-     * 
-     * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
-     * @throws MalformedURLException
-     *             if the URL for the artifact is broken.
-     */
-    protected List<ProcessedArtifact> getProcessedArtifacts() throws MalformedURLException {
-        @SuppressWarnings("unchecked")
-        List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
-        availableArtifacts.add(project.getArtifact());
-
-        List<ProcessedArtifact> result = new ArrayList<ProcessedArtifact>();
-        for (Artifact artifact : availableArtifacts) {
-            if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
-                ProcessedArtifact processedArtifact = processArtifact(artifact);
-                result.add(processedArtifact);
-            }
-        }
-
-        ProcessedArtifact processedArtifact = processArtifact(project.getArtifact());
-        result.add(processedArtifact);
-
-        return result;
-    }
-
-    protected EnvironmentConfiguration getDefaultEnvironment() {
-        EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
-        defaultEnvironment.setId("equinox");
-        defaultEnvironment.setFramework("equinox");
-        return defaultEnvironment;
-    }
-
-    /**
-     * Getting an array of the environment configurations that should be processed based on the value of the
-     * {@link #environmentIds} parameter. The value, that is returned, is calculated the first time the function is
-     * called.
-     * 
-     * @return The array of environment ids that should be processed.
-     */
-    protected EnvironmentConfiguration[] getEnvironmentsToProcess() {
-        if (environmentsToProcess != null) {
-            return environmentsToProcess;
-        }
-
-        if ("*".equals(environmentIds)) {
-            environmentsToProcess = environments;
-        } else {
-            String[] environmentIdArray = environmentIds.trim().split(",");
-
-            EnvironmentConfiguration[] tmpEnvironments = environments;
-            if ((tmpEnvironments == null) || (tmpEnvironments.length == 0)) {
-                tmpEnvironments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
-            }
-            List<EnvironmentConfiguration> result = new ArrayList<EnvironmentConfiguration>();
-            for (int i = 0; i < tmpEnvironments.length; i++) {
-                boolean found = false;
-                int j = 0, n = environmentIdArray.length;
-                while (!found && j < n) {
-                    if (environmentIdArray[j].equals(environments[j].getId())) {
-                        found = true;
-                        result.add(environments[i]);
-                    }
-                    j++;
-                }
-            }
-            environmentsToProcess = result.toArray(new EnvironmentConfiguration[result.size()]);
-        }
-        return environmentsToProcess;
-    }
-
-    /**
-     * Getting the normalized version of an artifact. The artifact has to have at least three digits inside the version
-     * separated by dots. If there are less than two dots inside the version it is extended with the necessary numbers
-     * of ".0".
-     * 
-     * @param version
-     *            The version that is checked.
-     * @return A normalizad version.
-     */
-    protected String normalizeVersion(final String version) {
-        int dotCount = 0;
-        char[] versionCharArray = version.toCharArray();
-        for (int i = 0, n = versionCharArray.length; (i < n) && (dotCount < 2); i++) {
-            if (versionCharArray[i] == '.') {
-                dotCount++;
-            }
-        }
-        StringBuilder result = new StringBuilder(version);
-        if (dotCount < 2) {
-            result.append(".0");
-        }
-        if (dotCount < 1) {
-            result.append(".0");
-        }
-        return result.toString();
     }
 }

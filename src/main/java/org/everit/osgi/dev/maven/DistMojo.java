@@ -23,11 +23,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.zip.ZipFile;
 
@@ -59,7 +56,6 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
 import org.everit.osgi.dev.maven.util.DistUtil;
-import org.everit.osgi.dev.maven.util.EOsgiConstants;
 
 /**
  * Creates a distribution package for the project. Distribution packages may be provided as Environment parameters or
@@ -132,7 +128,7 @@ public class DistMojo extends AbstractOSGiMojo {
         }
     }
 
-    protected List<ArtifactWithSettings> convertBundleArtifactsToDistributed(
+    protected List<ArtifactWithSettings> convertProcessedArtifactsToDistributed(
             final EnvironmentConfiguration environment, final List<ProcessedArtifact> artifacts) {
 
         List<ArtifactWithSettings> distributedBundleArtifacts = new ArrayList<ArtifactWithSettings>();
@@ -166,6 +162,9 @@ public class DistMojo extends AbstractOSGiMojo {
             if (environmentCopyMode == null) {
                 environmentCopyMode = CopyMode.FILE;
             }
+            if (CopyMode.SYMBOLIC_LINK.equals(environmentCopyMode) && !DistUtil.isSymlinkCreationSupported()) {
+                throw new MojoExecutionException("It seems that the operating system does not support symbolic links");
+            }
 
             ZipFile distPackageZipFile = null;
             try {
@@ -178,18 +177,18 @@ public class DistMojo extends AbstractOSGiMojo {
                         DistUtil.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
                     }
                 }
-                List<ArtifactWithSettings> distributedBundleArtifacts =
-                        convertBundleArtifactsToDistributed(environment, processedArtifacts);
+                List<ArtifactWithSettings> distributedArtifacts =
+                        convertProcessedArtifactsToDistributed(environment, processedArtifacts);
 
                 DistributionPackage distributionPackage =
-                        parseConfiguration(distFolderFile, distributedBundleArtifacts, environment,
+                        parseConfiguration(distFolderFile, distributedArtifacts, environment,
                                 environmentCopyMode);
 
                 resolveAndCopyArtifacts(distributionPackage, distFolderFile);
 
-                parseParseables(distributionPackage, distFolderFile, distributedBundleArtifacts, environment);
+                parseParseables(distributionPackage, distFolderFile, distributedArtifacts, environment);
                 distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
-                        distFolderFile, distributedBundleArtifacts));
+                        distFolderFile, distributedArtifacts));
 
             } catch (IOException e) {
                 throw new MojoExecutionException("Could not uncompress distribution package file: "
@@ -245,15 +244,15 @@ public class DistMojo extends AbstractOSGiMojo {
     }
 
     protected DistributionPackage parseConfiguration(final File distFolderFile,
-            final List<ArtifactWithSettings> bundleArtifacts, final EnvironmentConfiguration environment,
-            final CopyMode copyMode)
+            final List<ArtifactWithSettings> distributedArtifacts, final EnvironmentConfiguration environment,
+            final CopyMode environmentCopyMode)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
         VelocityContext context = new VelocityContext();
-        context.put("bundleArtifacts", bundleArtifacts);
+        context.put("artifacts", distributedArtifacts);
         context.put("environment", environment);
-        context.put("copyMode", copyMode.toString());
+        context.put("copyMode", environmentCopyMode.value());
         try {
             DistUtil.replaceFileWithParsed(configFile, context, "UTF8");
         } catch (IOException e) {
@@ -263,10 +262,10 @@ public class DistMojo extends AbstractOSGiMojo {
     }
 
     protected void parseParseables(final DistributionPackage distributionPackage, final File distFolderFile,
-            final List<ArtifactWithSettings> bundleArtifacts, final EnvironmentConfiguration environment)
+            final List<ArtifactWithSettings> distributedArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         VelocityContext context = new VelocityContext();
-        context.put("bundleArtifacts", bundleArtifacts);
+        context.put("artifacts", distributedArtifacts);
         context.put("distributionPackage", distributionPackage);
         context.put("environment", environment);
         Parseables parseables = distributionPackage.getParseables();
@@ -355,7 +354,6 @@ public class DistMojo extends AbstractOSGiMojo {
                 .getArtifact();
 
         CopyMode environmentCopyMode = distributionPackage.getCopyMode();
-        Map<File, File> fileCopyMap = new HashMap<File, File>();
         for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
 
             String artifactType = artifact.getType();
@@ -380,7 +378,10 @@ public class DistMojo extends AbstractOSGiMojo {
             } catch (ArtifactNotFoundException e) {
                 throw new MojoExecutionException("Could not resolve artifact for creating distribution package", e);
             }
-            File targetFileFolder = new File(envDistFolderFile, artifact.getTargetFolder());
+            File targetFileFolder = envDistFolderFile;
+            if (artifact.getTargetFolder() != null) {
+                targetFileFolder = new File(envDistFolderFile, artifact.getTargetFolder());
+            }
             targetFileFolder.mkdirs();
             String targetFileName = artifact.getTargetFile();
             if (targetFileName == null) {
@@ -388,13 +389,12 @@ public class DistMojo extends AbstractOSGiMojo {
                 artifact.setTargetFile(targetFileName);
             }
             File targetFile = new File(targetFileFolder, targetFileName);
-            fileCopyMap.put(mavenArtifact.getFile(), targetFile);
-        }
 
-        if (EOsgiConstants.COPYMODE_SYMBOLIC_LINK.equals(environmentCopyMode)) {
-            for (Entry<File, File> fileCopyEntry : fileCopyMap.entrySet()) {
-                DistUtil.copyFile(fileCopyEntry.getKey(), fileCopyEntry.getValue(), environmentCopyMode);
+            CopyMode artifactCopyMode = environmentCopyMode;
+            if (artifact.getCopyMode() != null) {
+                artifactCopyMode = artifact.getCopyMode();
             }
+            DistUtil.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
         }
     }
 

@@ -48,24 +48,25 @@
     </complexType>
 
     <complexType name="Artifact">
-        <sequence>
-          <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
-          <element name="artifactId" type="string" minOccurs="1" maxOccurs="1"></element>
-          <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
-          <element name="type" type="string" minOccurs="0" maxOccurs="1"></element>
-          <element name="classifier" type="string" minOccurs="0" maxOccurs="1"></element>
-          <element name="osgiAction" type="tns:OSGiAction" minOccurs="0" maxOccurs="1">
-            <annotation>
-              <documentation>In case this is an OSGi bundle, additional behavior can be defined.</documentation>
-            </annotation></element>
-        </sequence>
-        <attribute name="targetFolder" type="string">
-            <annotation>
-                <documentation>The target path inside the generated
-                    distribution package</documentation>
-            </annotation>
-        </attribute>
-        <attribute name="targetFile" type="string"></attribute>
+      <sequence>
+        <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
+        <element name="artifactId" type="string" minOccurs="1" maxOccurs="1"></element>
+        <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
+        <element name="type" type="string" minOccurs="0" maxOccurs="1"></element>
+        <element name="classifier" type="string" minOccurs="0" maxOccurs="1"></element>
+        <element name="osgiAction" type="tns:OSGiAction" minOccurs="0" maxOccurs="1">
+          <annotation>
+            <documentation>In case this is an OSGi bundle, additional behavior can be defined.</documentation>
+          </annotation>
+        </element>
+      </sequence>
+      <attribute name="targetFolder" type="string">
+        <annotation>
+          <documentation>The target path inside the generated distribution package</documentation>
+        </annotation>
+      </attribute>
+      <attribute name="targetFile" type="string"></attribute>
+      <attribute name="copyMode" type="tns:CopyMode"></attribute>
     </complexType>
 
     <complexType name="Artifacts">
