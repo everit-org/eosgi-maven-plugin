@@ -63,6 +63,12 @@
     <maven.compiler.target>1.7</maven.compiler.target>
   </properties>
   
+  <developers>
+    <developer>
+      <name>Everit Team</name>
+    </developer>
+  </developers>
+  
   <build>
     <plugins>
       <plugin>
