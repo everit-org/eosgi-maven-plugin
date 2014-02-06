@@ -99,8 +99,10 @@
 
     <complexType name="Launcher">
         <sequence>
-            <element name="startCommand" type="tns:Command"></element>
-            <element name="killCommand" type="tns:Command"></element>
+            <element name="startCommand" type="tns:Command">
+              <annotation>
+                <documentation>The command that starts the framework. The framework should be started in interactive mode so a CTRL+C can be sent to it.</documentation>
+              </annotation></element>
         </sequence>
         <attribute name="os">
             <simpleType>

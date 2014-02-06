@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-public class DeamonFileWriterStreamPoller implements Closeable {
+public class DaemonFileWriterStreamPoller implements Closeable {
 
     private class PollerRunnable implements Runnable {
 
@@ -55,7 +55,7 @@ public class DeamonFileWriterStreamPoller implements Closeable {
 
     private InputStream inputStream;
 
-    public DeamonFileWriterStreamPoller(final InputStream inputStream, final File file) {
+    public DaemonFileWriterStreamPoller(final InputStream inputStream, final File file) {
         this.inputStream = inputStream;
         this.file = file;
     }

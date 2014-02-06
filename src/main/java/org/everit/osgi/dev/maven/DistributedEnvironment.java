@@ -74,4 +74,5 @@ public class DistributedEnvironment {
     public void setEnvironment(final EnvironmentConfiguration environment) {
         this.environment = environment;
     }
+
 }

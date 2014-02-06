@@ -64,6 +64,13 @@ public class EnvironmentConfiguration {
     private String id;
 
     /**
+     * The amount of time in milliseconds until the plugin waits for the environment to stop after a CTRL+C was sent.
+     * Default value is half a minute.
+     */
+    @Parameter
+    private int shutdownTimeout = 30000;
+
+    /**
      * System properties that will be added to the JVM of started OSGI container.
      * 
      */
@@ -71,11 +78,12 @@ public class EnvironmentConfiguration {
     private Map<String, String> systemProperties = new HashMap<String, String>();
 
     /**
-     * The timeout in milliseconds after the Tests should stop for sure. Default value is five minutes.
+     * The timeout in milliseconds after the Tests should be finished for sure. The environment will be stopped when
+     * this exceeds. Default value is five minutes.
      * 
      */
     @Parameter
-    private long timeout = 300000;
+    private int timeout = 300000;
 
     /**
      * The JVM options that will be applied during starting the OSGI Container.
@@ -104,11 +112,15 @@ public class EnvironmentConfiguration {
         return id;
     }
 
+    public int getShutdownTimeout() {
+        return shutdownTimeout;
+    }
+
     public Map<String, String> getSystemProperties() {
         return systemProperties;
     }
 
-    public long getTimeout() {
+    public int getTimeout() {
         return timeout;
     }
 
@@ -136,11 +148,15 @@ public class EnvironmentConfiguration {
         this.id = id;
     }
 
+    public void setShutdownTimeout(final int shutdownTimeout) {
+        this.shutdownTimeout = shutdownTimeout;
+    }
+
     public void setSystemProperties(final Map<String, String> systemProperties) {
         this.systemProperties = systemProperties;
     }
 
-    public void setTimeout(final long timeout) {
+    public void setTimeout(final int timeout) {
         this.timeout = timeout;
     }
 
@@ -150,10 +166,10 @@ public class EnvironmentConfiguration {
 
     @Override
     public String toString() {
-        return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", timeout=" + timeout
-                + ", frameworkStartLevel=" + frameworkStartLevel + ", defaultBundleStartLevel=" + bundleStartLevel
-                + ", bundleSettings=" + bundleSettings + ", vmOptions=" + vmOptions + ", systemProperties="
-                + systemProperties + "]";
+        return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", frameworkStartLevel="
+                + frameworkStartLevel + ", timeout=" + timeout + ", shutdownTimeout=" + shutdownTimeout
+                + ", bundleStartLevel=" + bundleStartLevel + ", bundleSettings=" + bundleSettings
+                + ", systemProperties=" + systemProperties + ", vmOptions=" + vmOptions + "]";
     }
 
 }

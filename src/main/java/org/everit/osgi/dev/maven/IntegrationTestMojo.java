@@ -27,8 +27,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 import java.util.jar.Attributes;
+import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -37,7 +37,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -49,6 +48,10 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.Launchers;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
+import org.rzo.yajsw.os.OperatingSystem;
+import org.rzo.yajsw.os.Process;
+import org.rzo.yajsw.os.ProcessManager;
+import org.rzo.yajsw.os.posix.bsd.BSDProcess;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -59,16 +62,21 @@ public class IntegrationTestMojo extends DistMojo {
 
     private class ShutdownHook extends Thread {
 
-        private TimeoutChecker timeoutChecker;
+        private final Process process;
 
-        public ShutdownHook(final TimeoutChecker timeoutChecker) {
-            this.timeoutChecker = timeoutChecker;
+        private final int shutdownTimeout;
+
+        public ShutdownHook(final Process process, final int shutdownTimeout) {
+            this.process = process;
+            this.shutdownTimeout = shutdownTimeout;
         }
 
         @Override
         public void run() {
-            timeoutChecker.timeoutHappen();
-            System.out.flush();
+            if (process.isRunning()) {
+                getLog().warn("Stopping process due to shutdown hook: " + process.getPid());
+                process.stop(shutdownTimeout, -1);
+            }
         }
     }
 
@@ -80,90 +88,6 @@ public class IntegrationTestMojo extends DistMojo {
         public int skipped;
         public int tests;
     }
-
-    private class TimeoutChecker implements Runnable {
-        private final ProcessBuilder killCommand;
-
-        private ShutdownHook shutdownHook;
-
-        private boolean stopped = false;
-
-        private final long timeout;
-
-        public TimeoutChecker(final long timeout, final ProcessBuilder killCommand) {
-            this.timeout = timeout;
-            this.killCommand = killCommand;
-            shutdownHook = new ShutdownHook(this);
-            Runtime.getRuntime().addShutdownHook(shutdownHook);
-
-        }
-
-        @Override
-        public void run() {
-            Log logger = getLog();
-            long startTime = new Date().getTime();
-            long lastLoggedTime = startTime;
-            while (!stopped) {
-                long currentTime = new Date().getTime();
-
-                if ((currentTime - lastLoggedTime) > 5000) {
-                    lastLoggedTime = currentTime;
-                    long runningSecs = (currentTime - startTime) / 1000;
-                    logger.info("Test server is running since " + runningSecs + " seconds. Please wait!");
-                }
-
-                if ((currentTime - startTime) > timeout) {
-                    logger.error("Timeout exceeded, forcing to stop server...");
-                    logger.info("If you need a higher timeout you can override the default five "
-                            + "minutes in the environment configuration");
-                    stop();
-                    timeoutHappen();
-                }
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    System.out.println("WARN: TimeoutChecker thread interrupted.");
-                    timeoutHappen();
-                }
-            }
-
-        }
-
-        public void stop() {
-            stopped = true;
-            if (shutdownHook != null) {
-                Runtime.getRuntime().removeShutdownHook(shutdownHook);
-            }
-        }
-
-        public void timeoutHappen() {
-            stopped = true;
-            StreamRedirector stdoutRedirector = null;
-            StreamRedirector stdErrorRedirector = null;
-            try {
-                Process killProcess = killCommand.start();
-                stdoutRedirector = new StreamRedirector(killProcess.getInputStream(), System.out, true, false);
-                stdErrorRedirector = new StreamRedirector(killProcess.getErrorStream(), System.out, true, false);
-
-                new Thread(stdErrorRedirector).start();
-                new Thread(stdoutRedirector).start();
-                try {
-                    killProcess.waitFor();
-                } catch (InterruptedException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            } finally {
-                stdErrorRedirector.stop();
-                stdoutRedirector.stop();
-            }
-        }
-    }
-
-    public static final String ENV_PROCESS_UNIQUE_ID = "EOSGI_PROCESS_ID";
 
     /**
      * Constant of the MANIFEST header key to count the {@link #expectedNumberOfIntegrationTests}.
@@ -236,9 +160,8 @@ public class IntegrationTestMojo extends DistMojo {
         File exitErrorFile = new File(resultFolder, TestRunnerConstants.SYSTEM_EXIT_ERROR_FILE_NAME);
         if (exitErrorFile.exists()) {
             StringBuilder sb = new StringBuilder();
-            FileInputStream fin = null;
-            try {
-                fin = new FileInputStream(exitErrorFile);
+
+            try (FileInputStream fin = new FileInputStream(exitErrorFile)) {
                 InputStreamReader reader = new InputStreamReader(fin);
                 BufferedReader br = new BufferedReader(reader);
                 String line = br.readLine();
@@ -250,14 +173,6 @@ public class IntegrationTestMojo extends DistMojo {
                 getLog().error("Could not find file " + exitErrorFile.getAbsolutePath(), e);
             } catch (IOException e) {
                 getLog().error("Error during reading exit error file " + exitErrorFile.getAbsolutePath(), e);
-            } finally {
-                if (fin != null) {
-                    try {
-                        fin.close();
-                    } catch (IOException e) {
-                        getLog().error("Could not close file " + exitErrorFile.getAbsolutePath(), e);
-                    }
-                }
             }
             getLog().error(
                     "Error during stopping the JVM of the environment " + environmentId
@@ -304,63 +219,88 @@ public class IntegrationTestMojo extends DistMojo {
             if (folder != null) {
                 commandFolder = new File(commandFolder, folder);
             }
-            ProcessBuilder pb = new ProcessBuilder(startCommand.getValue().split(" ")).directory(commandFolder);
 
             try {
 
                 File resultFolder = new File(testReportFolderFile, distributedEnvironment.getEnvironment().getId());
                 resultFolder.mkdirs();
 
-                pb.environment().put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
-                pb.environment().put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
-                UUID processUUID = UUID.randomUUID();
-                pb.environment().put(ENV_PROCESS_UNIQUE_ID, processUUID.toString());
-
                 File stdOutFile = new File(resultFolder, "system-out.txt");
                 File stdErrFile = new File(resultFolder, "system-error.txt");
 
-                Command killCommand = launcher.getKillCommand();
-                String killFolder = killCommand.getFolder();
-
-                File killCommandFolder = distributedEnvironment.getDistributionFolder();
-                if (killFolder != null) {
-                    killCommandFolder = new File(killCommandFolder, killFolder);
+                OperatingSystem operatingSystem = OperatingSystem.instance();
+                Process process;
+                getLog().info("Operating system is " + operatingSystem.getOperatingSystemName());
+                if (operatingSystem.getOperatingSystemName().toLowerCase().contains("linux")) {
+                    getLog().info("Starting BSD process");
+                    process = new BSDProcess();
+                } else {
+                    ProcessManager processManager = operatingSystem.processManagerInstance();
+                    process = processManager.createProcess();
                 }
 
-                ProcessBuilder killPB =
-                        new ProcessBuilder(killCommand.getValue().split(" ")).directory(killCommandFolder);
-                killPB.environment().put(ENV_PROCESS_UNIQUE_ID, processUUID.toString());
-                TimeoutChecker timeoutChecker =
-                        new TimeoutChecker(distributedEnvironment.getEnvironment().getTimeout(), killPB);
+                process.setCommand(startCommand.getValue().split(" "));
+                File tmpPath = File.createTempFile("eosgi-", "-tmp");
+                tmpPath.delete();
+                tmpPath.mkdir();
+                getLog().info("Setting tmp path: " + tmpPath.getAbsolutePath());
+                process.setTmpPath(tmpPath.getAbsolutePath());
+                process.setTeeName(null);
+                process.setPipeStreams(true, false);
+                process.setLogger(Logger.getLogger("eosgi"));
+                // process.setPipeStreams(true, true);
 
-                new Thread(timeoutChecker).start();
+                List<String[]> env = new ArrayList<>();
+                env.add(new String[] { TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString() });
+                env.add(new String[] { TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath() });
 
-                Process process = pb.start();
+                process.setEnvironment(env);
+                process.setWorkingDir(commandFolder.getAbsolutePath());
+
+                boolean timeoutHappened = false;
+                ShutdownHook shutdownHook = new ShutdownHook(process, distributedEnvironment.getEnvironment()
+                        .getShutdownTimeout());
+                Runtime.getRuntime().addShutdownHook(shutdownHook);
+
+                boolean started = process.start();
+                if (!started) {
+                    throw new MojoFailureException("Could not start environment with command " + process.getCommand()
+                            + " in working dir " + process.getWorkingDir());
+                }
 
                 InputStream processOutput = process.getInputStream();
-                DeamonFileWriterStreamPoller deamonFileWriterStreamPoller =
-                        new DeamonFileWriterStreamPoller(processOutput, stdOutFile);
+                DaemonFileWriterStreamPoller deamonFileWriterStreamPoller =
+                        new DaemonFileWriterStreamPoller(processOutput, stdOutFile);
                 deamonFileWriterStreamPoller.start();
 
-                DeamonFileWriterStreamPoller deamonStdErrPoller =
-                        new DeamonFileWriterStreamPoller(process.getErrorStream(), stdErrFile);
+                DaemonFileWriterStreamPoller deamonStdErrPoller =
+                        new DaemonFileWriterStreamPoller(process.getErrorStream(), stdErrFile);
                 deamonStdErrPoller.start();
 
-                int exitValue = 0;
-                try {
-                    exitValue = process.waitFor();
-                } catch (InterruptedException e) {
-                    throw new MojoExecutionException("Running test server interrupted", e);
-                } finally {
-                    deamonFileWriterStreamPoller.close();
-                    deamonStdErrPoller.close();
-                    timeoutChecker.stop();
+                waitForProcessWithTimeoutAndLogging(process, distributedEnvironment.getEnvironment());
+
+                if (process.isRunning()) {
+                    getLog().warn("Test running process did not stop until timeout. Forcing to stop it...");
+                    timeoutHappened = true;
+                    process.stop(distributedEnvironment.getEnvironment().getShutdownTimeout(), -1);
                 }
 
+                deamonFileWriterStreamPoller.close();
+                deamonStdErrPoller.close();
+                DistUtil.deleteFolderRecurse(tmpPath);
+
                 String environmentId = distributedEnvironment.getEnvironment().getId();
+
+                if (timeoutHappened) {
+                    throw new MojoExecutionException("Test process of environment " + environmentId
+                            + " did not finish within timeout");
+                }
+
                 boolean exitError = checkExitError(resultFolder, environmentId);
-                if (exitValue != 0) {
-                    throw new MojoExecutionException("Test Process finished with exit code " + exitValue);
+                int exitCode = process.getExitCode();
+                if (exitCode != 0) {
+                    throw new MojoExecutionException("Test Process of environment " + environmentId
+                            + " finished with exit code " + exitCode);
                 }
 
                 getLog().info("Analyzing test results...");
@@ -513,5 +453,32 @@ public class IntegrationTestMojo extends DistMojo {
 
     public void setJacoco(final JacocoSettings jacoco) {
         this.jacoco = jacoco;
+    }
+
+    private void waitForProcessWithTimeoutAndLogging(final Process process,
+            final EnvironmentConfiguration environment) {
+        final long loggingInterval = 5000;
+        final long timeout = environment.getTimeout();
+        final long startTime = System.currentTimeMillis();
+
+        long nextExpectedLogging = startTime + loggingInterval;
+
+        final long latestEndTime = startTime + timeout;
+        long currentTime = startTime;
+        while (process.isRunning() && currentTime < latestEndTime) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                getLog().info("Waiting for tests was interrupted.");
+                return;
+            }
+            if (currentTime > nextExpectedLogging) {
+                long secondsSinceStart = (nextExpectedLogging - startTime) / 1000;
+                getLog().info("Waiting for test results since " + secondsSinceStart + "s");
+                nextExpectedLogging = nextExpectedLogging + loggingInterval;
+            }
+            currentTime = System.currentTimeMillis();
+        }
     }
 }
