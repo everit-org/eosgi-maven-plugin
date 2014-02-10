@@ -240,7 +240,7 @@ public class IntegrationTestMojo extends DistMojo {
                     ProcessManager processManager = operatingSystem.processManagerInstance();
                     process = processManager.createProcess();
                 }
-                process.setVisible(false);
+                process.setTitle("EOSGi-TestProcess - " + distributedEnvironment.getEnvironment().getId());
 
                 process.setCommand(startCommand.getValue().split(" "));
                 File tmpPath = File.createTempFile("eosgi-", "-tmp");
