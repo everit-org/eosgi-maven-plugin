@@ -265,7 +265,6 @@ public class IntegrationTestMojo extends DistMojo {
                 boolean timeoutHappened = false;
                 ShutdownHook shutdownHook = new ShutdownHook(process, distributedEnvironment.getEnvironment()
                         .getShutdownTimeout());
-                shutdownHook.setDaemon(false);
                 Runtime.getRuntime().addShutdownHook(shutdownHook);
 
                 boolean started = process.start();
