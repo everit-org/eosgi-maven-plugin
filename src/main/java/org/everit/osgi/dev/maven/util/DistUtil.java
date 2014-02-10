@@ -28,7 +28,11 @@ import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -46,6 +50,15 @@ public class DistUtil {
     public static final String OS_SUNOS = "sunos";
 
     public static final String OS_WINDOWS = "windows";
+
+    public static List<String[]> convertMapToList(final Map<String, String> map) {
+        List<String[]> result = new ArrayList<>();
+        for (Entry<String, String> entry : map.entrySet()) {
+            String[] newEntry = new String[] { entry.getKey(), entry.getValue() };
+            result.add(newEntry);
+        }
+        return result;
+    }
 
     public static void copyDirectory(final File sourceLocation, final File targetLocation, final CopyMode copyMode)
             throws IOException, MojoExecutionException {

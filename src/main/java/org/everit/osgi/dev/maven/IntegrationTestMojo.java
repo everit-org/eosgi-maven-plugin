@@ -25,8 +25,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.Attributes;
 import java.util.logging.Logger;
 
@@ -250,9 +252,11 @@ public class IntegrationTestMojo extends DistMojo {
                 process.setLogger(Logger.getLogger("eosgi"));
                 // process.setPipeStreams(true, true);
 
-                List<String[]> env = new ArrayList<>();
-                env.add(new String[] { TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString() });
-                env.add(new String[] { TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath() });
+                Map<String, String> envMap = new HashMap<String, String>(System.getenv());
+                envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
+                envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
+
+                List<String[]> env = DistUtil.convertMapToList(envMap);
 
                 process.setEnvironment(env);
                 process.setWorkingDir(commandFolder.getAbsolutePath());
