@@ -240,7 +240,7 @@ public class IntegrationTestMojo extends DistMojo {
                     ProcessManager processManager = operatingSystem.processManagerInstance();
                     process = processManager.createProcess();
                 }
-                process.setTitle("EOSGi-TestProcess - " + distributedEnvironment.getEnvironment().getId());
+                process.setTitle("EOSGi TestProcess - " + distributedEnvironment.getEnvironment().getId());
 
                 process.setCommand(startCommand.getValue().split(" "));
                 File tmpPath = File.createTempFile("eosgi-", "-tmp");
@@ -265,6 +265,7 @@ public class IntegrationTestMojo extends DistMojo {
                 boolean timeoutHappened = false;
                 ShutdownHook shutdownHook = new ShutdownHook(process, distributedEnvironment.getEnvironment()
                         .getShutdownTimeout());
+                shutdownHook.setDaemon(false);
                 Runtime.getRuntime().addShutdownHook(shutdownHook);
 
                 boolean started = process.start();
