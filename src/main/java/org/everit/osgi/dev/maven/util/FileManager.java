@@ -155,14 +155,14 @@ public class FileManager implements AutoCloseable {
                         File symbolicLinkTargetFile = symbolicLinkTarget.toFile();
                         if (!symbolicLinkTargetFile.equals(source)) {
                             target.delete();
-                            Files.createSymbolicLink(targetPath, source.toPath());
+                            createSymbolicLink(target, source);
                         }
                     } else {
                         target.delete();
-                        Files.createSymbolicLink(targetPath, source.toPath());
+                        createSymbolicLink(target, source);
                     }
                 } else {
-                    Files.createSymbolicLink(target.toPath(), source.toPath());
+                    createSymbolicLink(target, source);
                 }
             } catch (IOException e) {
                 throw new MojoExecutionException("Could not check the target of the symbolic link "
