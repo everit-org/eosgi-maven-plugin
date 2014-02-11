@@ -29,20 +29,61 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
+ * This class is intended to internal usage only!
+ * 
  * The purpose of this class to make it possible to create symbolic links in elevated mode on windows systems. The main
  * class takes one argument that is a port where a server will listen. The socket server accepts two commands:
  * <ul>
  * <li>createSymbolicLink sourceURI targetURI</li>
- * <li>Stop</li>
+ * <li>stop</li>
  * </ul>
  */
 public class ElevatedSymbolicLinkServer {
 
+    public static final String COMMAND_CREATE_SYMBOLIC_LINK = "createSymbolicLink";
+
+    private static final String COMMAND_STOP = "stop";
+
     private static ServerSocket serverSocket;
 
+    private static void createTestSymbolicLink() throws IOException {
+        File tempFile = null;
+        File tmpSymbolicLinkFile = null;
+        try {
+            tempFile = File.createTempFile("eosgi-", "-testFile");
+            tmpSymbolicLinkFile = File.createTempFile("eosgi-", "-testSymbolicLink");
+            tmpSymbolicLinkFile.delete();
+
+            Path tmpSymbolicLinkPath = tmpSymbolicLinkFile.toPath();
+            Files.createSymbolicLink(tmpSymbolicLinkPath, tempFile.toPath());
+
+            Path originalPath = Files.readSymbolicLink(tmpSymbolicLinkPath);
+            File originalFile = originalPath.toFile();
+            if (!originalFile.equals(tempFile)) {
+                throw new IOException("It seems that the system cannot handle symbolic links. "
+                        + "Error during checking test symbolic links. " + tempFile + " and " + originalFile
+                        + " should be the same.");
+            }
+        } finally {
+            if (tmpSymbolicLinkFile != null) {
+                tmpSymbolicLinkFile.delete();
+            }
+            if (tempFile != null) {
+                tempFile.delete();
+            }
+        }
+    }
+
     public static void main(final String[] args) {
+        try {
+            createTestSymbolicLink();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         int port = Integer.valueOf(args[0]);
         try {
             InetAddress localAddress = InetAddress.getLocalHost();
@@ -55,7 +96,7 @@ public class ElevatedSymbolicLinkServer {
             String line = br.readLine();
             boolean stopped = false;
             while (!stopped && line != null) {
-                if (!line.equals("stop")) {
+                if (!line.equals(COMMAND_STOP)) {
                     processLine(line);
                     line = br.readLine();
                 } else {
@@ -78,10 +119,10 @@ public class ElevatedSymbolicLinkServer {
         }
     }
 
-    private static void processLine(String line) {
-        if (line.startsWith("createSymbolicLink")) {
+    private static void processLine(final String line) {
+        if (line.startsWith(COMMAND_CREATE_SYMBOLIC_LINK)) {
 
-            String[] fileURIs = line.substring("createSymbolicLink".length() + 1).split(" ");
+            String[] fileURIs = line.substring(COMMAND_CREATE_SYMBOLIC_LINK.length() + 1).split(" ");
             String sourceURIString = fileURIs[0];
             String targetURIString = fileURIs[1];
             try {

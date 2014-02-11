@@ -55,7 +55,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
-import org.everit.osgi.dev.maven.util.DistUtil;
+import org.everit.osgi.dev.maven.util.FileManager;
 
 /**
  * Creates a distribution package for the project. Distribution packages may be provided as Environment parameters or
@@ -97,6 +97,8 @@ public class DistMojo extends AbstractOSGiMojo {
 
     @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
+
+    private FileManager fileManager = null;
 
     @Parameter(defaultValue = "${localRepository}")
     protected ArtifactRepository localRepository;
@@ -140,67 +142,77 @@ public class DistMojo extends AbstractOSGiMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        List<ProcessedArtifact> processedArtifacts;
-        File globalDistFolderFile = new File(getDistFolder());
+        fileManager = new FileManager(getLog());
         try {
-            processedArtifacts = getProcessedArtifacts();
-        } catch (MalformedURLException e) {
-            throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
-        }
-
-        distributedEnvironments = new ArrayList<DistributedEnvironment>();
-        for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
-            Artifact distPackageArtifact = resolveDistPackage(environment);
-            File distPackageFile = distPackageArtifact.getFile();
-            File distFolderFile = new File(globalDistFolderFile, environment.getId());
-
-            CopyMode environmentCopyMode = (getCopyMode() != null) ? CopyMode.fromValue(getCopyMode()) : null;
-            DistributionPackage existingDistConfig = readDistConfig(distFolderFile);
-            if (existingDistConfig != null) {
-                environmentCopyMode = existingDistConfig.getCopyMode();
-            }
-            if (environmentCopyMode == null) {
-                environmentCopyMode = CopyMode.FILE;
-            }
-            if (CopyMode.SYMBOLIC_LINK.equals(environmentCopyMode) && !DistUtil.isSymlinkCreationSupported()) {
-                throw new MojoExecutionException("It seems that the operating system does not support symbolic links");
-            }
-
-            ZipFile distPackageZipFile = null;
+            List<ProcessedArtifact> processedArtifacts;
+            File globalDistFolderFile = new File(getDistFolder());
             try {
-                distPackageZipFile = new ZipFile(distPackageFile);
-                DistUtil.unpackZipFile(distPackageFile, distFolderFile);
+                processedArtifacts = getProcessedArtifacts();
+            } catch (MalformedURLException e) {
+                throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
+            }
 
-                if (sourceDistPath != null) {
-                    File sourceDistPathFile = new File(sourceDistPath);
-                    if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
-                        DistUtil.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
+            distributedEnvironments = new ArrayList<DistributedEnvironment>();
+            for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
+                Artifact distPackageArtifact = resolveDistPackage(environment);
+                File distPackageFile = distPackageArtifact.getFile();
+                File distFolderFile = new File(globalDistFolderFile, environment.getId());
+
+                CopyMode environmentCopyMode = (getCopyMode() != null) ? CopyMode.fromValue(getCopyMode()) : null;
+                DistributionPackage existingDistConfig = readDistConfig(distFolderFile);
+                if (existingDistConfig != null) {
+                    environmentCopyMode = existingDistConfig.getCopyMode();
+                }
+                if (environmentCopyMode == null) {
+                    environmentCopyMode = CopyMode.FILE;
+                }
+                if (CopyMode.SYMBOLIC_LINK.equals(environmentCopyMode) && !fileManager.isSystemSymbolicLinkCapable()) {
+                    throw new MojoExecutionException(
+                            "It seems that the operating system does not support symbolic links");
+                }
+
+                ZipFile distPackageZipFile = null;
+                try {
+                    distPackageZipFile = new ZipFile(distPackageFile);
+                    fileManager.unpackZipFile(distPackageFile, distFolderFile);
+
+                    if (sourceDistPath != null) {
+                        File sourceDistPathFile = new File(sourceDistPath);
+                        if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
+                            fileManager.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
+                        }
+                    }
+                    List<ArtifactWithSettings> distributedArtifacts =
+                            convertProcessedArtifactsToDistributed(environment, processedArtifacts);
+
+                    DistributionPackage distributionPackage =
+                            parseConfiguration(distFolderFile, distributedArtifacts, environment,
+                                    environmentCopyMode);
+
+                    resolveAndCopyArtifacts(distributionPackage, distFolderFile);
+
+                    parseParseables(distributionPackage, distFolderFile, distributedArtifacts, environment);
+                    distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
+                            distFolderFile, distributedArtifacts));
+
+                } catch (IOException e) {
+                    throw new MojoExecutionException("Could not uncompress distribution package file: "
+                            + distPackageFile.toString(), e);
+                } finally {
+                    if (distPackageZipFile != null) {
+                        try {
+                            distPackageZipFile.close();
+                        } catch (IOException e) {
+                            getLog().error("Could not close distribution package zip file: " + distPackageZipFile, e);
+                        }
                     }
                 }
-                List<ArtifactWithSettings> distributedArtifacts =
-                        convertProcessedArtifactsToDistributed(environment, processedArtifacts);
-
-                DistributionPackage distributionPackage =
-                        parseConfiguration(distFolderFile, distributedArtifacts, environment,
-                                environmentCopyMode);
-
-                resolveAndCopyArtifacts(distributionPackage, distFolderFile);
-
-                parseParseables(distributionPackage, distFolderFile, distributedArtifacts, environment);
-                distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
-                        distFolderFile, distributedArtifacts));
-
+            }
+        } finally {
+            try {
+                fileManager.close();
             } catch (IOException e) {
-                throw new MojoExecutionException("Could not uncompress distribution package file: "
-                        + distPackageFile.toString(), e);
-            } finally {
-                if (distPackageZipFile != null) {
-                    try {
-                        distPackageZipFile.close();
-                    } catch (IOException e) {
-                        getLog().error("Could not close distribution package zip file: " + distPackageZipFile, e);
-                    }
-                }
+                getLog().error("Could not close file manager", e);
             }
         }
     }
@@ -254,7 +266,7 @@ public class DistMojo extends AbstractOSGiMojo {
         context.put("environment", environment);
         context.put("copyMode", environmentCopyMode.value());
         try {
-            DistUtil.replaceFileWithParsed(configFile, context, "UTF8");
+            fileManager.replaceFileWithParsed(configFile, context, "UTF8");
         } catch (IOException e) {
             throw new MojoExecutionException("Could not run velocity on configuration file: " + configFile.getName(), e);
         }
@@ -279,7 +291,7 @@ public class DistMojo extends AbstractOSGiMojo {
                             + parseableFile.getAbsolutePath());
                 }
                 try {
-                    DistUtil.replaceFileWithParsed(parseableFile, context, p.getEncoding());
+                    fileManager.replaceFileWithParsed(parseableFile, context, p.getEncoding());
                 } catch (IOException e) {
                     throw new MojoExecutionException("Could not replace parseable with parsed content: " + p.getPath(),
                             e);
@@ -394,7 +406,7 @@ public class DistMojo extends AbstractOSGiMojo {
             if (artifact.getCopyMode() != null) {
                 artifactCopyMode = artifact.getCopyMode();
             }
-            DistUtil.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
+            fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
         }
     }
 
