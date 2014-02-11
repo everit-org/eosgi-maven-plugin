@@ -195,7 +195,7 @@ public class FileManager implements AutoCloseable {
             try {
                 OutputStream outputStream = symbolicLinkServerSocket.getOutputStream();
                 String command = ElevatedSymbolicLinkServer.COMMAND_CREATE_SYMBOLIC_LINK + " "
-                        + target.toURI().toString() + " " + symbolicLinkFile.toURI().toString();
+                        + target.toURI().toString() + " " + symbolicLinkFile.toURI().toString() + "\n";
                 outputStream.write(command.getBytes(Charset.defaultCharset()));
             } catch (IOException e) {
                 throw new MojoExecutionException("Could not open stream to elevated symbolic link service", e);
