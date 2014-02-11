@@ -113,6 +113,11 @@ public class IntegrationTestMojo extends DistMojo {
     protected JacocoSettings jacoco;
 
     /**
+     * Skipping this plugin.
+     */
+    @Parameter(property = "maven.test.skip", defaultValue = "false")
+    protected boolean skipTests = false;
+    /**
      * The folder where the integration test reports will be placed. Please note that the content of this folder will be
      * deleted before running the tests.
      */
@@ -188,6 +193,10 @@ public class IntegrationTestMojo extends DistMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        if (skipTests) {
+            return;
+        }
+
         processJacocoSettings();
         super.execute();
 

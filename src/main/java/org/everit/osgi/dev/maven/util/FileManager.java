@@ -113,7 +113,7 @@ public class FileManager implements AutoCloseable {
         }
         if (symbolicLinkServerSocket != null) {
             OutputStream outputStream = symbolicLinkServerSocket.getOutputStream();
-            outputStream.write("stop".getBytes(Charset.defaultCharset()));
+            outputStream.write("stop\n".getBytes(Charset.defaultCharset()));
             symbolicLinkServerSocket.close();
             symbolicLinkServerSocket = null;
         }

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.zip.ZipFile;
 
@@ -55,6 +56,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
+import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.maven.util.FileManager;
 
 /**
@@ -130,6 +132,20 @@ public class DistMojo extends AbstractOSGiMojo {
         }
     }
 
+    protected void addDefaultSettingsToEnvironment(final EnvironmentConfiguration environment)
+            throws MojoExecutionException {
+        String environmentId = environment.getId();
+        Map<String, String> systemProperties = environment.getSystemProperties();
+        String currentValue = systemProperties.get(EOsgiConstants.SYSPROP_ENVIRONMENT_ID);
+        if (currentValue != null && !currentValue.equals(environmentId)) {
+            throw new MojoExecutionException("If defined, the system property " + EOsgiConstants.SYSPROP_ENVIRONMENT_ID
+                    + " must be the same as environment id: " + environment.getId());
+        }
+        if (currentValue == null) {
+            systemProperties.put(EOsgiConstants.SYSPROP_ENVIRONMENT_ID, environmentId);
+        }
+    }
+
     protected List<ArtifactWithSettings> convertProcessedArtifactsToDistributed(
             final EnvironmentConfiguration environment, final List<ProcessedArtifact> artifacts) {
 
@@ -154,6 +170,7 @@ public class DistMojo extends AbstractOSGiMojo {
 
             distributedEnvironments = new ArrayList<DistributedEnvironment>();
             for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
+                addDefaultSettingsToEnvironment(environment);
                 Artifact distPackageArtifact = resolveDistPackage(environment);
                 File distPackageFile = distPackageArtifact.getFile();
                 File distFolderFile = new File(globalDistFolderFile, environment.getId());
