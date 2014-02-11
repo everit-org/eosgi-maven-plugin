@@ -221,15 +221,15 @@ public class FileManager implements AutoCloseable {
             log.info("Trying port if it is free to start the elevated symboliclink server " + port);
 
             try (Socket socket = new Socket(localAddress, port)) {
-                freePort = socket.getPort();
-            } catch (IOException e) {
                 String message = "Port " + port + " is not available.";
                 if (i == n - 1) {
                     message += " Trying another one";
                 } else {
-                    message += " This was the last try. Message of exception is " + e.getMessage();
+                    message += " This was the last try.";
                 }
                 log.info(message);
+            } catch (IOException e) {
+                freePort = port;
             }
         }
 
