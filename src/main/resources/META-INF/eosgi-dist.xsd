@@ -54,7 +54,7 @@
         <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
         <element name="type" type="string" minOccurs="0" maxOccurs="1"></element>
         <element name="classifier" type="string" minOccurs="0" maxOccurs="1"></element>
-        <element name="osgiAction" type="tns:OSGiAction" minOccurs="0" maxOccurs="1">
+        <element name="bundle" type="tns:Bundle" minOccurs="0" maxOccurs="1">
           <annotation>
             <documentation>In case this is an OSGi bundle, additional behavior can be defined.</documentation>
           </annotation>
@@ -124,15 +124,25 @@
         </simpleContent>
     </complexType>
 
-    <complexType name="OSGiAction">
-      <attribute name="start" type="boolean" use="required"></attribute>
-      <attribute name="startLevel" type="int" use="optional"></attribute>
+    <complexType name="Bundle">
+      <attribute name="action" type="tns:OSGiAction" use="required"></attribute>
+      <attribute name="symbolicName" type="string"></attribute>
+      <attribute name="version" type="string"></attribute>
+        <attribute name="startLevel" type="int" use="optional"></attribute>
     </complexType>
 
     <simpleType name="CopyMode">
       <restriction base="string">
         <enumeration value="file"></enumeration>
         <enumeration value="symbolicLink"></enumeration>
+      </restriction>
+    </simpleType>
+
+    <simpleType name="OSGiAction">
+      <restriction base="string">
+        <enumeration value="none"></enumeration>
+        <enumeration value="install"></enumeration>
+        <enumeration value="start"></enumeration>
       </restriction>
     </simpleType>
 </schema>

@@ -126,8 +126,8 @@ public class IntegrationTestMojo extends DistMojo {
 
     private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
         int result = 0;
-        for (ArtifactWithSettings bundleArtifact : distributedEnvironment.getBundleArtifacts()) {
-            Attributes mainAttributes = bundleArtifact.getManifest().getMainAttributes();
+        for (DistributableArtifact distributableArtifact : distributedEnvironment.getDistributableArtifacts()) {
+            Attributes mainAttributes = distributableArtifact.getManifest().getMainAttributes();
             String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
             if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
                 long currentExpectedNumber = Long.valueOf(currentExpectedNumberString).longValue();

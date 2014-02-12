@@ -23,7 +23,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -41,6 +40,7 @@ import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
 import org.apache.maven.artifact.resolver.ArtifactResolutionException;
 import org.apache.maven.artifact.resolver.ArtifactResolver;
+import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
@@ -56,6 +56,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
+import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.maven.util.FileManager;
 
@@ -66,7 +67,7 @@ import org.everit.osgi.dev.maven.util.FileManager;
  */
 @Mojo(name = "dist", defaultPhase = LifecyclePhase.PACKAGE, requiresProject = true,
         requiresDependencyResolution = ResolutionScope.COMPILE)
-public class DistMojo extends AbstractOSGiMojo {
+public class DistMojo extends AbstractMojo {
 
     @Component
     protected ArtifactFactory artifactFactory;
@@ -97,6 +98,21 @@ public class DistMojo extends AbstractOSGiMojo {
 
     protected List<DistributedEnvironment> distributedEnvironments;
 
+    /**
+     * Comma separated list of the id of the environments that should be processed. Default is * that means all
+     * environments.
+     */
+    @Parameter(property = "eosgi.environmentIds", defaultValue = "*")
+    protected String environmentIds = "*";
+
+    /**
+     * The environments on which the tests should run.
+     */
+    @Parameter
+    protected EnvironmentConfiguration[] environments;
+
+    private EnvironmentConfiguration[] environmentsToProcess;
+
     @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
 
@@ -104,6 +120,18 @@ public class DistMojo extends AbstractOSGiMojo {
 
     @Parameter(defaultValue = "${localRepository}")
     protected ArtifactRepository localRepository;
+
+    /**
+     * Map of plugin artifacts.
+     */
+    @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
+    protected Map<String, Artifact> pluginArtifactMap;
+
+    /**
+     * The Maven project.
+     */
+    @Parameter(defaultValue = "${project}", readonly = true, required = true)
+    protected MavenProject project;
 
     @Parameter(defaultValue = "${project.remoteArtifactRepositories}")
     protected List<ArtifactRepository> remoteRepositories;
@@ -146,30 +174,76 @@ public class DistMojo extends AbstractOSGiMojo {
         }
     }
 
-    protected List<ArtifactWithSettings> convertProcessedArtifactsToDistributed(
-            final EnvironmentConfiguration environment, final List<ProcessedArtifact> artifacts) {
+    protected void distributeArtifacts(final DistributionPackage distributionPackage, final File envDistFolderFile)
+            throws MojoExecutionException {
 
-        List<ArtifactWithSettings> distributedBundleArtifacts = new ArrayList<ArtifactWithSettings>();
-        for (ProcessedArtifact artifact : artifacts) {
-            distributedBundleArtifacts.add(generateDistributedArtifact(environment, artifact));
+        Artifacts artifactsJaxbObj = distributionPackage.getArtifacts();
+        if (artifactsJaxbObj == null) {
+            return;
         }
-        return distributedBundleArtifacts;
+        List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts = artifactsJaxbObj
+                .getArtifact();
+
+        CopyMode environmentCopyMode = distributionPackage.getCopyMode();
+        for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
+
+            String artifactType = artifact.getType();
+            if (artifactType == null) {
+                artifactType = "jar";
+            }
+            Artifact mavenArtifact = null;
+            if (artifact.getClassifier() == null) {
+                mavenArtifact =
+                        artifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(),
+                                artifact.getVersion(), "compile", artifactType);
+            } else {
+                mavenArtifact =
+                        artifactFactory.createArtifactWithClassifier(artifact.getGroupId(), artifact.getArtifactId(),
+                                artifact.getVersion(), artifactType, artifact.getClassifier());
+
+            }
+            try {
+                artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
+            } catch (ArtifactResolutionException e) {
+                throw new MojoExecutionException("Could not resolve artifact for creating distribution package", e);
+            } catch (ArtifactNotFoundException e) {
+                throw new MojoExecutionException("Could not resolve artifact for creating distribution package", e);
+            }
+            File targetFileFolder = envDistFolderFile;
+            if (artifact.getTargetFolder() != null) {
+                targetFileFolder = new File(envDistFolderFile, artifact.getTargetFolder());
+            }
+            targetFileFolder.mkdirs();
+            String targetFileName = artifact.getTargetFile();
+            if (targetFileName == null) {
+                targetFileName = mavenArtifact.getFile().getName();
+                artifact.setTargetFile(targetFileName);
+            }
+            File targetFile = new File(targetFileFolder, targetFileName);
+
+            CopyMode artifactCopyMode = environmentCopyMode;
+            if (artifact.getCopyMode() != null) {
+                artifactCopyMode = artifact.getCopyMode();
+            }
+            fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
+        }
     }
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         fileManager = new FileManager(getLog());
         try {
-            List<ProcessedArtifact> processedArtifacts;
+            List<DistributableArtifact> processedArtifacts;
             File globalDistFolderFile = new File(getDistFolder());
-            try {
-                processedArtifacts = getProcessedArtifacts();
-            } catch (MalformedURLException e) {
-                throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
-            }
 
             distributedEnvironments = new ArrayList<DistributedEnvironment>();
             for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
+                try {
+                    processedArtifacts = generateDistributableArtifacts(environment);
+                } catch (MalformedURLException e) {
+                    throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
+                }
+
                 addDefaultSettingsToEnvironment(environment);
                 Artifact distPackageArtifact = resolveDistPackage(environment);
                 File distPackageFile = distPackageArtifact.getFile();
@@ -199,18 +273,16 @@ public class DistMojo extends AbstractOSGiMojo {
                             fileManager.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
                         }
                     }
-                    List<ArtifactWithSettings> distributedArtifacts =
-                            convertProcessedArtifactsToDistributed(environment, processedArtifacts);
 
                     DistributionPackage distributionPackage =
-                            parseConfiguration(distFolderFile, distributedArtifacts, environment,
+                            parseConfiguration(distFolderFile, processedArtifacts, environment,
                                     environmentCopyMode);
 
-                    resolveAndCopyArtifacts(distributionPackage, distFolderFile);
+                    distributeArtifacts(distributionPackage, distFolderFile);
 
-                    parseParseables(distributionPackage, distFolderFile, distributedArtifacts, environment);
+                    parseParseables(distributionPackage, distFolderFile, processedArtifacts, environment);
                     distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
-                            distFolderFile, distributedArtifacts));
+                            distFolderFile, processedArtifacts));
 
                 } catch (IOException e) {
                     throw new MojoExecutionException("Could not uncompress distribution package file: "
@@ -234,34 +306,17 @@ public class DistMojo extends AbstractOSGiMojo {
         }
     }
 
-    protected ArtifactWithSettings generateDistributedArtifact(final EnvironmentConfiguration environment,
-            final ProcessedArtifact artifact) {
-
-        getLog().debug("Converting artifact to distributable bundle artifact: " + artifact.toString());
-
-        ArtifactWithSettings distributableBundleArtifact = new ArtifactWithSettings();
-        distributableBundleArtifact.setBundleArtifact(artifact);
-
-        // Getting the start level
-        List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
-        Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
-        BundleSettings matchedSettings = null;
-        while (iterator.hasNext() && (matchedSettings == null)) {
-            BundleSettings settings = iterator.next();
-            if (settings.getSymbolicName().equals(artifact.getSymbolicName())
-                    && ((settings.getVersion() == null) || settings.getVersion().equals(artifact.getVersion()))) {
-                matchedSettings = settings;
-            }
-        }
-        if (matchedSettings != null) {
-
-            distributableBundleArtifact.setStartLevel(matchedSettings.getStartLevel());
-        }
-        return distributableBundleArtifact;
-    }
-
     public String getCopyMode() {
         return copyMode;
+    }
+
+    protected EnvironmentConfiguration getDefaultEnvironment() {
+        getLog().info("There is no environment specified in the project. Creating equinox environment with"
+                + " default settings");
+        EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
+        defaultEnvironment.setId("equinox");
+        defaultEnvironment.setFramework("equinox");
+        return defaultEnvironment;
     }
 
     public String getDistFolder() {
@@ -272,14 +327,81 @@ public class DistMojo extends AbstractOSGiMojo {
         return distributedEnvironments;
     }
 
+    public EnvironmentConfiguration[] getEnvironments() {
+        if (environments == null || environments.length == 0) {
+            environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
+        }
+        return environments;
+    }
+
+    /**
+     * Getting an array of the environment configurations that should be processed based on the value of the
+     * {@link #environmentIds} parameter. The value, that is returned, is calculated the first time the function is
+     * called.
+     * 
+     * @return The array of environment ids that should be processed.
+     */
+    protected EnvironmentConfiguration[] getEnvironmentsToProcess() {
+        if (environmentsToProcess != null) {
+            return environmentsToProcess;
+        }
+
+        if ("*".equals(environmentIds)) {
+            environmentsToProcess = getEnvironments();
+        } else {
+            String[] environmentIdArray = environmentIds.trim().split(",");
+
+            EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
+
+            List<EnvironmentConfiguration> result = new ArrayList<EnvironmentConfiguration>();
+            for (int i = 0; i < tmpEnvironments.length; i++) {
+                boolean found = false;
+                int j = 0, n = environmentIdArray.length;
+                while (!found && j < n) {
+                    if (environmentIdArray[j].equals(tmpEnvironments[j].getId())) {
+                        found = true;
+                        result.add(tmpEnvironments[i]);
+                    }
+                    j++;
+                }
+            }
+            environmentsToProcess = result.toArray(new EnvironmentConfiguration[result.size()]);
+        }
+        return environmentsToProcess;
+    }
+
+    /**
+     * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
+     * called therefore the developer should not call it inside an iteration.
+     * 
+     * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
+     * @throws MalformedURLException
+     *             if the URL for the artifact is broken.
+     */
+    protected List<DistributableArtifact> generateDistributableArtifacts(EnvironmentConfiguration environment)
+            throws MalformedURLException {
+        @SuppressWarnings("unchecked")
+        List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+        availableArtifacts.add(project.getArtifact());
+
+        List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
+        for (Artifact artifact : availableArtifacts) {
+            if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
+                DistributableArtifact processedArtifact = DistUtil.processArtifact(environment, artifact);
+                result.add(processedArtifact);
+            }
+        }
+        return result;
+    }
+
     protected DistributionPackage parseConfiguration(final File distFolderFile,
-            final List<ArtifactWithSettings> distributedArtifacts, final EnvironmentConfiguration environment,
+            final List<DistributableArtifact> distributableArtifacts, final EnvironmentConfiguration environment,
             final CopyMode environmentCopyMode)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
         VelocityContext context = new VelocityContext();
-        context.put("artifacts", distributedArtifacts);
+        context.put("artifacts", distributableArtifacts);
         context.put("environment", environment);
         context.put("copyMode", environmentCopyMode.value());
         try {
@@ -291,10 +413,10 @@ public class DistMojo extends AbstractOSGiMojo {
     }
 
     protected void parseParseables(final DistributionPackage distributionPackage, final File distFolderFile,
-            final List<ArtifactWithSettings> distributedArtifacts, final EnvironmentConfiguration environment)
+            final List<DistributableArtifact> distributableArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         VelocityContext context = new VelocityContext();
-        context.put("artifacts", distributedArtifacts);
+        context.put("artifacts", distributableArtifacts);
         context.put("distributionPackage", distributionPackage);
         context.put("environment", environment);
         Parseables parseables = distributionPackage.getParseables();
@@ -369,61 +491,6 @@ public class DistMojo extends AbstractOSGiMojo {
             }
         } else {
             return null;
-        }
-    }
-
-    protected void resolveAndCopyArtifacts(final DistributionPackage distributionPackage, final File envDistFolderFile)
-            throws MojoExecutionException {
-
-        Artifacts artifactsJaxbObj = distributionPackage.getArtifacts();
-        if (artifactsJaxbObj == null) {
-            return;
-        }
-        List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts = artifactsJaxbObj
-                .getArtifact();
-
-        CopyMode environmentCopyMode = distributionPackage.getCopyMode();
-        for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
-
-            String artifactType = artifact.getType();
-            if (artifactType == null) {
-                artifactType = "jar";
-            }
-            Artifact mavenArtifact = null;
-            if (artifact.getClassifier() == null) {
-                mavenArtifact =
-                        artifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-                                artifact.getVersion(), "compile", artifactType);
-            } else {
-                mavenArtifact =
-                        artifactFactory.createArtifactWithClassifier(artifact.getGroupId(), artifact.getArtifactId(),
-                                artifact.getVersion(), artifactType, artifact.getClassifier());
-
-            }
-            try {
-                artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
-            } catch (ArtifactResolutionException e) {
-                throw new MojoExecutionException("Could not resolve artifact for creating distribution package", e);
-            } catch (ArtifactNotFoundException e) {
-                throw new MojoExecutionException("Could not resolve artifact for creating distribution package", e);
-            }
-            File targetFileFolder = envDistFolderFile;
-            if (artifact.getTargetFolder() != null) {
-                targetFileFolder = new File(envDistFolderFile, artifact.getTargetFolder());
-            }
-            targetFileFolder.mkdirs();
-            String targetFileName = artifact.getTargetFile();
-            if (targetFileName == null) {
-                targetFileName = mavenArtifact.getFile().getName();
-                artifact.setTargetFile(targetFileName);
-            }
-            File targetFile = new File(targetFileFolder, targetFileName);
-
-            CopyMode artifactCopyMode = environmentCopyMode;
-            if (artifact.getCopyMode() != null) {
-                artifactCopyMode = artifact.getCopyMode();
-            }
-            fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
         }
     }
 

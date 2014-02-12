@@ -23,7 +23,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
 
 public class DistributedEnvironment {
 
-    private List<ArtifactWithSettings> bundleArtifacts;
+    private List<DistributableArtifact> distributableArtifacts;
 
     private File distributionFolder;
 
@@ -36,15 +36,15 @@ public class DistributedEnvironment {
 
     public DistributedEnvironment(final EnvironmentConfiguration environment,
             final DistributionPackage distributionPackage, final File distributionFolder,
-            final List<ArtifactWithSettings> bundleArtifacts) {
+            final List<DistributableArtifact> bundleArtifacts) {
         this.environment = environment;
         this.distributionPackage = distributionPackage;
         this.distributionFolder = distributionFolder;
-        this.bundleArtifacts = bundleArtifacts;
+        this.distributableArtifacts = bundleArtifacts;
     }
 
-    public List<ArtifactWithSettings> getBundleArtifacts() {
-        return bundleArtifacts;
+    public List<DistributableArtifact> getDistributableArtifacts() {
+        return distributableArtifacts;
     }
 
     public File getDistributionFolder() {
@@ -59,8 +59,8 @@ public class DistributedEnvironment {
         return environment;
     }
 
-    public void setBundleArtifacts(final List<ArtifactWithSettings> bundleArtifacts) {
-        this.bundleArtifacts = bundleArtifacts;
+    public void setDistributableArtifacts(final List<DistributableArtifact> bundleArtifacts) {
+        this.distributableArtifacts = bundleArtifacts;
     }
 
     public void setDistributionFolder(final File distributionFolder) {
