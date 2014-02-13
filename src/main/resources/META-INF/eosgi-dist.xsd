@@ -21,40 +21,40 @@
     elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema"
     xmlns:tns="http://everit.org/eosgi/dist/definition/2.0.0">
 
-    <element name="distributionPackage" type="tns:DistributionPackage">
+    <element name="distributionPackage" type="tns:DistributionPackageType">
         <annotation>
             <documentation>Root element of a distribution package
                 definition.</documentation>
         </annotation>
     </element>
 
-    <complexType name="DistributionPackage">
+    <complexType name="DistributionPackageType">
       <sequence maxOccurs="1" minOccurs="0">
-        <element name="artifacts" type="tns:Artifacts" maxOccurs="1" minOccurs="0">
+        <element name="artifacts" type="tns:ArtifactsType" maxOccurs="1" minOccurs="0">
           <annotation>
             <documentation>
               Artifacts that should be resolved (downloaded and copied) into the distribution package.
             </documentation>
           </annotation>
         </element>
-        <element name="parseables" type="tns:Parseables" maxOccurs="1" minOccurs="0"></element>
-        <element name="launchers" type="tns:Launchers" minOccurs="0" maxOccurs="1">
+        <element name="parseables" type="tns:ParseablesType" maxOccurs="1" minOccurs="0"></element>
+        <element name="launchers" type="tns:LaunchersType" minOccurs="0" maxOccurs="1">
           <annotation>
             <documentation>Start command is necessary to be able to start integration tests on server.</documentation>
           </annotation>
         </element>
       </sequence>
-      <attribute name="copyMode" type="tns:CopyMode" use="required"></attribute>
+      <attribute name="copyMode" type="tns:CopyModeType" use="required"></attribute>
     </complexType>
 
-    <complexType name="Artifact">
+    <complexType name="ArtifactType">
       <sequence>
         <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
         <element name="artifactId" type="string" minOccurs="1" maxOccurs="1"></element>
         <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
         <element name="type" type="string" minOccurs="0" maxOccurs="1"></element>
         <element name="classifier" type="string" minOccurs="0" maxOccurs="1"></element>
-        <element name="bundle" type="tns:Bundle" minOccurs="0" maxOccurs="1">
+        <element name="bundle" type="tns:BundleDataType" minOccurs="0" maxOccurs="1">
           <annotation>
             <documentation>In case this is an OSGi bundle, additional behavior can be defined.</documentation>
           </annotation>
@@ -66,40 +66,40 @@
         </annotation>
       </attribute>
       <attribute name="targetFile" type="string"></attribute>
-      <attribute name="copyMode" type="tns:CopyMode"></attribute>
+      <attribute name="copyMode" type="tns:CopyModeType"></attribute>
     </complexType>
 
-    <complexType name="Artifacts">
+    <complexType name="ArtifactsType">
         <sequence>
-            <element name="artifact" type="tns:Artifact"
+            <element name="artifact" type="tns:ArtifactType"
                 maxOccurs="unbounded"></element>
         </sequence>
     </complexType>
 
-    <complexType name="Parseables">
+    <complexType name="ParseablesType">
         <sequence>
-            <element name="parseable" type="tns:Parseable"
+            <element name="parseable" type="tns:ParseableType"
                 maxOccurs="unbounded"></element>
         </sequence>
     </complexType>
 
-    <complexType name="Parseable">
+    <complexType name="ParseableType">
         <attribute name="path" type="string" />
         <attribute name="encoding" type="string" />
     </complexType>
 
 
 
-    <complexType name="Launchers">
+    <complexType name="LaunchersType">
         <sequence>
-            <element name="launcher" type="tns:Launcher"
+            <element name="launcher" type="tns:LauncherType"
                 maxOccurs="unbounded" minOccurs="0"></element>
         </sequence>
     </complexType>
 
-    <complexType name="Launcher">
+    <complexType name="LauncherType">
         <sequence>
-            <element name="startCommand" type="tns:Command">
+            <element name="startCommand" type="tns:CommandType">
               <annotation>
                 <documentation>The command that starts the framework. The framework should be started in interactive mode so a CTRL+C can be sent to it.</documentation>
               </annotation></element>
@@ -116,7 +116,7 @@
         </attribute>
     </complexType>
 
-    <complexType name="Command">
+    <complexType name="CommandType">
         <simpleContent>
             <extension base="string">
                 <attribute name="folder" type="string" use="optional"></attribute>
@@ -124,21 +124,21 @@
         </simpleContent>
     </complexType>
 
-    <complexType name="Bundle">
-      <attribute name="action" type="tns:OSGiAction" use="required"></attribute>
+    <complexType name="BundleDataType">
+      <attribute name="action" type="tns:OSGiActionType" use="required"></attribute>
       <attribute name="symbolicName" type="string"></attribute>
       <attribute name="version" type="string"></attribute>
         <attribute name="startLevel" type="int" use="optional"></attribute>
     </complexType>
 
-    <simpleType name="CopyMode">
+    <simpleType name="CopyModeType">
       <restriction base="string">
         <enumeration value="file"></enumeration>
         <enumeration value="symbolicLink"></enumeration>
       </restriction>
     </simpleType>
 
-    <simpleType name="OSGiAction">
+    <simpleType name="OSGiActionType">
       <restriction base="string">
         <enumeration value="none"></enumeration>
         <enumeration value="install"></enumeration>

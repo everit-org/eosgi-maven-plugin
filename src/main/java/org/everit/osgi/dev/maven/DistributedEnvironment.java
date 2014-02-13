@@ -19,7 +19,7 @@ package org.everit.osgi.dev.maven;
 import java.io.File;
 import java.util.List;
 
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
 
 public class DistributedEnvironment {
 
@@ -27,7 +27,7 @@ public class DistributedEnvironment {
 
     private File distributionFolder;
 
-    private DistributionPackage distributionPackage;
+    private DistributionPackageType distributionPackage;
 
     private EnvironmentConfiguration environment;
 
@@ -35,7 +35,7 @@ public class DistributedEnvironment {
     }
 
     public DistributedEnvironment(final EnvironmentConfiguration environment,
-            final DistributionPackage distributionPackage, final File distributionFolder,
+            final DistributionPackageType distributionPackage, final File distributionFolder,
             final List<DistributableArtifact> bundleArtifacts) {
         this.environment = environment;
         this.distributionPackage = distributionPackage;
@@ -51,7 +51,7 @@ public class DistributedEnvironment {
         return distributionFolder;
     }
 
-    public DistributionPackage getDistributionPackage() {
+    public DistributionPackageType getDistributionPackage() {
         return distributionPackage;
     }
 
@@ -67,7 +67,7 @@ public class DistributedEnvironment {
         this.distributionFolder = distributionFolder;
     }
 
-    public void setDistributionPackage(final DistributionPackage distributionPackage) {
+    public void setDistributionPackage(final DistributionPackageType distributionPackage) {
         this.distributionPackage = distributionPackage;
     }
 

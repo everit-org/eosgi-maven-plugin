@@ -20,16 +20,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.everit.osgi.dev.maven.BundleSettings;
-import org.everit.osgi.dev.maven.EnvironmentConfiguration;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifacts;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
 
 public class DistUtil {
 
@@ -50,6 +47,26 @@ public class DistUtil {
         return result;
     }
 
+    public static Map<ArtifactKey, ArtifactType> createArtifactMap(final DistributionPackageType distributionPackage) {
+        if (distributionPackage == null) {
+            return Collections.emptyMap();
+        }
+        ArtifactsType artifacts = distributionPackage.getArtifacts();
+        if (artifacts == null) {
+            return Collections.emptyMap();
+        }
+        Map<ArtifactKey, ArtifactType> result = new HashMap<>();
+        List<ArtifactType> artifactList = artifacts.getArtifact();
+        for (ArtifactType artifact : artifactList) {
+            ArtifactKey artifactKey = new ArtifactKey(artifact);
+            if (result.containsKey(artifactKey)) {
+                throw new DuplicateArtifactException(artifactKey);
+            }
+            result.put(artifactKey, artifact);
+        }
+        return result;
+    }
+
     public static void deleteFolderRecurse(final File folder) {
         if (folder.exists()) {
             File[] subFiles = folder.listFiles();
@@ -64,18 +81,19 @@ public class DistUtil {
         }
     }
 
-    public void findMatchingSettings(EnvironmentConfiguration environment, String symbolicName, String bundleVersion) {
-        // Getting the start level
-        List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
-        Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
-        BundleSettings matchedSettings = null;
-        while (iterator.hasNext() && (matchedSettings == null)) {
-            BundleSettings settings = iterator.next();
-            if (settings.getSymbolicName().equals(symbolicName)
-                    && ((settings.getVersion() == null) || settings.getVersion().equals(bundleVersion))) {
-                matchedSettings = settings;
-            }
+    public static List<ArtifactType> getArtifactsToRemove(final Map<ArtifactKey, ArtifactType> currentArtifactMap,
+            final DistributionPackageType current) {
+        Map<ArtifactKey, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
+        ArtifactsType artifacts = current.getArtifacts();
+        if (artifacts == null) {
+            return new ArrayList<>(currentArtifactMap.values());
         }
+        List<ArtifactType> artifactList = artifacts.getArtifact();
+        for (ArtifactType artifact : artifactList) {
+            ArtifactKey artifactKey = new ArtifactKey(artifact);
+            tmpArtifactMap.remove(artifactKey);
+        }
+        return new ArrayList<>(tmpArtifactMap.values());
     }
 
     public static String getOS() {
@@ -108,44 +126,6 @@ public class DistUtil {
         return same;
     }
 
-    private DistUtil() {
-    }
-
-    public static List<Artifact> getArtifactsToRemove(Map<ArtifactKey, Artifact> currentArtifactMap,
-            DistributionPackage current) {
-        Map<ArtifactKey, Artifact> tmpArtifactMap = new HashMap<>(currentArtifactMap);
-        Artifacts artifacts = current.getArtifacts();
-        if (artifacts == null) {
-            return new ArrayList<>(currentArtifactMap.values());
-        }
-        List<Artifact> artifactList = artifacts.getArtifact();
-        for (Artifact artifact : artifactList) {
-            ArtifactKey artifactKey = new ArtifactKey(artifact);
-            tmpArtifactMap.remove(artifactKey);
-        }
-        return new ArrayList<>(tmpArtifactMap.values());
-    }
-
-    public static Map<ArtifactKey, Artifact> convertDPToArtifactMap(DistributionPackage distributionPackage) {
-        if (distributionPackage == null) {
-            return Collections.emptyMap();
-        }
-        Artifacts artifacts = distributionPackage.getArtifacts();
-        if (artifacts == null) {
-            return Collections.emptyMap();
-        }
-        Map<ArtifactKey, Artifact> result = new HashMap<>();
-        List<Artifact> artifactList = artifacts.getArtifact();
-        for (Artifact artifact : artifactList) {
-            ArtifactKey artifactKey = new ArtifactKey(artifact);
-            if (result.containsKey(artifactKey)) {
-                throw new DuplicateArtifactException(artifactKey);
-            }
-            result.put(artifactKey, artifact);
-        }
-        return result;
-    }
-
     /**
      * Getting the normalized version of an artifact. The artifact has to have at least three digits inside the version
      * separated by dots. If there are less than two dots inside the version it is extended with the necessary numbers
@@ -171,5 +151,8 @@ public class DistUtil {
             result.append(".0");
         }
         return result.toString();
+    }
+
+    private DistUtil() {
     }
 }

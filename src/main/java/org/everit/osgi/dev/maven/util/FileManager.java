@@ -45,7 +45,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyMode;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
 import org.rzo.yajsw.os.OperatingSystem;
 import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
 import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcessManager;
@@ -119,7 +119,7 @@ public class FileManager implements AutoCloseable {
         }
     }
 
-    public void copyDirectory(final File sourceLocation, final File targetLocation, final CopyMode copyMode)
+    public void copyDirectory(final File sourceLocation, final File targetLocation, final CopyModeType copyMode)
             throws IOException, MojoExecutionException {
 
         if (sourceLocation.isDirectory()) {
@@ -137,9 +137,9 @@ public class FileManager implements AutoCloseable {
         }
     }
 
-    public void copyFile(final File source, final File target, final CopyMode copyMode)
+    public void copyFile(final File source, final File target, final CopyModeType copyMode)
             throws MojoExecutionException {
-        if (CopyMode.FILE.equals(copyMode)) {
+        if (CopyModeType.FILE.equals(copyMode)) {
             if (target.exists() && Files.isSymbolicLink(target.toPath())) {
                 target.delete();
             }
@@ -334,7 +334,7 @@ public class FileManager implements AutoCloseable {
                 fout.close();
             }
         }
-        copyFile(tmpFile, parseableFile, CopyMode.FILE);
+        copyFile(tmpFile, parseableFile, CopyModeType.FILE);
         tmpFile.delete();
     }
 

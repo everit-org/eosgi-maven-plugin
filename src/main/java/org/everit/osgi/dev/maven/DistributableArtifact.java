@@ -35,12 +35,13 @@ public class DistributableArtifact {
      */
     private Manifest manifest;
 
-    private DistributableArtifactBundleData bundle;
+    private DistributableArtifactBundleMeta bundle;
 
-    public DistributableArtifact(Artifact artifact, Manifest manifest, DistributableArtifactBundleData bundle) {
+    public DistributableArtifact(final Artifact artifact, final Manifest manifest,
+            final DistributableArtifactBundleMeta bundleMeta) {
         this.artifact = artifact;
         this.manifest = manifest;
-        this.bundle = bundle;
+        this.bundle = bundleMeta;
     }
 
     public Artifact getArtifact() {
@@ -51,7 +52,7 @@ public class DistributableArtifact {
         return manifest;
     }
 
-    public DistributableArtifactBundleData getBundle() {
+    public DistributableArtifactBundleMeta getBundle() {
         return bundle;
     }
 }

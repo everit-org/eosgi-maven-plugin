@@ -44,9 +44,9 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Command;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Launcher;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Launchers;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
@@ -111,12 +111,12 @@ public class IntegrationTestMojo extends DistMojo {
      */
     @Parameter
     protected JacocoSettings jacoco;
-
     /**
      * Skipping this plugin.
      */
     @Parameter(property = "maven.test.skip", defaultValue = "false")
     protected boolean skipTests = false;
+
     /**
      * The folder where the integration test reports will be placed. Please note that the content of this folder will be
      * deleted before running the tests.
@@ -137,14 +137,14 @@ public class IntegrationTestMojo extends DistMojo {
         return result;
     }
 
-    private Launcher calculateLauncherForCurrentOS(final DistributedEnvironment distributedEnvironment) {
+    private LauncherType calculateLauncherForCurrentOS(final DistributedEnvironment distributedEnvironment) {
 
-        Launchers launchers = distributedEnvironment.getDistributionPackage().getLaunchers();
+        LaunchersType launchers = distributedEnvironment.getDistributionPackage().getLaunchers();
         if (launchers == null) {
             return null;
         }
 
-        List<Launcher> launcherList = launchers.getLauncher();
+        List<LauncherType> launcherList = launchers.getLauncher();
 
         if (launcherList.size() == 0) {
             return null;
@@ -152,10 +152,10 @@ public class IntegrationTestMojo extends DistMojo {
 
         String os = DistUtil.getOS();
 
-        Launcher selectedLauncher = null;
-        Iterator<Launcher> iterator = launcherList.iterator();
+        LauncherType selectedLauncher = null;
+        Iterator<LauncherType> iterator = launcherList.iterator();
         while ((selectedLauncher == null) && iterator.hasNext()) {
-            Launcher launcher = iterator.next();
+            LauncherType launcher = iterator.next();
             if (os.equals(launcher.getOs())) {
                 selectedLauncher = launcher;
             }
@@ -216,14 +216,14 @@ public class IntegrationTestMojo extends DistMojo {
             testResult.environmentId = distributedEnvironment.getEnvironment().getId();
             testResult.expectedTestNum = calculateExpectedTestNum(distributedEnvironment);
             testResults.add(testResult);
-            Launcher launcher = calculateLauncherForCurrentOS(distributedEnvironment);
+            LauncherType launcher = calculateLauncherForCurrentOS(distributedEnvironment);
 
             if (launcher == null) {
                 throw new MojoFailureException("No start command specified for tests in the distribution package of "
                         + distributedEnvironment.getEnvironment().getId());
             }
 
-            Command startCommand = launcher.getStartCommand();
+            CommandType startCommand = launcher.getStartCommand();
             String folder = startCommand.getFolder();
             File commandFolder = distributedEnvironment.getDistributionFolder();
 
@@ -380,6 +380,7 @@ public class IntegrationTestMojo extends DistMojo {
         if (jacoco != null) {
             File globalReportFolderFile = new File(testReportFolder);
 
+            System.out.println(pluginArtifactMap.keySet());
             Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
             File jacocoAgentFile = jacocoAgentArtifact.getFile();
             String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();

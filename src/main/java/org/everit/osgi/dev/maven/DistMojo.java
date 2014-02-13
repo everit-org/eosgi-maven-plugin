@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -36,6 +37,7 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -53,12 +55,14 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.velocity.VelocityContext;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifacts;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyMode;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseable;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseableType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseablesType;
+import org.everit.osgi.dev.maven.util.ArtifactKey;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -151,8 +155,8 @@ public class DistMojo extends AbstractMojo {
      * Comma separated list of ports of currently running OSGi containers. Such ports are normally opened with
      * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
      */
-    @Parameter(property = "eosgi.upgradePorts")
-    protected String upgradePorts;
+    @Parameter(property = "eosgi.servicePorts")
+    protected String servicePorts;
 
     public DistMojo() {
         try {
@@ -178,18 +182,18 @@ public class DistMojo extends AbstractMojo {
         }
     }
 
-    protected void distributeArtifacts(final DistributionPackage distributionPackage, final File envDistFolderFile)
+    protected void distributeArtifacts(final DistributionPackageType distributionPackage, final File envDistFolderFile)
             throws MojoExecutionException {
 
-        Artifacts artifactsJaxbObj = distributionPackage.getArtifacts();
+        ArtifactsType artifactsJaxbObj = distributionPackage.getArtifacts();
         if (artifactsJaxbObj == null) {
             return;
         }
-        List<org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact> artifacts = artifactsJaxbObj
+        List<ArtifactType> artifacts = artifactsJaxbObj
                 .getArtifact();
 
-        CopyMode environmentCopyMode = distributionPackage.getCopyMode();
-        for (org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact artifact : artifacts) {
+        CopyModeType environmentCopyMode = distributionPackage.getCopyMode();
+        for (ArtifactType artifact : artifacts) {
 
             String artifactType = artifact.getType();
             if (artifactType == null) {
@@ -225,80 +229,12 @@ public class DistMojo extends AbstractMojo {
             }
             File targetFile = new File(targetFileFolder, targetFileName);
 
-            CopyMode artifactCopyMode = environmentCopyMode;
+            CopyModeType artifactCopyMode = environmentCopyMode;
             if (artifact.getCopyMode() != null) {
                 artifactCopyMode = artifact.getCopyMode();
             }
             fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
         }
-    }
-
-    /**
-     * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
-     * a Bundle-SymbolicName.
-     * 
-     * @param artifact
-     *            The artifact that is checked.
-     * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version. Bundle-Version comes
-     *         from MANIFEST.MF but if Bundle-Version is not available there the default 0.0.0 version is provided.
-     */
-    public DistributableArtifact processArtifact(EnvironmentConfiguration environment,
-            final org.apache.maven.artifact.Artifact artifact) {
-
-        if ("pom".equals(artifact.getType())) {
-            return new DistributableArtifact(artifact, null, null);
-        }
-        File artifactFile = artifact.getFile();
-        if ((artifactFile == null) || !artifactFile.exists()) {
-            return new DistributableArtifact(artifact, null, null);
-        }
-        Manifest manifest = null;
-        JarFile jarFile = null;
-        try {
-            jarFile = new JarFile(artifactFile);
-            manifest = jarFile.getManifest();
-            if (manifest == null) {
-                return result;
-            }
-
-            Attributes mainAttributes = manifest.getMainAttributes();
-            String symbolicName = mainAttributes.getValue(Constants.BUNDLE_SYMBOLICNAME);
-            String version = mainAttributes.getValue(Constants.BUNDLE_VERSION);
-            if (symbolicName != null) {
-                int semicolonIndex = symbolicName.indexOf(';');
-                if (semicolonIndex >= 0) {
-                    symbolicName = symbolicName.substring(0, semicolonIndex);
-                }
-                if (version == null) {
-                    version = "0.0.0";
-                } else {
-                    version = DistUtil.normalizeVersion(version);
-                }
-
-                String bundleFullName = symbolicName + ";version=" + version;
-                result.setSymbolicName(symbolicName);
-                result.setVersion(version);
-                result.setImportPackage(mainAttributes.getValue(Constants.IMPORT_PACKAGE));
-                result.setExportPackage(mainAttributes.getValue(Constants.EXPORT_PACKAGE));
-                result.setFragmentHost(mainAttributes.getValue(Constants.FRAGMENT_HOST));
-                return result;
-            } else {
-                return result;
-            }
-
-        } catch (IOException e) {
-            // TODO log that this is not a jar
-            return result;
-        } finally {
-            if (jarFile != null) {
-                try {
-                    jarFile.close();
-                } catch (IOException e) {
-                    getLog().warn("Error during closing bundleFile: " + jarFile.toString(), e);
-                }
-            }
-        }
-        // TODO DistUtil.findMatching...
     }
 
     @Override
@@ -321,15 +257,18 @@ public class DistMojo extends AbstractMojo {
                 File distPackageFile = distPackageArtifact.getFile();
                 File distFolderFile = new File(globalDistFolderFile, environment.getId());
 
-                CopyMode environmentCopyMode = (getCopyMode() != null) ? CopyMode.fromValue(getCopyMode()) : null;
-                DistributionPackage existingDistConfig = readDistConfig(distFolderFile);
+                CopyModeType environmentCopyMode = (getCopyMode() != null) ? CopyModeType.fromValue(getCopyMode())
+                        : null;
+                DistributionPackageType existingDistConfig = readDistConfig(distFolderFile);
+
                 if (existingDistConfig != null) {
                     environmentCopyMode = existingDistConfig.getCopyMode();
                 }
                 if (environmentCopyMode == null) {
-                    environmentCopyMode = CopyMode.FILE;
+                    environmentCopyMode = CopyModeType.FILE;
                 }
-                if (CopyMode.SYMBOLIC_LINK.equals(environmentCopyMode) && !fileManager.isSystemSymbolicLinkCapable()) {
+                if (CopyModeType.SYMBOLIC_LINK.equals(environmentCopyMode)
+                        && !fileManager.isSystemSymbolicLinkCapable()) {
                     throw new MojoExecutionException(
                             "It seems that the operating system does not support symbolic links");
                 }
@@ -346,9 +285,13 @@ public class DistMojo extends AbstractMojo {
                         }
                     }
 
-                    DistributionPackage distributionPackage =
+                    DistributionPackageType distributionPackage =
                             parseConfiguration(distFolderFile, processedArtifacts, environment,
                                     environmentCopyMode);
+
+                    Map<ArtifactKey, ArtifactType> artifactMap = DistUtil.createArtifactMap(existingDistConfig);
+                    List<ArtifactType> artifactsToRemove = DistUtil.getArtifactsToRemove(artifactMap,
+                            distributionPackage);
 
                     distributeArtifacts(distributionPackage, distFolderFile);
 
@@ -376,6 +319,46 @@ public class DistMojo extends AbstractMojo {
                 getLog().error("Could not close file manager", e);
             }
         }
+    }
+
+    public BundleSettings findMatchingSettings(final EnvironmentConfiguration environment, final String symbolicName,
+            final String bundleVersion) {
+        // Getting the start level
+        List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
+        Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
+        BundleSettings matchedSettings = null;
+        while (iterator.hasNext() && (matchedSettings == null)) {
+            BundleSettings settings = iterator.next();
+            if (settings.getSymbolicName().equals(symbolicName)
+                    && ((settings.getVersion() == null) || settings.getVersion().equals(bundleVersion))) {
+                matchedSettings = settings;
+            }
+        }
+        return matchedSettings;
+    }
+
+    /**
+     * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
+     * called therefore the developer should not call it inside an iteration.
+     * 
+     * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
+     * @throws MalformedURLException
+     *             if the URL for the artifact is broken.
+     */
+    protected List<DistributableArtifact> generateDistributableArtifacts(final EnvironmentConfiguration environment)
+            throws MalformedURLException {
+        @SuppressWarnings("unchecked")
+        List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+        availableArtifacts.add(project.getArtifact());
+
+        List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
+        for (Artifact artifact : availableArtifacts) {
+            if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
+                DistributableArtifact processedArtifact = processArtifact(environment, artifact);
+                result.add(processedArtifact);
+            }
+        }
+        return result;
     }
 
     public String getCopyMode() {
@@ -442,40 +425,17 @@ public class DistMojo extends AbstractMojo {
         return environmentsToProcess;
     }
 
-    /**
-     * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
-     * called therefore the developer should not call it inside an iteration.
-     * 
-     * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
-     * @throws MalformedURLException
-     *             if the URL for the artifact is broken.
-     */
-    protected List<DistributableArtifact> generateDistributableArtifacts(EnvironmentConfiguration environment)
-            throws MalformedURLException {
-        @SuppressWarnings("unchecked")
-        List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
-        availableArtifacts.add(project.getArtifact());
-
-        List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
-        for (Artifact artifact : availableArtifacts) {
-            if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
-                DistributableArtifact processedArtifact = processArtifact(environment, artifact);
-                result.add(processedArtifact);
-            }
-        }
-        return result;
-    }
-
-    protected DistributionPackage parseConfiguration(final File distFolderFile,
+    protected DistributionPackageType parseConfiguration(final File distFolderFile,
             final List<DistributableArtifact> distributableArtifacts, final EnvironmentConfiguration environment,
-            final CopyMode environmentCopyMode)
+            final CopyModeType environmentCopyMode)
             throws MojoExecutionException {
         File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
         VelocityContext context = new VelocityContext();
-        context.put("artifacts", distributableArtifacts);
+        context.put("distributableArtifacts", distributableArtifacts);
         context.put("environment", environment);
         context.put("copyMode", environmentCopyMode.value());
+        context.put("StringEscapeUtils", StringEscapeUtils.class);
         try {
             fileManager.replaceFileWithParsed(configFile, context, "UTF8");
         } catch (IOException e) {
@@ -484,17 +444,18 @@ public class DistMojo extends AbstractMojo {
         return readDistConfig(distFolderFile);
     }
 
-    protected void parseParseables(final DistributionPackage distributionPackage, final File distFolderFile,
+    protected void parseParseables(final DistributionPackageType distributionPackage, final File distFolderFile,
             final List<DistributableArtifact> distributableArtifacts, final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         VelocityContext context = new VelocityContext();
-        context.put("artifacts", distributableArtifacts);
+        context.put("distributableArtifacts", distributableArtifacts);
         context.put("distributionPackage", distributionPackage);
         context.put("environment", environment);
-        Parseables parseables = distributionPackage.getParseables();
+        context.put("StringEscapeUtils", StringEscapeUtils.class);
+        ParseablesType parseables = distributionPackage.getParseables();
         if (parseables != null) {
-            List<Parseable> parseable = parseables.getParseable();
-            for (Parseable p : parseable) {
+            List<ParseableType> parseable = parseables.getParseable();
+            for (ParseableType p : parseable) {
                 String path = p.getPath();
                 File parseableFile = new File(distFolderFile, path);
                 if (!parseableFile.exists()) {
@@ -508,6 +469,64 @@ public class DistMojo extends AbstractMojo {
                             e);
                 }
             }
+        }
+    }
+
+    /**
+     * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
+     * a Bundle-SymbolicName.
+     * 
+     * @param artifact
+     *            The artifact that is checked.
+     * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version. Bundle-Version comes
+     *         from MANIFEST.MF but if Bundle-Version is not available there the default 0.0.0 version is provided.
+     */
+    public DistributableArtifact processArtifact(final EnvironmentConfiguration environment,
+            final org.apache.maven.artifact.Artifact artifact) {
+
+        if ("pom".equals(artifact.getType())) {
+            return new DistributableArtifact(artifact, null, null);
+        }
+        File artifactFile = artifact.getFile();
+        if ((artifactFile == null) || !artifactFile.exists()) {
+            return new DistributableArtifact(artifact, null, null);
+        }
+        Manifest manifest = null;
+
+        try (JarFile jarFile = new JarFile(artifactFile)) {
+            manifest = jarFile.getManifest();
+            if (manifest == null) {
+                return new DistributableArtifact(artifact, null, null);
+            }
+
+            Attributes mainAttributes = manifest.getMainAttributes();
+            String symbolicName = mainAttributes.getValue(Constants.BUNDLE_SYMBOLICNAME);
+            String version = mainAttributes.getValue(Constants.BUNDLE_VERSION);
+            DistributableArtifactBundleMeta bundleData = null;
+            if (symbolicName != null && version != null) {
+                int semicolonIndex = symbolicName.indexOf(';');
+                if (semicolonIndex >= 0) {
+                    symbolicName = symbolicName.substring(0, semicolonIndex);
+                }
+
+                version = DistUtil.normalizeVersion(version);
+
+                String fragmentHost = mainAttributes.getValue(Constants.FRAGMENT_HOST);
+                String importPackage = mainAttributes.getValue(Constants.IMPORT_PACKAGE);
+                String exportPackage = mainAttributes.getValue(Constants.EXPORT_PACKAGE);
+                BundleSettings bundleSettings = findMatchingSettings(environment, symbolicName, version);
+                Integer startLevel = null;
+                if (bundleSettings != null) {
+                    startLevel = bundleSettings.getStartLevel();
+                }
+
+                bundleData = new DistributableArtifactBundleMeta(symbolicName, version, fragmentHost, importPackage,
+                        exportPackage, startLevel);
+            }
+
+            return new DistributableArtifact(artifact, manifest, bundleData);
+        } catch (IOException e) {
+            return new DistributableArtifact(artifact, null, null);
         }
     }
 
@@ -538,7 +557,7 @@ public class DistMojo extends AbstractMojo {
         return result;
     }
 
-    protected DistributionPackage readDistConfig(final File distFolderFile) throws MojoExecutionException {
+    protected DistributionPackageType readDistConfig(final File distFolderFile) throws MojoExecutionException {
         File distConfigFile = new File(distFolderFile, "/.eosgi.dist.xml");
         if (distConfigFile.exists()) {
             try {
@@ -547,11 +566,12 @@ public class DistMojo extends AbstractMojo {
                 if (distributionPackage instanceof JAXBElement) {
 
                     @SuppressWarnings("unchecked")
-                    JAXBElement<DistributionPackage> jaxbDistPack = (JAXBElement<DistributionPackage>) distributionPackage;
+                    JAXBElement<DistributionPackageType> jaxbDistPack =
+                            (JAXBElement<DistributionPackageType>) distributionPackage;
                     distributionPackage = jaxbDistPack.getValue();
                 }
-                if (distributionPackage instanceof DistributionPackage) {
-                    return (DistributionPackage) distributionPackage;
+                if (distributionPackage instanceof DistributionPackageType) {
+                    return (DistributionPackageType) distributionPackage;
                 } else {
                     throw new MojoExecutionException(
                             "The root element in the provided distribution configuration file "
