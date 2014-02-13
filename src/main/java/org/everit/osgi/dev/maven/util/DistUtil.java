@@ -17,7 +17,6 @@
 package org.everit.osgi.dev.maven.util;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,17 +24,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 import org.everit.osgi.dev.maven.BundleSettings;
-import org.everit.osgi.dev.maven.DistributableArtifact;
 import org.everit.osgi.dev.maven.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifact;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.Artifacts;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackage;
-import org.osgi.framework.Constants;
 
 public class DistUtil {
 
@@ -150,76 +144,6 @@ public class DistUtil {
             result.put(artifactKey, artifact);
         }
         return result;
-    }
-
-    /**
-     * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
-     * a Bundle-SymbolicName.
-     * 
-     * @param artifact
-     *            The artifact that is checked.
-     * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version. Bundle-Version comes
-     *         from MANIFEST.MF but if Bundle-Version is not available there the default 0.0.0 version is provided.
-     */
-    public static DistributableArtifact processArtifact(EnvironmentConfiguration environment,
-            final org.apache.maven.artifact.Artifact artifact) {
-        Manifest manifest = null;
-
-        DistributableArtifact result = new DistributableArtifact();
-        result.setArtifact(artifact);
-        if ("pom".equals(artifact.getType())) {
-            return result;
-        }
-        File artifactFile = artifact.getFile();
-        if ((artifactFile == null) || !artifactFile.exists()) {
-            return result;
-        }
-        JarFile jarFile = null;
-        try {
-            jarFile = new JarFile(artifactFile);
-            manifest = jarFile.getManifest();
-            if (manifest == null) {
-                return result;
-            }
-
-            Attributes mainAttributes = manifest.getMainAttributes();
-            String symbolicName = mainAttributes.getValue(Constants.BUNDLE_SYMBOLICNAME);
-            String version = mainAttributes.getValue(Constants.BUNDLE_VERSION);
-            if (symbolicName != null) {
-                int semicolonIndex = symbolicName.indexOf(';');
-                if (semicolonIndex >= 0) {
-                    symbolicName = symbolicName.substring(0, semicolonIndex);
-                }
-                if (version == null) {
-                    version = "0.0.0";
-                } else {
-                    version = normalizeVersion(version);
-                }
-
-                String bundleFullName = symbolicName + ";version=" + version;
-                result.setSymbolicName(symbolicName);
-                result.setVersion(version);
-                result.setImportPackage(mainAttributes.getValue(Constants.IMPORT_PACKAGE));
-                result.setExportPackage(mainAttributes.getValue(Constants.EXPORT_PACKAGE));
-                result.setFragmentHost(mainAttributes.getValue(Constants.FRAGMENT_HOST));
-                return result;
-            } else {
-                return result;
-            }
-
-        } catch (IOException e) {
-            // TODO log that this is not a jar
-            return result;
-        } finally {
-            if (jarFile != null) {
-                try {
-                    jarFile.close();
-                } catch (IOException e) {
-                    getLog().warn("Error during closing bundleFile: " + jarFile.toString(), e);
-                }
-            }
-        }
-        // TODO DistUtil.findMatching...
     }
 
     /**

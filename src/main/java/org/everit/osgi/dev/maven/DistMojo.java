@@ -26,6 +26,9 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
 import java.util.zip.ZipFile;
 
 import javax.xml.bind.JAXBContext;
@@ -59,6 +62,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.Parseables;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.maven.util.FileManager;
+import org.osgi.framework.Constants;
 
 /**
  * Creates a distribution package for the project. Distribution packages may be provided as Environment parameters or
@@ -229,6 +233,74 @@ public class DistMojo extends AbstractMojo {
         }
     }
 
+    /**
+     * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
+     * a Bundle-SymbolicName.
+     * 
+     * @param artifact
+     *            The artifact that is checked.
+     * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version. Bundle-Version comes
+     *         from MANIFEST.MF but if Bundle-Version is not available there the default 0.0.0 version is provided.
+     */
+    public DistributableArtifact processArtifact(EnvironmentConfiguration environment,
+            final org.apache.maven.artifact.Artifact artifact) {
+
+        if ("pom".equals(artifact.getType())) {
+            return new DistributableArtifact(artifact, null, null);
+        }
+        File artifactFile = artifact.getFile();
+        if ((artifactFile == null) || !artifactFile.exists()) {
+            return new DistributableArtifact(artifact, null, null);
+        }
+        Manifest manifest = null;
+        JarFile jarFile = null;
+        try {
+            jarFile = new JarFile(artifactFile);
+            manifest = jarFile.getManifest();
+            if (manifest == null) {
+                return result;
+            }
+
+            Attributes mainAttributes = manifest.getMainAttributes();
+            String symbolicName = mainAttributes.getValue(Constants.BUNDLE_SYMBOLICNAME);
+            String version = mainAttributes.getValue(Constants.BUNDLE_VERSION);
+            if (symbolicName != null) {
+                int semicolonIndex = symbolicName.indexOf(';');
+                if (semicolonIndex >= 0) {
+                    symbolicName = symbolicName.substring(0, semicolonIndex);
+                }
+                if (version == null) {
+                    version = "0.0.0";
+                } else {
+                    version = DistUtil.normalizeVersion(version);
+                }
+
+                String bundleFullName = symbolicName + ";version=" + version;
+                result.setSymbolicName(symbolicName);
+                result.setVersion(version);
+                result.setImportPackage(mainAttributes.getValue(Constants.IMPORT_PACKAGE));
+                result.setExportPackage(mainAttributes.getValue(Constants.EXPORT_PACKAGE));
+                result.setFragmentHost(mainAttributes.getValue(Constants.FRAGMENT_HOST));
+                return result;
+            } else {
+                return result;
+            }
+
+        } catch (IOException e) {
+            // TODO log that this is not a jar
+            return result;
+        } finally {
+            if (jarFile != null) {
+                try {
+                    jarFile.close();
+                } catch (IOException e) {
+                    getLog().warn("Error during closing bundleFile: " + jarFile.toString(), e);
+                }
+            }
+        }
+        // TODO DistUtil.findMatching...
+    }
+
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         fileManager = new FileManager(getLog());
@@ -387,7 +459,7 @@ public class DistMojo extends AbstractMojo {
         List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
         for (Artifact artifact : availableArtifacts) {
             if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
-                DistributableArtifact processedArtifact = DistUtil.processArtifact(environment, artifact);
+                DistributableArtifact processedArtifact = processArtifact(environment, artifact);
                 result.add(processedArtifact);
             }
         }
