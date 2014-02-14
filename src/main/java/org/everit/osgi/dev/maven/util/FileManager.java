@@ -137,13 +137,14 @@ public class FileManager implements AutoCloseable {
         }
     }
 
-    public void copyFile(final File source, final File target, final CopyModeType copyMode)
+    public boolean copyFile(final File source, final File target, final CopyModeType copyMode)
             throws MojoExecutionException {
+        boolean fileChange = false;
         if (CopyModeType.FILE.equals(copyMode)) {
             if (target.exists() && Files.isSymbolicLink(target.toPath())) {
                 target.delete();
             }
-            overCopyFile(source, target);
+            fileChange = overCopyFile(source, target);
         } else {
             try {
                 if (target.exists()) {
@@ -156,19 +157,23 @@ public class FileManager implements AutoCloseable {
                         if (!symbolicLinkTargetFile.equals(source)) {
                             target.delete();
                             createSymbolicLink(target, source);
+                            fileChange = true;
                         }
                     } else {
                         target.delete();
                         createSymbolicLink(target, source);
+                        fileChange = true;
                     }
                 } else {
                     createSymbolicLink(target, source);
+                    fileChange = true;
                 }
             } catch (IOException e) {
                 throw new MojoExecutionException("Could not check the target of the symbolic link "
                         + target.getAbsolutePath(), e);
             }
         }
+        return fileChange;
     }
 
     public void createSymbolicLink(final File symbolicLinkFile, final File target) throws MojoExecutionException {

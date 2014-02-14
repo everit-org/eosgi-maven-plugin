@@ -22,8 +22,6 @@ public final class EOsgiConstants {
 
     public static final String COPYMODE_SYMBOLIC_LINK = "symbolicLink";
 
-    public static final String SYSPROP_ENVIRONMENT_ID = "eosgi_environment_id";
-
     private EOsgiConstants() {
     }
 }
