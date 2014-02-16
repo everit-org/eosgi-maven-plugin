@@ -25,7 +25,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
-import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -121,8 +120,8 @@ public class DistMojo extends AbstractMojo {
      * Comma separated list of the id of the environments that should be processed. Default is * that means all
      * environments.
      */
-    @Parameter(property = "eosgi.environmentIds", defaultValue = "*")
-    protected String environmentIds = "*";
+    @Parameter(property = "eosgi.environmentId", defaultValue = "*")
+    protected String environmentId = "*";
 
     /**
      * The environments on which the tests should run.
@@ -160,7 +159,7 @@ public class DistMojo extends AbstractMojo {
      * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
      */
     @Parameter(property = "eosgi.servicePorts")
-    protected String servicePorts;
+    protected String servicePort;
 
     /**
      * The directory where there may be additional files to create the distribution package.
@@ -210,8 +209,8 @@ public class DistMojo extends AbstractMojo {
 
     protected void defineUpgradePorts() throws MojoExecutionException {
         upgradePortByEnvironmentId = new HashMap<String, Integer>();
-        if (servicePorts != null) {
-            String[] servicePortArray = servicePorts.split(",");
+        if (servicePort != null) {
+            String[] servicePortArray = servicePort.split(",");
             InetAddress localAddress;
             try {
                 localAddress = InetAddress.getLocalHost();
@@ -289,10 +288,10 @@ public class DistMojo extends AbstractMojo {
                 if (bundle != null) {
                     OSGiActionType osgiAction = bundle.getAction();
                     if (!OSGiActionType.NONE.equals(osgiAction)) {
-                        URI targetFileURI = targetFile.toURI();
+                        String bundleLocation = bundle.getLocation();
                         Integer startLevel = bundle.getStartLevel();
                         StringBuilder sb = new StringBuilder(RichConsoleConstants.TCPCOMMAND_DEPLOY_BUNDLE);
-                        sb.append(" ").append(targetFileURI.toString()).append("@");
+                        sb.append(" ").append(bundleLocation.toString()).append("@");
                         if (startLevel != null) {
                             sb.append(startLevel).append(":");
                         }
@@ -508,7 +507,7 @@ public class DistMojo extends AbstractMojo {
 
     /**
      * Getting an array of the environment configurations that should be processed based on the value of the
-     * {@link #environmentIds} parameter. The value, that is returned, is calculated the first time the function is
+     * {@link #environmentId} parameter. The value, that is returned, is calculated the first time the function is
      * called.
      * 
      * @return The array of environment ids that should be processed.
@@ -518,10 +517,10 @@ public class DistMojo extends AbstractMojo {
             return environmentsToProcess;
         }
 
-        if ("*".equals(environmentIds)) {
+        if ("*".equals(environmentId)) {
             environmentsToProcess = getEnvironments();
         } else {
-            String[] environmentIdArray = environmentIds.trim().split(",");
+            String[] environmentIdArray = environmentId.trim().split(",");
 
             EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
 

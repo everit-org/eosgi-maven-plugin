@@ -48,7 +48,10 @@
     </complexType>
 
     <complexType name="ArtifactType">
-      <sequence>
+        <annotation>
+          <documentation>The start level of the bundle (optional)</documentation>
+        </annotation>
+        <sequence>
         <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
         <element name="artifactId" type="string" minOccurs="1" maxOccurs="1"></element>
         <element name="version" type="string" minOccurs="1" maxOccurs="1"></element>
@@ -125,10 +128,25 @@
     </complexType>
 
     <complexType name="BundleDataType">
-      <attribute name="action" type="tns:OSGiActionType" use="required"></attribute>
-      <attribute name="symbolicName" type="string"></attribute>
-      <attribute name="version" type="string"></attribute>
-        <attribute name="startLevel" type="int" use="optional"></attribute>
+      <sequence>
+        <element name="symbolicName" type="string" minOccurs="1" maxOccurs="1">
+          <annotation>
+            <documentation>Symbolic name of the bundle</documentation>
+          </annotation></element>
+            <element name="version" type="string" minOccurs="1" maxOccurs="1">
+              <annotation>
+                <documentation>Version of the bundle</documentation>
+              </annotation></element>
+            <element name="location" type="string" minOccurs="1" maxOccurs="1">
+              <annotation>
+                <documentation>The file URI that can be used to update/install the bundle. It might start with "reference:".</documentation>
+              </annotation></element>
+        </sequence>
+      <attribute name="action" type="tns:OSGiActionType" use="required">
+        <annotation>
+          <documentation>An action that should be done with the bundle</documentation>
+        </annotation></attribute>
+      <attribute name="startLevel" type="int" use="optional"></attribute>
     </complexType>
 
     <simpleType name="CopyModeType">
