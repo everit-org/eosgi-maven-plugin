@@ -45,7 +45,6 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -63,6 +62,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.velocity.VelocityContext;
+import org.apache.velocity.tools.generic.EscapeTool;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
@@ -73,8 +73,9 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseableType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseablesType;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
-import org.everit.osgi.dev.maven.util.PluginUtil;
+import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
+import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.richconsole.RichConsoleConstants;
 import org.osgi.framework.Constants;
 
@@ -551,7 +552,8 @@ public class DistMojo extends AbstractMojo {
         context.put("distributableArtifacts", distributableArtifacts);
         context.put("environment", environment);
         context.put("copyMode", environmentCopyMode.value());
-        context.put("StringEscapeUtils", StringEscapeUtils.class);
+        context.put("escapeTool", new EscapeTool());
+        context.put("distUtil", new DistUtil());
         try {
             fileManager.replaceFileWithParsed(configFile, context, "UTF8");
         } catch (IOException e) {
@@ -567,7 +569,8 @@ public class DistMojo extends AbstractMojo {
         context.put("distributableArtifacts", distributableArtifacts);
         context.put("distributionPackage", distributionPackage);
         context.put("environment", environment);
-        context.put("StringEscapeUtils", StringEscapeUtils.class);
+        context.put("escapeTool", new EscapeTool());
+        context.put("distUtil", new DistUtil());
         ParseablesType parseables = distributionPackage.getParseables();
         if (parseables != null) {
             List<ParseableType> parseable = parseables.getParseable();
