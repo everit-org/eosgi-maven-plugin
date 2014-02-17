@@ -16,7 +16,6 @@
  */
 package org.everit.osgi.dev.maven.util;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -213,15 +212,12 @@ public class FileManager implements AutoCloseable {
         }
         if (symbolicLinkServerSocket != null) {
             try {
-                OutputStream outputStream = symbolicLinkServerSocket.getOutputStream();
                 String command = ElevatedSymbolicLinkServer.COMMAND_CREATE_SYMBOLIC_LINK + " "
                         + target.toURI().toString() + " " + symbolicLinkFile.toURI().toString() + "\n";
-                outputStream.write(command.getBytes(Charset.defaultCharset()));
-                InputStream inputStream = symbolicLinkServerSocket.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                String line = reader.readLine();
-                if (!"ok".equals(line)) {
-                    throw new MojoExecutionException("Unkonwn message from file manager server: " + line);
+                String response = PluginUtil.sendCommandToSocket(command, symbolicLinkServerSocket, "elevated-process",
+                        log);
+                if (!"ok".equals(response)) {
+                    throw new MojoExecutionException("Unkonwn message from file manager server: " + response);
                 }
             } catch (IOException e) {
                 throw new MojoExecutionException("Could not open stream to elevated symbolic link service", e);

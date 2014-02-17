@@ -16,18 +16,14 @@
  */
 package org.everit.osgi.dev.maven;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -304,7 +300,8 @@ public class DistMojo extends AbstractMojo {
                             sb.append(startLevel).append(":");
                         }
                         sb.append("start");
-                        String response = sendCommandToEnvironment(sb.toString(), environmentSocket);
+                        String response = PluginUtil.sendCommandToSocket(sb.toString(), environmentSocket,
+                                "environment", getLog());
                         if (!RichConsoleConstants.TCPRESPONSE_OK.equals(response)) {
                             throw new MojoExecutionException(
                                     "Environment server did not answer ok after bundle deployment");
@@ -389,7 +386,8 @@ public class DistMojo extends AbstractMojo {
                             if (bundle != null) {
                                 String command = RichConsoleConstants.TCPCOMMAND_UNINSTALL + " "
                                         + bundle.getSymbolicName() + ":" + bundle.getVersion();
-                                String response = sendCommandToEnvironment(command, environmentSocket);
+                                String response = PluginUtil.sendCommandToSocket(command, environmentSocket,
+                                        "environment", getLog());
                                 if (!RichConsoleConstants.TCPRESPONSE_OK.equals(response)) {
                                     throw new MojoExecutionException(
                                             "Environment server did not answer ok after bundle deployment");
@@ -660,7 +658,8 @@ public class DistMojo extends AbstractMojo {
     protected String queryEnvironmentIdFromPort(final InetAddress address, final int port)
             throws MojoExecutionException {
         try (Socket socket = new Socket(address, port)) {
-            String response = sendCommandToEnvironment(RichConsoleConstants.TCPCOMMAND_GET_ENVIRONMENT_ID, socket);
+            String response = PluginUtil.sendCommandToSocket(RichConsoleConstants.TCPCOMMAND_GET_ENVIRONMENT_ID,
+                    socket, "environment", getLog());
 
             if (response == null || response.trim().equals("")) {
                 return null;
@@ -783,18 +782,6 @@ public class DistMojo extends AbstractMojo {
             throw new MojoExecutionException("Invalid distribution package id format: " + frameworkArtifact);
         }
         return distPackageParts;
-    }
-
-    protected String sendCommandToEnvironment(final String command, final Socket socket) throws IOException {
-        getLog().info("Sending command to environment: " + command);
-        InputStream inputStream = socket.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        OutputStream outputStream = socket.getOutputStream();
-        outputStream.write((command + "\n").getBytes(Charset.defaultCharset()));
-        outputStream.flush();
-        String response = reader.readLine();
-        getLog().info("Got response from environment: " + response);
-        return response;
     }
 
 }

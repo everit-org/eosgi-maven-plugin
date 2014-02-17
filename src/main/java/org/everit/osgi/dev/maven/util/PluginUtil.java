@@ -16,7 +16,14 @@
  */
 package org.everit.osgi.dev.maven.util;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.maven.plugin.logging.Log;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
@@ -151,6 +159,20 @@ public class PluginUtil {
             result.append(".0");
         }
         return result.toString();
+    }
+
+    public static String sendCommandToSocket(final String command, final Socket socket, final String serverName,
+            final Log log)
+            throws IOException {
+        log.info("Sending command to " + serverName + ": " + command);
+        InputStream inputStream = socket.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        OutputStream outputStream = socket.getOutputStream();
+        outputStream.write((command + "\n").getBytes(Charset.defaultCharset()));
+        outputStream.flush();
+        String response = reader.readLine();
+        log.info("Got response from " + serverName + ": " + response);
+        return response;
     }
 
     private PluginUtil() {
