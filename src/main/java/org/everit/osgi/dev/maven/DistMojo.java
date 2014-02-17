@@ -318,7 +318,7 @@ public class DistMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         defineUpgradePorts();
-        fileManager = new FileManager(getLog(), reportFolder);
+        fileManager = new FileManager(getLog());
         try {
             List<DistributableArtifact> processedArtifacts;
             File globalDistFolderFile = new File(getDistFolder());

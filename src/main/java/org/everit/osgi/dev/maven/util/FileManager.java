@@ -95,8 +95,6 @@ public class FileManager implements AutoCloseable {
 
     private final Log log;
 
-    private String reportFolder;
-
     private ShutdownHook shutdownHook = null;
 
     private DaemonFileWriterStreamPoller stdErrPoller;
@@ -105,9 +103,8 @@ public class FileManager implements AutoCloseable {
 
     private Socket symbolicLinkServerSocket = null;
 
-    public FileManager(final Log log, final String reportFolder) {
+    public FileManager(final Log log) {
         this.log = log;
-        this.reportFolder = reportFolder;
     }
 
     /**
@@ -381,9 +378,6 @@ public class FileManager implements AutoCloseable {
             File classpathFile = new File(classpathURI);
             WindowsXPProcess process = (WindowsXPProcess) windowsXPProcessManager.createProcess();
             process.setTitle("Elevated symboliclink service");
-            process.setVisible(false);
-            process.setTeeName(null);
-            process.setPipeStreams(true, false);
             process.setLogger(Logger.getLogger("eosgi-elevated-process"));
             int port = getFreePort();
             String command = "\"" + javaExecutableFile.getAbsolutePath() + "\" -cp \""
@@ -393,21 +387,6 @@ public class FileManager implements AutoCloseable {
             process.setCommand(command);
             process.startElevated();
             log.info("Symboliclink service started");
-
-            try {
-                File stdOutFile = new File(reportFolder, "elevated-stdout.log");
-                InputStream processOutput = process.getInputStream();
-                stdOutPoller =
-                        new DaemonFileWriterStreamPoller(processOutput, stdOutFile);
-                stdOutPoller.start();
-
-                File stdErrFile = new File(reportFolder, "elevated-stderr.log");
-                stdErrPoller =
-                        new DaemonFileWriterStreamPoller(process.getErrorStream(), stdErrFile);
-                stdErrPoller.start();
-            } catch (IOException e) {
-                throw new MojoExecutionException("Could not start daemon pollers on elevated process");
-            }
 
             InetAddress localHost;
             try {

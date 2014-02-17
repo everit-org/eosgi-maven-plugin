@@ -194,7 +194,7 @@ public class IntegrationTestMojo extends DistMojo {
         processJacocoSettings();
         super.execute();
 
-        File testReportFolderFile = new File(reportFolder, "testResult");
+        File testReportFolderFile = new File(reportFolder);
 
         getLog().info("OSGi Integrations tests running started");
         getLog().info("Integration test output directory: " + testReportFolderFile.getAbsolutePath());
