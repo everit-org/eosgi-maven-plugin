@@ -108,7 +108,7 @@ public class DistMojo extends AbstractMojo {
      * files with same name already exist.
      * 
      */
-    @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi/dist")
+    @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
     protected String distFolder;
 
     protected List<DistributedEnvironment> distributedEnvironments;
@@ -155,7 +155,7 @@ public class DistMojo extends AbstractMojo {
      * The folder where the integration test reports will be placed. Please note that the content of this folder will be
      * deleted before running the tests.
      */
-    @Parameter(property = "eosgi.testReportFolder", defaultValue = "${project.build.directory}/eosgi/report")
+    @Parameter(property = "eosgi.testReportFolder", defaultValue = "${project.build.directory}/eosgi-report")
     protected String reportFolder;
 
     /**
