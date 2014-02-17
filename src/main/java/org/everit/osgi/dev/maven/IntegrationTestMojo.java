@@ -386,14 +386,14 @@ public class IntegrationTestMojo extends DistMojo {
             String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
 
             StringBuilder sb = new StringBuilder("-javaagent:");
-            sb.append(jacocoAgentAbsPath.replace("\\", "\\\\"));
+            sb.append(jacocoAgentAbsPath);
             sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
-            sb.append("\\,dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
+            sb.append(",dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
             if (jacoco.getIncludes() != null) {
-                sb.append("\\,includes=").append(jacoco.getIncludes());
+                sb.append(",includes=").append(jacoco.getIncludes());
             }
             if (jacoco.getExcludes() != null) {
-                sb.append("\\,excludes=").append(jacoco.getExcludes());
+                sb.append(",excludes=").append(jacoco.getExcludes());
             }
             String jacocoAgentParam = sb.toString();
             for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
@@ -401,8 +401,8 @@ public class IntegrationTestMojo extends DistMojo {
                 reportFolderFile.mkdirs();
                 File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
                 StringBuilder envSb = new StringBuilder(jacocoAgentParam);
-                envSb.append("\\,destfile=").append(jacocoExecFile.getAbsolutePath().replace("\\", "\\\\"));
-                envSb.append("\\,sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
+                envSb.append(",destfile=").append(jacocoExecFile.getAbsolutePath());
+                envSb.append(",sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
 
                 List<String> vmOptions = environment.getVmOptions();
                 if (vmOptions == null) {
