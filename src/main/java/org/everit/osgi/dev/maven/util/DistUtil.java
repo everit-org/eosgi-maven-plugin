@@ -16,11 +16,41 @@
  */
 package org.everit.osgi.dev.maven.util;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.TreeMap;
+
 import org.apache.velocity.tools.generic.EscapeTool;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
 
 public final class DistUtil {
 
     private final EscapeTool escapeTool = new EscapeTool();
+
+    public TreeMap<Integer, List<ArtifactType>> getBundleArtifactsOrderedByStartLevel(
+            final Collection<ArtifactType> artifacts,
+            final int defaultStartLevel, final String osgiAction) {
+
+        TreeMap<Integer, List<ArtifactType>> result = new TreeMap<>();
+        for (ArtifactType artifact : artifacts) {
+            BundleDataType bundle = artifact.getBundle();
+            if (bundle != null && (osgiAction == null || bundle.getAction().value().equals(osgiAction))) {
+                int startLevel = defaultStartLevel;
+                if (bundle.getStartLevel() != null) {
+                    startLevel = bundle.getStartLevel();
+                }
+                List<ArtifactType> bundleArtifacts = result.get(startLevel);
+                if (bundleArtifacts == null) {
+                    bundleArtifacts = new ArrayList<>();
+                    result.put(startLevel, bundleArtifacts);
+                }
+                bundleArtifacts.add(artifact);
+            }
+        }
+        return result;
+    }
 
     public String propertyKey(final String key) {
         return escapeTool.propertyKey(key).replace(",", "\\,");
