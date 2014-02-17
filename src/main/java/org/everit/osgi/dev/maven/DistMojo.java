@@ -112,7 +112,7 @@ public class DistMojo extends AbstractMojo {
      * files with same name already exist.
      * 
      */
-    @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
+    @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi/dist")
     protected String distFolder;
 
     protected List<DistributedEnvironment> distributedEnvironments;
@@ -156,10 +156,17 @@ public class DistMojo extends AbstractMojo {
     protected List<ArtifactRepository> remoteRepositories;
 
     /**
+     * The folder where the integration test reports will be placed. Please note that the content of this folder will be
+     * deleted before running the tests.
+     */
+    @Parameter(property = "eosgi.testReportFolder", defaultValue = "${project.build.directory}/eosgi/report")
+    protected String reportFolder;
+
+    /**
      * Comma separated list of ports of currently running OSGi containers. Such ports are normally opened with
      * richConsole. In case this property is defined, dependency changes will be pushed via the defined ports.
      */
-    @Parameter(property = "eosgi.servicePorts")
+    @Parameter(property = "eosgi.servicePort")
     protected String servicePort;
 
     /**
@@ -311,7 +318,7 @@ public class DistMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         defineUpgradePorts();
-        fileManager = new FileManager(getLog());
+        fileManager = new FileManager(getLog(), reportFolder);
         try {
             List<DistributableArtifact> processedArtifacts;
             File globalDistFolderFile = new File(getDistFolder());

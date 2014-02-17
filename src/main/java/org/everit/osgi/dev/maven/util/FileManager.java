@@ -39,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.Random;
+import java.util.logging.Logger;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -46,6 +47,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
+import org.everit.osgi.dev.maven.DaemonFileWriterStreamPoller;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
 import org.rzo.yajsw.os.OperatingSystem;
 import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
@@ -93,12 +95,19 @@ public class FileManager implements AutoCloseable {
 
     private final Log log;
 
+    private String reportFolder;
+
     private ShutdownHook shutdownHook = null;
+
+    private DaemonFileWriterStreamPoller stdErrPoller;
+
+    private DaemonFileWriterStreamPoller stdOutPoller;
 
     private Socket symbolicLinkServerSocket = null;
 
-    public FileManager(final Log log) {
+    public FileManager(final Log log, final String reportFolder) {
         this.log = log;
+        this.reportFolder = reportFolder;
     }
 
     /**
@@ -117,6 +126,14 @@ public class FileManager implements AutoCloseable {
             outputStream.write("stop\n".getBytes(Charset.defaultCharset()));
             symbolicLinkServerSocket.close();
             symbolicLinkServerSocket = null;
+        }
+
+        if (stdOutPoller != null) {
+            stdOutPoller.close();
+        }
+
+        if (stdErrPoller != null) {
+            stdErrPoller.close();
         }
     }
 
@@ -365,6 +382,9 @@ public class FileManager implements AutoCloseable {
             WindowsXPProcess process = (WindowsXPProcess) windowsXPProcessManager.createProcess();
             process.setTitle("Elevated symboliclink service");
             process.setVisible(false);
+            process.setTeeName(null);
+            process.setPipeStreams(true, false);
+            process.setLogger(Logger.getLogger("eosgi-elevated-process"));
             int port = getFreePort();
             String command = "\"" + javaExecutableFile.getAbsolutePath() + "\" -cp \""
                     + classpathFile.getAbsolutePath() + "\" " + ElevatedSymbolicLinkServer.class.getName() + " "
@@ -373,6 +393,22 @@ public class FileManager implements AutoCloseable {
             process.setCommand(command);
             process.startElevated();
             log.info("Symboliclink service started");
+
+            try {
+                File stdOutFile = new File(reportFolder, "elevated-stdout.log");
+                InputStream processOutput = process.getInputStream();
+                stdOutPoller =
+                        new DaemonFileWriterStreamPoller(processOutput, stdOutFile);
+                stdOutPoller.start();
+
+                File stdErrFile = new File(reportFolder, "elevated-stderr.log");
+                stdErrPoller =
+                        new DaemonFileWriterStreamPoller(process.getErrorStream(), stdErrFile);
+                stdErrPoller.start();
+            } catch (IOException e) {
+                throw new MojoExecutionException("Could not start daemon pollers on elevated process");
+            }
+
             InetAddress localHost;
             try {
                 localHost = InetAddress.getLocalHost();

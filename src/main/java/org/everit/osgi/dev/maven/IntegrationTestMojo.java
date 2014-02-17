@@ -47,8 +47,8 @@ import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
-import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
+import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
 import org.rzo.yajsw.os.Process;
@@ -111,18 +111,12 @@ public class IntegrationTestMojo extends DistMojo {
      */
     @Parameter
     protected JacocoSettings jacoco;
+
     /**
      * Skipping this plugin.
      */
     @Parameter(property = "maven.test.skip", defaultValue = "false")
     protected boolean skipTests = false;
-
-    /**
-     * The folder where the integration test reports will be placed. Please note that the content of this folder will be
-     * deleted before running the tests.
-     */
-    @Parameter(property = "eosgi.testReportFolder", defaultValue = "${project.build.directory}/eosgi-itests-reports")
-    protected String testReportFolder;
 
     private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
         int result = 0;
@@ -200,7 +194,7 @@ public class IntegrationTestMojo extends DistMojo {
         processJacocoSettings();
         super.execute();
 
-        File testReportFolderFile = new File(testReportFolder);
+        File testReportFolderFile = new File(reportFolder, "testResult");
 
         getLog().info("OSGi Integrations tests running started");
         getLog().info("Integration test output directory: " + testReportFolderFile.getAbsolutePath());
@@ -257,10 +251,10 @@ public class IntegrationTestMojo extends DistMojo {
                 tmpPath.mkdir();
                 getLog().info("Setting tmp path: " + tmpPath.getAbsolutePath());
                 process.setTmpPath(tmpPath.getAbsolutePath());
+                process.setVisible(false);
                 process.setTeeName(null);
                 process.setPipeStreams(true, false);
                 process.setLogger(Logger.getLogger("eosgi"));
-                // process.setPipeStreams(true, true);
 
                 Map<String, String> envMap = new HashMap<String, String>(System.getenv());
                 envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
@@ -378,7 +372,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     private void processJacocoSettings() {
         if (jacoco != null) {
-            File globalReportFolderFile = new File(testReportFolder);
+            File globalReportFolderFile = new File(reportFolder);
 
             System.out.println(pluginArtifactMap.keySet());
             Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
