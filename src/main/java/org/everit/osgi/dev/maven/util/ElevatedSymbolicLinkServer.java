@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -91,13 +92,14 @@ public class ElevatedSymbolicLinkServer {
             serverSocket = new ServerSocket(port, 1, localAddress);
             Socket socket = serverSocket.accept();
             InputStream in = socket.getInputStream();
+            OutputStream outputStream = socket.getOutputStream();
             InputStreamReader reader = new InputStreamReader(in, Charset.defaultCharset());
             BufferedReader br = new BufferedReader(reader);
             String line = br.readLine();
             boolean stopped = false;
             while (!stopped && line != null) {
                 if (!line.equals(COMMAND_STOP)) {
-                    processLine(line);
+                    processLine(line, outputStream);
                     line = br.readLine();
                 } else {
                     System.out.println("Caughed stop command. Stopping server.");
@@ -119,7 +121,7 @@ public class ElevatedSymbolicLinkServer {
         }
     }
 
-    private static void processLine(final String line) {
+    private static void processLine(final String line, final OutputStream out) {
         if (line.startsWith(COMMAND_CREATE_SYMBOLIC_LINK)) {
 
             String[] fileURIs = line.substring(COMMAND_CREATE_SYMBOLIC_LINK.length() + 1).split(" ");
@@ -139,6 +141,7 @@ public class ElevatedSymbolicLinkServer {
                 } else {
                     targetFile.setExecutable(false);
                 }
+                out.write("ok\n".getBytes(Charset.defaultCharset()));
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             } catch (IOException e) {

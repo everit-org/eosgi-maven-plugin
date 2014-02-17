@@ -28,7 +28,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
 
-public class DistUtil {
+public class PluginUtil {
 
     public static final String OS_LINUX_UNIX = "linux";
 
@@ -72,7 +72,7 @@ public class DistUtil {
             File[] subFiles = folder.listFiles();
             for (File subFile : subFiles) {
                 if (subFile.isDirectory()) {
-                    DistUtil.deleteFolderRecurse(subFile);
+                    PluginUtil.deleteFolderRecurse(subFile);
                 } else {
                     subFile.delete();
                 }
@@ -153,6 +153,6 @@ public class DistUtil {
         return result.toString();
     }
 
-    private DistUtil() {
+    private PluginUtil() {
     }
 }

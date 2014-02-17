@@ -73,7 +73,7 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseableType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseablesType;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
-import org.everit.osgi.dev.maven.util.DistUtil;
+import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
 import org.everit.osgi.dev.richconsole.RichConsoleConstants;
 import org.osgi.framework.Constants;
@@ -371,8 +371,8 @@ public class DistMojo extends AbstractMojo {
                             parseConfiguration(distFolderFile, processedArtifacts, environment,
                                     environmentCopyMode);
 
-                    Map<ArtifactKey, ArtifactType> artifactMap = DistUtil.createArtifactMap(existingDistConfig);
-                    List<ArtifactType> artifactsToRemove = DistUtil.getArtifactsToRemove(artifactMap,
+                    Map<ArtifactKey, ArtifactType> artifactMap = PluginUtil.createArtifactMap(existingDistConfig);
+                    List<ArtifactType> artifactsToRemove = PluginUtil.getArtifactsToRemove(artifactMap,
                             distributionPackage);
 
                     if (environmentSocket != null) {
@@ -626,7 +626,7 @@ public class DistMojo extends AbstractMojo {
                     symbolicName = symbolicName.substring(0, semicolonIndex);
                 }
 
-                version = DistUtil.normalizeVersion(version);
+                version = PluginUtil.normalizeVersion(version);
 
                 String fragmentHost = mainAttributes.getValue(Constants.FRAGMENT_HOST);
                 String importPackage = mainAttributes.getValue(Constants.IMPORT_PACKAGE);

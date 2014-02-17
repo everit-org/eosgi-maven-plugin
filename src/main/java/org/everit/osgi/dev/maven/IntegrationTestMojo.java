@@ -47,7 +47,7 @@ import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
-import org.everit.osgi.dev.maven.util.DistUtil;
+import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
@@ -150,7 +150,7 @@ public class IntegrationTestMojo extends DistMojo {
             return null;
         }
 
-        String os = DistUtil.getOS();
+        String os = PluginUtil.getOS();
 
         LauncherType selectedLauncher = null;
         Iterator<LauncherType> iterator = launcherList.iterator();
@@ -206,7 +206,7 @@ public class IntegrationTestMojo extends DistMojo {
         getLog().info("Integration test output directory: " + testReportFolderFile.getAbsolutePath());
 
         if (testReportFolderFile.exists()) {
-            DistUtil.deleteFolderRecurse(testReportFolderFile);
+            PluginUtil.deleteFolderRecurse(testReportFolderFile);
         }
         testReportFolderFile.mkdirs();
 
@@ -266,7 +266,7 @@ public class IntegrationTestMojo extends DistMojo {
                 envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
                 envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
 
-                List<String[]> env = DistUtil.convertMapToList(envMap);
+                List<String[]> env = PluginUtil.convertMapToList(envMap);
 
                 process.setEnvironment(env);
                 process.setWorkingDir(commandFolder.getAbsolutePath());
@@ -301,7 +301,7 @@ public class IntegrationTestMojo extends DistMojo {
 
                 deamonFileWriterStreamPoller.close();
                 deamonStdErrPoller.close();
-                DistUtil.deleteFolderRecurse(tmpPath);
+                PluginUtil.deleteFolderRecurse(tmpPath);
 
                 String environmentId = distributedEnvironment.getEnvironment().getId();
 
