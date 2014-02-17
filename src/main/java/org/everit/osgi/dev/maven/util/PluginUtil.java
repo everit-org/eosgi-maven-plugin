@@ -164,14 +164,14 @@ public class PluginUtil {
     public static String sendCommandToSocket(final String command, final Socket socket, final String serverName,
             final Log log)
             throws IOException {
-        log.info("Sending command to " + serverName + ": " + command);
+        log.debug("Sending command to " + serverName + ": " + command);
         InputStream inputStream = socket.getInputStream();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         OutputStream outputStream = socket.getOutputStream();
         outputStream.write((command + "\n").getBytes(Charset.defaultCharset()));
         outputStream.flush();
         String response = reader.readLine();
-        log.info("Got response from " + serverName + ": " + response);
+        log.debug("Got response from " + serverName + ": " + response);
         return response;
     }
 
