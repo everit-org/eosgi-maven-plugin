@@ -166,8 +166,7 @@ public class DistMojo extends AbstractMojo {
     protected String servicePort;
 
     /**
-     * The directory where there may be additional files to create the distribution package.
-     * 
+     * The directory where there may be additional files to create the distribution package (optional).
      */
     @Parameter(property = "eosgi.sourceDistPath", defaultValue = "${basedir}/src/dist/")
     protected String sourceDistPath;

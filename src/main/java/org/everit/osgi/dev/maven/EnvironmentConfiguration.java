@@ -83,7 +83,7 @@ public class EnvironmentConfiguration {
      * 
      */
     @Parameter
-    private int timeout = 300000;
+    private int timeout = 180000;
 
     /**
      * The JVM options that will be applied during starting the OSGI Container.

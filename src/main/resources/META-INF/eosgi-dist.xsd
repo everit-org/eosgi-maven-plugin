@@ -21,10 +21,19 @@
     elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema"
     xmlns:tns="http://everit.org/eosgi/dist/definition/2.0.0">
 
+    <annotation>
+      <documentation>The schema of the XML that describes the distribution environment. The XML file is parsed with Velocity before processing. The folling variables can be used:
+<ul>
+  <li>distributableArtifacts: List of DistributableArtifact objects</li>
+  <li>environment: An EnvironmentConfiguration object</li>
+  <li>copyMode: The default copy mode that should be used during distributing artifacts</li>
+  <li>escapeTool:  A simply utility class that can be used to do escapes</li>
+  <li>distUtil: A class that contains util functions that help creating a distribution package.</li>
+</ul>
+</documentation></annotation>
     <element name="distributionPackage" type="tns:DistributionPackageType">
         <annotation>
-            <documentation>Root element of a distribution package
-                definition.</documentation>
+          <documentation></documentation>
         </annotation>
     </element>
 
@@ -49,7 +58,7 @@
 
     <complexType name="ArtifactType">
         <annotation>
-          <documentation>The start level of the bundle (optional)</documentation>
+          <documentation>A maven artifact with additional information.</documentation>
         </annotation>
         <sequence>
         <element name="groupId" type="string" minOccurs="1" maxOccurs="1"></element>
@@ -65,11 +74,17 @@
       </sequence>
       <attribute name="targetFolder" type="string">
         <annotation>
-          <documentation>The target path inside the generated distribution package</documentation>
+          <documentation>The target folder where the artifact should be copied to inside the distribution package.</documentation>
         </annotation>
       </attribute>
-      <attribute name="targetFile" type="string"></attribute>
-      <attribute name="copyMode" type="tns:CopyModeType"></attribute>
+      <attribute name="targetFile" type="string">
+        <annotation>
+          <documentation>The target name of the artifact file. If not specified, the target file will have the same name as the maven artifact file.</documentation>
+        </annotation></attribute>
+      <attribute name="copyMode" type="tns:CopyModeType">
+        <annotation>
+          <documentation>Either creating a symbolic link or copying the artifact file.</documentation>
+        </annotation></attribute>
     </complexType>
 
     <complexType name="ArtifactsType">
@@ -87,8 +102,27 @@
     </complexType>
 
     <complexType name="ParseableType">
-        <attribute name="path" type="string" />
-        <attribute name="encoding" type="string" />
+        <annotation>
+          <documentation>A file that will be parsed with Velocity after distributing the artifacts. The following variables can be used:
+
+The schema of the XML that describes the distribution environment. The XML file is parsed with Velocity before processing. The folling variables can be used:
+<ul>
+  <li>distributableArtifacts: List of DistributableArtifact objects</li>
+  <li>environment: An EnvironmentConfiguration object</li>
+  <li>distributionPackage: The content of the distribution package XML (that is described by this schema)</li>
+  <li>escapeTool:  A simply utility class that can be used to do escapes</li>
+  <li>distUtil: A class that contains util functions that help creating a distribution package.</li>
+</ul>
+</documentation>
+        </annotation>
+        <attribute name="path" type="string" >
+          <annotation>
+            <documentation>Path of the parseable  file.</documentation>
+          </annotation></attribute>
+        <attribute name="encoding" type="string" >
+          <annotation>
+            <documentation>The encoding of the parseable file.</documentation>
+          </annotation></attribute>
     </complexType>
 
 
@@ -104,10 +138,13 @@
         <sequence>
             <element name="startCommand" type="tns:CommandType">
               <annotation>
-                <documentation>The command that starts the framework. The framework should be started in interactive mode so a CTRL+C can be sent to it.</documentation>
+                <documentation>The command that starts the framework. The framework should be started in the way that it will be stopped by sending a SIGTERM signal.</documentation>
               </annotation></element>
         </sequence>
         <attribute name="os">
+            <annotation>
+              <documentation>The type of the operating system.</documentation>
+            </annotation>
             <simpleType>
                 <restriction base="string">
                     <enumeration value="windows"></enumeration>
@@ -122,7 +159,10 @@
     <complexType name="CommandType">
         <simpleContent>
             <extension base="string">
-                <attribute name="folder" type="string" use="optional"></attribute>
+                <attribute name="folder" type="string" use="optional">
+                  <annotation>
+                    <documentation>The path of the working directory where the command should be executed.</documentation>
+                  </annotation></attribute>
             </extension>
         </simpleContent>
     </complexType>
@@ -139,14 +179,17 @@
               </annotation></element>
             <element name="location" type="string" minOccurs="1" maxOccurs="1">
               <annotation>
-                <documentation>The file URI that can be used to update/install the bundle. It might start with "reference:".</documentation>
+                <documentation>The file URI that can be used to update/install the bundle. It might start with "reference:file:" or "file:".</documentation>
               </annotation></element>
         </sequence>
       <attribute name="action" type="tns:OSGiActionType" use="required">
         <annotation>
           <documentation>An action that should be done with the bundle</documentation>
         </annotation></attribute>
-      <attribute name="startLevel" type="int" use="optional"></attribute>
+      <attribute name="startLevel" type="int" use="optional">
+        <annotation>
+          <documentation>Start level of the bundle (optional)</documentation>
+        </annotation></attribute>
     </complexType>
 
     <simpleType name="CopyModeType">

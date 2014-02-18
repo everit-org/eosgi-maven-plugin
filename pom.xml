@@ -30,7 +30,7 @@
 
   <groupId>org.everit.osgi.dev</groupId>
   <artifactId>eosgi-maven-plugin</artifactId>
-  <version>2.0.0-SNAPSHOT</version>
+  <version>2.0.0</version>
 
   <packaging>maven-plugin</packaging>
 
@@ -42,17 +42,13 @@
     <developerConnection>scm:git:https://github.com/everit-org/eosgi-maven-plugin.git</developerConnection>
     <url>https://github.com/everit-org/eosgi-maven-plugin</url>
   </scm>
-  <url>${everit.public.site.url}</url>
-  <distributionManagement>
-    <site>
-      <id>everit.org</id>
-      <url>dav:${everit.public.site.url}/mvnsites/eosgi-maven-plugin</url>
-    </site>
-  </distributionManagement>
+  <url>http://everit.org</url>
+
   <ciManagement>
     <system>Jenkins</system>
     <url>https://ci.everit.biz/jenkins/job/eosgi-maven-plugin</url>
   </ciManagement>
+
   <issueManagement>
     <system>GitHub</system>
     <url>https://github.com/everit-org/eosgi-maven-plugin/issues</url>
@@ -63,11 +59,18 @@
     <maven.compiler.target>1.7</maven.compiler.target>
   </properties>
 
-  <developers>
-    <developer>
-      <name>Everit Team</name>
-    </developer>
-  </developers>
+  <licenses>
+    <license>
+      <name>GNU Lesser General Public License v3.0</name>
+      <url>http://opensource.org/licenses/LGPL-3.0</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Everit Kft.</name>
+    <url>http://www.everit.biz</url>
+  </organization>
 
   <build>
     <plugins>
@@ -178,7 +181,7 @@
     <dependency>
       <groupId>org.everit.osgi.dev</groupId>
       <artifactId>org.everit.osgi.dev.richconsole</artifactId>
-      <version>1.2.0-SNAPSHOT</version>
+      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.velocity</groupId>
@@ -186,4 +189,17 @@
       <version>2.0</version>
     </dependency>
   </dependencies>
+  
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
+        <configuration>
+          <show>private</show>
+        </configuration>
+      </plugin>
+    </plugins>
+  </reporting>
 </project>

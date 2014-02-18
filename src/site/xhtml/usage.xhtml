@@ -17,24 +17,6 @@
     along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
 
 -->
-<!--
-
-    This file is part of Maven OSGi plugin.
-
-    Maven OSGi plugin is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    Maven OSGi plugin is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
-
--->
 <!DOCTYPE html
   PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -50,14 +32,13 @@
 		ran successfully. A dependency is an OSGi bundle if it has the
 		Bundle-SymbolicName and the Bundle-Version manifest headers defined.</p>
 	<h2>Distribution packages</h2>
-	<p>
-		In the goals this plugin uses distribution packages. A distribution
-		package is a simple ZIP file available in a maven repository with the
-		dependencies and configuration files of the framework. By default,
-		there is an Equinox based distribution package. To see how to create
-		your own distribution package, please refer to the <a
-			href="distpackage.html">distribution package guide</a>.
-	</p>
+	<p>In the goals this plugin uses distribution packages. A
+		distribution package is a simple ZIP file available in a maven
+		repository with the dependencies and configuration files of the
+		framework. By default, there is an Equinox based distribution package.
+		To see how to create your own distribution package, check one of the
+		existing ones and the the documentation in the XSD that is available
+		in the source of this plugin.</p>
 
 	<h2>Environments</h2>
 
@@ -74,7 +55,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
-    &lt;version&gt;1.1.0&lt;/version&gt;
+    &lt;version&gt;2.0.0&lt;/version&gt;
 &lt;/plugin&gt;
 			</pre>
 	</div>
@@ -85,7 +66,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
-    &lt;version&gt;1.0.0&lt;/version&gt;
+    &lt;version&gt;2.0.0&lt;/version&gt;
     &lt;configuration&gt;
         &lt;environments&gt;
             &lt;environment&gt;
@@ -235,7 +216,23 @@
 		To see them, please check the documentation of the goal you want to
 		run!</p>
 	<h2>Integrate tests as a maven compilation lifecycle</h2>
-	<h3>Configuration of the osgi plugin</h3>
+	<h3>Additional dependencies of the project</h3>
+	<p>To be able to run tests with the maven plugin, the started OSGi
+		containers must contain the osgi-testrunner bundle and at least one
+		Test Engine bundle. At the moment there is one Test Engine
+		implementation that makes it possible to run tests with JUnit4. To
+		have all necessary bundles within the environment, add the following
+		dependency to the project:</p>
+	<div class="source">
+		<pre>
+&lt;dependency&gt;
+  &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
+  &lt;artifactId&gt;org.everit.osgi.dev.testrunner.junit4&lt;/artifactId&gt;
+  &lt;version&gt;3.0.0&lt;/version&gt;
+&lt;/dependency&gt;
+		</pre>
+	</div>
+	<h3>Configuration of the maven plugin</h3>
 	<p>In order to run the integration-test goal at the integration
 		phase of maven you can use the following configuration snippet:</p>
 	<div class="source">
@@ -243,7 +240,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
-    &lt;version&gt;1.1.0&lt;/version&gt;
+    &lt;version&gt;2.0.0&lt;/version&gt;
     &lt;executions&gt;
         &lt;execution&gt;
             &lt;id&gt;integration-test&lt;/id&gt;
@@ -300,7 +297,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
-    &lt;version&gt;1.0.0&lt;/version&gt;
+    &lt;version&gt;2.0.0&lt;/version&gt;
     &lt;configuration&gt;
         &lt;jacoco&gt;
             &lt;append&gt;true&lt;/append&gt;
@@ -318,7 +315,40 @@
 			href="http://www.eclemma.org/jacoco/trunk/doc/agent.html">Jacoco
 			java agent documentation</a> as the parameters are passed directly to the
 		agent. The output is set to the
-		target/eosgi-itest-reports/environmentId/jacoco.exec file.
+		target/eosgi-reports/environmentId/jacoco.exec file.
+	</p>
+	<h2>Incremental update</h2>
+	It is possible to run incremental updates on the distributions. To do
+	an update, simply run the following command:
+	<div class="source">
+		<pre>
+  mvn package eosgi:dist
+		</pre>
+	</div>
+	<p>By running the command, all extracted environments will be
+		updated. In case there is an incremental update, the copy mode of the
+		original distribution is used. It is important to either stopping all
+		environments before an incremental update or specifying their service
+		ports.</p>
+	<h2>Changing bundles on the OSGi container without restarting it</h2>
+	<p>
+		In case <a href="https://github.com/everit-org/osgi-richconsole">Everit
+			OSGi RichConsole</a> is deployed, it listens on a specific TCP port. The
+		port is displayed on the deployer window and in the log. For more
+		information about the configuration possibilities, please see the
+		documentation of RichConsole.
+	</p>
+	<p>
+		Since version 2.0.0, eosgi-maven-plugin supports calling the service
+		ports. To define these ports, the <a href="dist-mojo.html#servicePort">eosgi.servicePort</a>
+		system property must be defined. An example command:
+		<div class="source">
+			<pre>
+  mvn package eosgi:dist -Deosgi.servicePort=33532,33432
+		</pre>
+			In the example above, two environments are running when the
+			incremental update command is called.
+		</div>
 	</p>
 </body>
 </html>
