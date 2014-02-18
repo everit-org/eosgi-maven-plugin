@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Everit - Maven OSGi plugin - </title>
+    <title>Everit - Maven OSGi plugin - Dependency Information</title>
     <style type="text/css" media="all">
       @import url("./css/maven-base.css");
       @import url("./css/maven-theme.css");
@@ -58,8 +58,8 @@
                                 <h5>Overview</h5>
                   <ul>
                   <li class="none">
-            <strong>Introduction</strong>
-          </li>
+                          <a href="index.html" title="Introduction">Introduction</a>
+            </li>
                   <li class="none">
                           <a href="plugin-info.html" title="Goals">Goals</a>
             </li>
@@ -76,8 +76,8 @@
                           <a href="project-info.html" title="Project Information">Project Information</a>
                     <ul>
                       <li class="none">
-            <strong>About</strong>
-          </li>
+                          <a href="index.html" title="About">About</a>
+            </li>
                       <li class="none">
                           <a href="plugin-management.html" title="Plugin Management">Plugin Management</a>
             </li>
@@ -85,8 +85,8 @@
                           <a href="distribution-management.html" title="Distribution Management">Distribution Management</a>
             </li>
                       <li class="none">
-                          <a href="dependency-info.html" title="Dependency Information">Dependency Information</a>
-            </li>
+            <strong>Dependency Information</strong>
+          </li>
                       <li class="none">
                           <a href="source-repository.html" title="Source Repository">Source Repository</a>
             </li>
@@ -129,29 +129,45 @@
     </div>
     <div id="bodyColumn">
       <div id="contentBox">
-        <!-- This file is part of Everit - Maven OSGi plugin.
-
-    Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>. -->
-	
-		<div class="section">
-<h2>About Everit - Maven OSGi plugin<a name="About_Everit_-_Maven_OSGi_plugin"></a></h2>
-		
-<p>The aim of the maven plugin is to speed up development by means of an OSGi environment.
-		It runs integration tests as a life-cycle phase of the compilation and supports creation of custom
-		OSGi distribution packages.</p>
-	</div>
-
+        <div class="section">
+<h2>Dependency Information<a name="Dependency_Information"></a></h2><a name="Dependency_Information"></a>
+<div class="section">
+<h3>Apache Maven<a name="Apache_Maven"></a></h3><a name="Apache_Maven"></a>
+<div class="source">
+<pre>&lt;dependency&gt;
+  &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
+  &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
+  &lt;version&gt;2.0.0&lt;/version&gt;
+  &lt;type&gt;maven-plugin&lt;/type&gt;
+&lt;/dependency&gt;</pre></div></div>
+<div class="section">
+<h3>Apache Buildr<a name="Apache_Buildr"></a></h3><a name="Apache_Buildr"></a>
+<div class="source">
+<pre>'org.everit.osgi.dev:eosgi-maven-plugin:maven-plugin:2.0.0'</pre></div></div>
+<div class="section">
+<h3>Apache Ant<a name="Apache_Ant"></a></h3><a name="Apache_Ant"></a>
+<div class="source">
+<pre>&lt;dependency org=&quot;org.everit.osgi.dev&quot; name=&quot;eosgi-maven-plugin&quot; rev=&quot;2.0.0&quot;&gt;
+  &lt;artifact name=&quot;eosgi-maven-plugin&quot; type=&quot;maven-plugin&quot; /&gt;
+&lt;/dependency&gt;</pre></div></div>
+<div class="section">
+<h3>Groovy Grape<a name="Groovy_Grape"></a></h3><a name="Groovy_Grape"></a>
+<div class="source">
+<pre>@Grapes(
+@Grab(group='org.everit.osgi.dev', module='eosgi-maven-plugin', version='2.0.0')
+)</pre></div></div>
+<div class="section">
+<h3>Grails<a name="Grails"></a></h3><a name="Grails"></a>
+<div class="source">
+<pre>compile 'org.everit.osgi.dev:eosgi-maven-plugin:2.0.0'</pre></div></div>
+<div class="section">
+<h3>Leiningen<a name="Leiningen"></a></h3><a name="Leiningen"></a>
+<div class="source">
+<pre>[org.everit.osgi.dev/eosgi-maven-plugin &quot;2.0.0&quot;]</pre></div></div>
+<div class="section">
+<h3>SBT<a name="SBT"></a></h3><a name="SBT"></a>
+<div class="source">
+<pre>libraryDependencies += &quot;org.everit.osgi.dev&quot; %% &quot;eosgi-maven-plugin&quot; % &quot;2.0.0&quot;</pre></div></div></div>
       </div>
     </div>
     <div class="clear">
