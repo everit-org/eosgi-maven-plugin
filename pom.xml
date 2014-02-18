@@ -67,6 +67,12 @@
     </license>
   </licenses>
 
+  <developers>
+    <developer>
+      <name>Everit Team</name>
+    </developer>
+  </developers>
+
   <organization>
     <name>Everit Kft.</name>
     <url>http://www.everit.biz</url>
@@ -189,7 +195,7 @@
       <version>2.0</version>
     </dependency>
   </dependencies>
-  
+
   <reporting>
     <plugins>
       <plugin>
