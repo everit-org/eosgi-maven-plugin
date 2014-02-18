@@ -26,9 +26,11 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.jar.Attributes;
 import java.util.logging.Logger;
 
@@ -44,9 +46,13 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
+import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
 import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
@@ -120,13 +126,43 @@ public class IntegrationTestMojo extends DistMojo {
 
     private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
         int result = 0;
-        for (DistributableArtifact distributableArtifact : distributedEnvironment.getDistributableArtifacts()) {
-            Attributes mainAttributes = distributableArtifact.getManifest().getMainAttributes();
-            String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
-            if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
-                long currentExpectedNumber = Long.valueOf(currentExpectedNumberString).longValue();
-                result += currentExpectedNumber;
+        ArtifactsType artifacts = distributedEnvironment.getDistributionPackage().getArtifacts();
+        if (artifacts == null) {
+            return 0;
+        }
+        List<ArtifactType> artifactList = artifacts.getArtifact();
+        Set<String> artifactsKeys = new HashSet<>();
+        for (ArtifactType artifactType : artifactList) {
+            BundleDataType bundleDataType = artifactType.getBundle();
+            if (bundleDataType != null && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
+                String artifactKey = artifactType.getGroupId() + ":" + artifactType.getArtifactId() + ":"
+                        + artifactType.getVersion() + ":" + evaluateArtifactType(artifactType.getType()) + ":"
+                        + evaluateClassifier(artifactType.getClassifier());
+
+                artifactsKeys.add(artifactKey);
             }
+        }
+
+        for (DistributableArtifact distributableArtifact : distributedEnvironment.getDistributableArtifacts()) {
+            DistributableArtifactBundleMeta bundle = distributableArtifact.getBundle();
+            if (bundle != null) {
+                Artifact artifact = distributableArtifact.getArtifact();
+
+                String artifactKey = artifact.getGroupId() + ":" + artifact.getArtifactId() + ":"
+                        + artifact.getVersion() + ":" + evaluateArtifactType(artifact.getType()) + ":"
+                        + evaluateClassifier(artifact.getClassifier());
+
+                if (artifactsKeys.contains(artifactKey)) {
+                    Attributes mainAttributes = distributableArtifact.getManifest().getMainAttributes();
+
+                    String currentExpectedNumberString = mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
+                    if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
+                        long currentExpectedNumber = Long.valueOf(currentExpectedNumberString).longValue();
+                        result += currentExpectedNumber;
+                    }
+                }
+            }
+
         }
         return result;
     }
@@ -183,6 +219,20 @@ public class IntegrationTestMojo extends DistMojo {
             return true;
         }
         return false;
+    }
+
+    private String evaluateArtifactType(final String artifactType) {
+        if (artifactType == null || artifactType.trim().equals("")) {
+            return "jar";
+        }
+        return artifactType;
+    }
+
+    private String evaluateClassifier(final String classifier) {
+        if (classifier == null || classifier.trim().length() == 0) {
+            return null;
+        }
+        return classifier;
     }
 
     @Override
