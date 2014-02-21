@@ -318,7 +318,7 @@
 		target/eosgi-reports/environmentId/jacoco.exec file.
 	</p>
 	<h2>Incremental update</h2>
-	It is possible to run incremental updates on the distributions. To do
+	It is possible to run incremental updates on distributions. To carry out
 	an update, simply run the following command:
 	<div class="source">
 		<pre>
@@ -327,26 +327,26 @@
 	</div>
 	<p>By running the command, all extracted environments will be
 		updated. In case there is an incremental update, the copy mode of the
-		original distribution is used. It is important to either stopping all
-		environments before an incremental update or specifying their service
+		original distribution is used. It is important to either stop all
+		environments before an incremental update is carried out or to specify their service
 		ports.</p>
-	<h2>Changing bundles on the OSGi container without restarting it</h2>
+	<h2>Changing bundles in the OSGi container without a restart</h2>
 	<p>
 		In case <a href="https://github.com/everit-org/osgi-richconsole">Everit
 			OSGi RichConsole</a> is deployed, it listens on a specific TCP port. The
-		port is displayed on the deployer window and in the log. For more
+		port is displayed in the deployer window and also in the log. For more
 		information about the configuration possibilities, please see the
 		documentation of RichConsole.
 	</p>
 	<p>
-		Since version 2.0.0, eosgi-maven-plugin supports calling the service
-		ports. To define these ports, the <a href="dist-mojo.html#servicePort">eosgi.servicePort</a>
+		Since version 2.0.0, eosgi-maven-plugin supports service port callings.
+		To define these ports, the <a href="dist-mojo.html#servicePort">eosgi.servicePort</a>
 		system property must be defined. An example command:
 		<div class="source">
 			<pre>
   mvn package eosgi:dist -Deosgi.servicePort=33532,33432
 		</pre>
-			In the example above, two environments are running when the
+			In the above example, two environments are running when the
 			incremental update command is called.
 		</div>
 	</p>
