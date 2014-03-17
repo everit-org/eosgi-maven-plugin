@@ -41,6 +41,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -59,6 +60,7 @@ import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
 import org.rzo.yajsw.os.Process;
 import org.rzo.yajsw.os.ProcessManager;
+import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
 import org.rzo.yajsw.os.posix.bsd.BSDProcess;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -83,7 +85,23 @@ public class IntegrationTestMojo extends DistMojo {
         public void run() {
             if (process.isRunning()) {
                 getLog().warn("Stopping process due to shutdown hook: " + process.getPid());
-                process.stop(shutdownTimeout, -1);
+                if (process instanceof WindowsXPProcess) {
+                    // In case of windows xp process we must kill the process with a command as there is no visible
+                    // window and kill tree command of YAJSW does not work. Hopefully this is a temporary solution.
+                    Log log = getLog();
+
+                    OperatingSystem operatingSystem = OperatingSystem.instance();
+                    ProcessManager processManagerInstance = operatingSystem.processManagerInstance();
+                    Process killProcess = processManagerInstance.createProcess();
+                    String killCommand = "taskkill /F /T /PID " + process.getPid();
+                    log.warn("Killing windows process with command: " + killCommand + "");
+                    killProcess.setCommand(killCommand);
+                    killProcess.setVisible(false);
+                    killProcess.start();
+                    process.waitFor(shutdownTimeout);
+                } else {
+                    process.stop(shutdownTimeout, -1);
+                }
             }
         }
     }
