@@ -52,6 +52,7 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
+import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -82,6 +83,7 @@ import org.osgi.framework.Constants;
  */
 @Mojo(name = "dist", defaultPhase = LifecyclePhase.PACKAGE, requiresProject = true,
         requiresDependencyResolution = ResolutionScope.COMPILE)
+@Execute(phase = LifecyclePhase.PACKAGE)
 public class DistMojo extends AbstractMojo {
 
     @Component
@@ -128,7 +130,7 @@ public class DistMojo extends AbstractMojo {
 
     private EnvironmentConfiguration[] environmentsToProcess;
 
-    @Parameter(defaultValue = "${executedProject}")
+    @Parameter(property = "executedProject")
     protected MavenProject executedProject;
 
     private FileManager fileManager = null;
@@ -530,13 +532,13 @@ public class DistMojo extends AbstractMojo {
             EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
 
             List<EnvironmentConfiguration> result = new ArrayList<EnvironmentConfiguration>();
-            for (int i = 0; i < tmpEnvironments.length; i++) {
+            for (EnvironmentConfiguration tmpEnvironment : tmpEnvironments) {
                 boolean found = false;
                 int j = 0, n = environmentIdArray.length;
                 while (!found && j < n) {
                     if (environmentIdArray[j].equals(tmpEnvironments[j].getId())) {
                         found = true;
-                        result.add(tmpEnvironments[i]);
+                        result.add(tmpEnvironment);
                     }
                     j++;
                 }
