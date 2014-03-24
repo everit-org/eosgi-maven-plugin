@@ -171,7 +171,7 @@
     <dependency>
       <groupId>org.jacoco</groupId>
       <artifactId>org.jacoco.agent</artifactId>
-      <version>0.6.4.201312101107</version>
+      <version>0.7.0.201403182114</version>
       <classifier>runtime</classifier>
     </dependency>
     <dependency>
