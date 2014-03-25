@@ -1,22 +1,20 @@
+#*
+ * This file is part of Everit - Maven OSGi plugin.
+ *
+ * Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ *#
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-
-    This file is part of Everit - Maven OSGi plugin.
-
-    Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
-
--->
 <!DOCTYPE html
   PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -55,6 +53,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
+    &lt;version&gt;${project.version}&lt;/version&gt;
 &lt;/plugin&gt;
 			</pre>
 	</div>
@@ -65,6 +64,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
+    &lt;version&gt;${project.version}&lt;/version&gt;
     &lt;configuration&gt;
         &lt;environments&gt;
             &lt;environment&gt;
@@ -226,7 +226,7 @@
 &lt;dependency&gt;
   &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
   &lt;artifactId&gt;org.everit.osgi.dev.testrunner.junit4&lt;/artifactId&gt;
-  &lt;version&gt;3.0.0&lt;/version&gt;
+  &lt;version&gt;3.0.3&lt;/version&gt;
 &lt;/dependency&gt;
 		</pre>
 	</div>
@@ -238,6 +238,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
+    &lt;version&gt;${project.version}&lt;/version&gt;
     &lt;executions&gt;
         &lt;execution&gt;
             &lt;id&gt;integration-test&lt;/id&gt;
@@ -294,6 +295,7 @@
 &lt;plugin&gt;
     &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
     &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
+    &lt;version&gt;${project.version}&lt;/version&gt;
     &lt;configuration&gt;
         &lt;jacoco&gt;
             &lt;append&gt;true&lt;/append&gt;
@@ -318,7 +320,7 @@
 	an update, simply run the following command:
 	<div class="source">
 		<pre>
-  mvn package eosgi:dist
+  mvn eosgi:dist
 		</pre>
 	</div>
 	<p>By running the command, all extracted environments will be
@@ -340,7 +342,7 @@
 		system property must be defined. An example command:
 		<div class="source">
 			<pre>
-  mvn package eosgi:dist -Deosgi.servicePort=33532,33432
+  mvn eosgi:dist -Deosgi.servicePort=33532,33432
 		</pre>
 			In the above example, two environments are running when the
 			incremental update command is called.
