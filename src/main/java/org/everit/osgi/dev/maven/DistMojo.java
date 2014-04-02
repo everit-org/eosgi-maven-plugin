@@ -464,6 +464,8 @@ public class DistMojo extends AbstractMojo {
      * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
      * called therefore the developer should not call it inside an iteration.
      * 
+     * @param environment
+     *            Configuration of the environment that the distributable artifacts will be generated for.
      * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
      * @throws MalformedURLException
      *             if the URL for the artifact is broken.
@@ -472,7 +474,7 @@ public class DistMojo extends AbstractMojo {
             throws MalformedURLException {
         @SuppressWarnings("unchecked")
         List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
-        availableArtifacts.add(project.getArtifact());
+        availableArtifacts.add(executedProject.getArtifact());
 
         List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
         for (Artifact artifact : availableArtifacts) {
@@ -601,6 +603,8 @@ public class DistMojo extends AbstractMojo {
      * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
      * a Bundle-SymbolicName.
      * 
+     * @param environment
+     *            The environment that uses the artifact.
      * @param artifact
      *            The artifact that is checked.
      * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version. Bundle-Version comes

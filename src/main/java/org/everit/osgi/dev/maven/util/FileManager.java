@@ -110,6 +110,7 @@ public class FileManager implements AutoCloseable {
      * In case an elevated service was started, it will be stopped by calling this function.
      * 
      * @throws IOException
+     *             if there is a problem during writing to the symbolicLink server socket.
      */
     @Override
     public void close() throws IOException {
@@ -295,9 +296,9 @@ public class FileManager implements AutoCloseable {
      *            The inputstream of the source.
      * @param targetFile
      *            The file that will be overridden if it is necessary.
-     * @throws MojoExecutionException
      * @throws IOException
-     * @throws FileNotFoundException
+     *             if there is an error during copying the file.
+     * @return true if the target file had to be changed, false if the target file was not changed.
      */
     public boolean overCopyFile(final InputStream is, final File targetFile) throws IOException {
         boolean fileChanged = false;
