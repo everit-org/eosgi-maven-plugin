@@ -147,7 +147,7 @@ public class DistMojo extends AbstractMojo {
     /**
      * The Maven project.
      */
-    @Parameter(defaultValue = "${project}", readonly = true, required = true)
+    @Parameter(property = "project")
     protected MavenProject project;
 
     @Parameter(defaultValue = "${project.remoteArtifactRepositories}")
@@ -188,6 +188,9 @@ public class DistMojo extends AbstractMojo {
     protected void addDefaultSettingsToEnvironment(final EnvironmentConfiguration environment)
             throws MojoExecutionException {
         String environmentId = environment.getId();
+        if (environmentId == null) {
+            throw new MojoExecutionException("Environment id must not be null");
+        }
         Map<String, String> systemProperties = environment.getSystemProperties();
         String currentValue = systemProperties.get(RichConsoleConstants.SYSPROP_ENVIRONMENT_ID);
         if (currentValue != null && !currentValue.equals(environmentId)) {
@@ -474,7 +477,11 @@ public class DistMojo extends AbstractMojo {
             throws MalformedURLException {
         @SuppressWarnings("unchecked")
         List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
-        availableArtifacts.add(executedProject.getArtifact());
+        if (executedProject != null) {
+            availableArtifacts.add(executedProject.getArtifact());
+        } else {
+            availableArtifacts.add(project.getArtifact());
+        }
 
         List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
         for (Artifact artifact : availableArtifacts) {
