@@ -54,7 +54,6 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
-import org.everit.osgi.dev.maven.util.EOsgiConstants;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
@@ -83,26 +82,7 @@ public class IntegrationTestMojo extends DistMojo {
 
         @Override
         public void run() {
-            if (process.isRunning()) {
-                getLog().warn("Stopping process due to shutdown hook: " + process.getPid());
-                if (process instanceof WindowsXPProcess) {
-                    // In case of windows xp process we must kill the process with a command as there is no visible
-                    // window and kill tree command of YAJSW does not work. Hopefully this is a temporary solution.
-                    Log log = getLog();
-
-                    OperatingSystem operatingSystem = OperatingSystem.instance();
-                    ProcessManager processManagerInstance = operatingSystem.processManagerInstance();
-                    Process killProcess = processManagerInstance.createProcess();
-                    String killCommand = "taskkill /F /T /PID " + process.getPid();
-                    log.warn("Killing windows process with command: " + killCommand + "");
-                    killProcess.setCommand(killCommand);
-                    killProcess.setVisible(false);
-                    killProcess.start();
-                    process.waitFor(shutdownTimeout);
-                } else {
-                    process.stop(shutdownTimeout, -1);
-                }
-            }
+            shutdownProcess(process, shutdownTimeout);
         }
     }
 
@@ -119,13 +99,6 @@ public class IntegrationTestMojo extends DistMojo {
      * Constant of the MANIFEST header key to count the {@link #expectedNumberOfIntegrationTests}.
      */
     private static final String EXPECTED_NUMBER_OF_INTEGRATION_TESTS = "EOSGi-TestNum";
-
-    /**
-     * If link than the generated files in the dist folder will be links instead of real copied files. Two possible
-     * values: symbolicLink, file.
-     */
-    @Parameter(property = "eosgi.copyMode", defaultValue = EOsgiConstants.COPYMODE_SYMBOLIC_LINK)
-    protected String copyMode;
 
     @Parameter(defaultValue = "${executedProject}")
     protected MavenProject executedProject;
@@ -358,7 +331,7 @@ public class IntegrationTestMojo extends DistMojo {
                 if (process.isRunning()) {
                     getLog().warn("Test running process did not stop until timeout. Forcing to stop it...");
                     timeoutHappened = true;
-                    process.stop(distributedEnvironment.getEnvironment().getShutdownTimeout(), -1);
+                    shutdownProcess(process, distributedEnvironment.getEnvironment().getShutdownTimeout());
                 }
 
                 deamonFileWriterStreamPoller.close();
@@ -427,11 +400,6 @@ public class IntegrationTestMojo extends DistMojo {
             throw new MojoFailureException("Number of expected tests " + resultSum.expectedTestNum + " while "
                     + resultSum.tests + " tests ran.");
         }
-    }
-
-    @Override
-    public String getCopyMode() {
-        return copyMode;
     }
 
     public JacocoSettings getJacoco() {
@@ -530,6 +498,29 @@ public class IntegrationTestMojo extends DistMojo {
 
     public void setJacoco(final JacocoSettings jacoco) {
         this.jacoco = jacoco;
+    }
+
+    private void shutdownProcess(Process process, int shutdownTimeout) {
+        getLog().warn("Stopping test process: " + process.getPid());
+        if (process.isRunning()) {
+            if (process instanceof WindowsXPProcess) {
+                // In case of windows xp process we must kill the process with a command as there is no visible
+                // window and kill tree command of YAJSW does not work. Hopefully this is a temporary solution.
+                Log log = getLog();
+
+                OperatingSystem operatingSystem = OperatingSystem.instance();
+                ProcessManager processManagerInstance = operatingSystem.processManagerInstance();
+                Process killProcess = processManagerInstance.createProcess();
+                String killCommand = "taskkill /F /T /PID " + process.getPid();
+                log.warn("Killing windows process with command: " + killCommand + "");
+                killProcess.setCommand(killCommand);
+                killProcess.setVisible(false);
+                killProcess.start();
+                process.waitFor(shutdownTimeout);
+            } else {
+                process.stop(shutdownTimeout, -1);
+            }
+        }
     }
 
     private void waitForProcessWithTimeoutAndLogging(final Process process,

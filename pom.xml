@@ -30,7 +30,7 @@
 
   <groupId>org.everit.osgi.dev</groupId>
   <artifactId>eosgi-maven-plugin</artifactId>
-  <version>2.0.5</version>
+  <version>3.0.0-SNAPSHOT</version>
 
   <packaging>maven-plugin</packaging>
 
@@ -43,11 +43,6 @@
     <url>https://github.com/everit-org/eosgi-maven-plugin</url>
   </scm>
   <url>http://everit.org</url>
-
-  <ciManagement>
-    <system>Jenkins</system>
-    <url>https://ci.everit.biz/jenkins/job/eosgi-maven-plugin</url>
-  </ciManagement>
 
   <issueManagement>
     <system>GitHub</system>
@@ -83,7 +78,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.8</version>
+        <version>1.9</version>
         <executions>
           <execution>
             <phase>generate-sources</phase>
@@ -101,7 +96,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.2</version>
+        <version>3.3</version>
         <executions>
           <execution>
             <id>report</id>
