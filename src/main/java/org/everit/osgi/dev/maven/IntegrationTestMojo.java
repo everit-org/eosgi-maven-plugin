@@ -83,7 +83,7 @@ public class IntegrationTestMojo extends DistMojo {
 
         @Override
         public void run() {
-            shutdownProcess(process, shutdownTimeout);
+            shutdownProcess(process, shutdownTimeout, 0);
         }
     }
 
@@ -435,7 +435,7 @@ public class IntegrationTestMojo extends DistMojo {
                     if (process.isRunning()) {
                         getLog().warn("Test running process did not stop until timeout. Forcing to stop it...");
                         timeoutHappened = true;
-                        shutdownProcess(process, distributedEnvironment.getEnvironment().getShutdownTimeout());
+                        shutdownProcess(process, distributedEnvironment.getEnvironment().getShutdownTimeout(), -1);
                     }
                 } finally {
                     try {
@@ -574,7 +574,7 @@ public class IntegrationTestMojo extends DistMojo {
         }
     }
 
-    private void shutdownProcess(final Process process, final int shutdownTimeout) {
+    private void shutdownProcess(final Process process, final int shutdownTimeout, int code) {
         getLog().warn("Stopping test process: " + process.getPid());
         if (process.isRunning()) {
             if (process instanceof WindowsXPProcess) {
@@ -592,7 +592,7 @@ public class IntegrationTestMojo extends DistMojo {
                 killProcess.start();
                 process.waitFor(shutdownTimeout);
             } else {
-                process.stop(shutdownTimeout, -1);
+                process.stop(shutdownTimeout, code);
             }
         }
     }
