@@ -46,7 +46,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
-import org.everit.osgi.dev.maven.DaemonFileWriterStreamPoller;
+import org.everit.osgi.dev.maven.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
 import org.rzo.yajsw.os.OperatingSystem;
 import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
@@ -96,9 +96,9 @@ public class FileManager implements AutoCloseable {
 
     private ShutdownHook shutdownHook = null;
 
-    private DaemonFileWriterStreamPoller stdErrPoller;
+    private DaemonStreamRedirector stdErrPoller;
 
-    private DaemonFileWriterStreamPoller stdOutPoller;
+    private DaemonStreamRedirector stdOutPoller;
 
     private Socket symbolicLinkServerSocket = null;
 
