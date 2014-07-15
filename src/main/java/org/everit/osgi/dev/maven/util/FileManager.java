@@ -108,7 +108,7 @@ public class FileManager implements AutoCloseable {
 
     /**
      * In case an elevated service was started, it will be stopped by calling this function.
-     * 
+     *
      * @throws IOException
      *             if there is a problem during writing to the symbolicLink server socket.
      */
@@ -239,13 +239,13 @@ public class FileManager implements AutoCloseable {
         } catch (UnknownHostException e) {
             throw new MojoExecutionException("Could not determine localhost address", e);
         }
-        for (int i = 0, n = 50; i < n && freePort == 0; i++) {
+        for (int i = 0, n = 50; (i < n) && (freePort == 0); i++) {
             int port = r.nextInt(relativePortRange) + protectedPortRange + 1;
             log.info("Trying port if it is free to start the elevated symboliclink server " + port);
 
             try (Socket socket = new Socket(localAddress, port)) {
                 String message = "Port " + port + " is not available.";
-                if (i == n - 1) {
+                if (i == (n - 1)) {
                     message += " Trying another one";
                 } else {
                     message += " This was the last try.";
@@ -291,7 +291,7 @@ public class FileManager implements AutoCloseable {
     /**
      * Copies an inputstream into a file. In case the file already exists, only those bytes are overwritten in the
      * target file that are changed.
-     * 
+     *
      * @param is
      *            The inputstream of the source.
      * @param targetFile
@@ -391,13 +391,13 @@ public class FileManager implements AutoCloseable {
             } catch (UnknownHostException e) {
                 throw new MojoExecutionException("Could not determine localhost", e);
             }
-            for (int i = 0, n = 10; i < n && symbolicLinkServerSocket == null && process.isRunning(); i++) {
+            for (int i = 0, n = 10; (i < n) && (symbolicLinkServerSocket == null) && process.isRunning(); i++) {
                 try {
                     symbolicLinkServerSocket = new Socket(localHost, port);
                     shutdownHook = new ShutdownHook();
                     Runtime.getRuntime().addShutdownHook(shutdownHook);
                 } catch (IOException e) {
-                    if (i < n - 1) {
+                    if (i < (n - 1)) {
                         log.info("Waiting for symbolicLinkService to listen on port " + port);
                         try {
                             Thread.sleep(100);
@@ -410,7 +410,7 @@ public class FileManager implements AutoCloseable {
                     }
                 }
             }
-            if (symbolicLinkServerSocket == null && !process.isRunning()) {
+            if ((symbolicLinkServerSocket == null) && !process.isRunning()) {
                 log.info("Stopping symbolic link service.");
                 process.stop(100, -1);
             }
@@ -423,7 +423,7 @@ public class FileManager implements AutoCloseable {
         ByteArrayOutputStream bout = new ByteArrayOutputStream(amount);
         byte[] buffer = new byte[amount];
         int r = is.read(buffer);
-        while (r > -1 && bout.size() < amount) {
+        while ((r > -1) && (bout.size() < amount)) {
             bout.write(buffer, 0, r);
             r = is.read(buffer, 0, amount - bout.size());
         }
@@ -448,7 +448,7 @@ public class FileManager implements AutoCloseable {
                     parentFolder.mkdirs();
                     InputStream inputStream = zipFile.getInputStream(entry);
                     overCopyFile(inputStream, destFile);
-                    setUnixPermissionsOnFileIfNecessary(destFile, entry);
+                    FileManager.setUnixPermissionsOnFileIfNecessary(destFile, entry);
                 }
 
             }

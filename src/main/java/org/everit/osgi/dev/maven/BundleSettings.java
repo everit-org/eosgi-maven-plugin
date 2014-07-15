@@ -22,14 +22,14 @@ public class BundleSettings {
 
     /**
      * The start level of the bundle or if left empty, the framework default startlevel will be used.
-     * 
+     *
      */
     @Parameter
     private Integer startLevel;
 
     /**
      * The Bundle-SymbolicName, a required parameter.
-     * 
+     *
      */
     @Parameter
     private String symbolicName;
@@ -37,7 +37,7 @@ public class BundleSettings {
     /**
      * The version of the bundle. If left empty, all bundles with the specified symbolic name will be relevant. At the
      * moment only exact values are suppoted, range support may come in a future version if requested by many users.
-     * 
+     *
      */
     @Parameter
     private String version;

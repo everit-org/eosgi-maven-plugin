@@ -36,7 +36,7 @@ public final class DistUtil {
         TreeMap<Integer, List<ArtifactType>> result = new TreeMap<>();
         for (ArtifactType artifact : artifacts) {
             BundleDataType bundle = artifact.getBundle();
-            if (bundle != null && (osgiAction == null || bundle.getAction().value().equals(osgiAction))) {
+            if ((bundle != null) && ((osgiAction == null) || bundle.getAction().value().equals(osgiAction))) {
                 int startLevel = defaultStartLevel;
                 if (bundle.getStartLevel() != null) {
                     startLevel = bundle.getStartLevel();

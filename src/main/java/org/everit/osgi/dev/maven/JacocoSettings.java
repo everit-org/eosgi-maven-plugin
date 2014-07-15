@@ -18,7 +18,14 @@ package org.everit.osgi.dev.maven;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
+/**
+ * Settings for jacoco. For more information, please see {@link http://www.eclemma.org/jacoco/trunk/doc/agent.html}.
+ *
+ */
 public class JacocoSettings {
+
+    @Parameter
+    private String address;
 
     @Parameter
     private boolean append = true;
@@ -32,6 +39,16 @@ public class JacocoSettings {
     @Parameter
     private String includes;
 
+    @Parameter
+    private String output;
+
+    @Parameter
+    private Integer port;
+
+    public String getAddress() {
+        return address;
+    }
+
     public String getExcludes() {
         return excludes;
     }
@@ -40,12 +57,24 @@ public class JacocoSettings {
         return includes;
     }
 
+    public String getOutput() {
+        return output;
+    }
+
+    public Integer getPort() {
+        return port;
+    }
+
     public boolean isAppend() {
         return append;
     }
 
     public boolean isDumponexit() {
         return dumponexit;
+    }
+
+    public void setAddress(final String address) {
+        this.address = address;
     }
 
     public void setAppend(final boolean append) {
@@ -62,6 +91,14 @@ public class JacocoSettings {
 
     public void setIncludes(final String includes) {
         this.includes = includes;
+    }
+
+    public void setOutput(final String output) {
+        this.output = output;
+    }
+
+    public void setPort(final Integer port) {
+        this.port = port;
     }
 
     @Override

@@ -34,7 +34,7 @@ import java.nio.file.Path;
 
 /**
  * This class is intended to internal usage only!
- * 
+ *
  * The purpose of this class to make it possible to create symbolic links in elevated mode on windows systems. The main
  * class takes one argument that is a port where a server will listen. The socket server accepts two commands:
  * <ul>
@@ -80,7 +80,7 @@ public class ElevatedSymbolicLinkServer {
 
     public static void main(final String[] args) {
         try {
-            createTestSymbolicLink();
+            ElevatedSymbolicLinkServer.createTestSymbolicLink();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -97,9 +97,9 @@ public class ElevatedSymbolicLinkServer {
             BufferedReader br = new BufferedReader(reader);
             String line = br.readLine();
             boolean stopped = false;
-            while (!stopped && line != null) {
+            while (!stopped && (line != null)) {
                 if (!line.equals(COMMAND_STOP)) {
-                    processLine(line, outputStream);
+                    ElevatedSymbolicLinkServer.processLine(line, outputStream);
                     line = br.readLine();
                 } else {
                     System.out.println("Caughed stop command. Stopping server.");

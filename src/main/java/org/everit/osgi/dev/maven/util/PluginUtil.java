@@ -127,7 +127,7 @@ public class PluginUtil {
         }
         int i = 0;
         boolean same = true;
-        while (i < originalLength && same) {
+        while ((i < originalLength) && same) {
             same = original[i] == target[i];
             i++;
         }
@@ -138,7 +138,7 @@ public class PluginUtil {
      * Getting the normalized version of an artifact. The artifact has to have at least three digits inside the version
      * separated by dots. If there are less than two dots inside the version it is extended with the necessary numbers
      * of ".0".
-     * 
+     *
      * @param version
      *            The version that is checked.
      * @return A normalizad version.

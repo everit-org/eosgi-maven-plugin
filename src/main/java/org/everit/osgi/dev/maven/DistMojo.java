@@ -25,6 +25,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -108,7 +109,7 @@ public class DistMojo extends AbstractMojo {
     /**
      * Path to folder where the distribution will be generated. The content of this folder will be overridden if the
      * files with same name already exist.
-     * 
+     *
      */
     @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
     protected String distFolder;
@@ -134,6 +135,12 @@ public class DistMojo extends AbstractMojo {
     protected MavenProject executedProject;
 
     private FileManager fileManager = null;
+
+    /**
+     * The jacoco code coverage generation settings. To see the possible settings see {@link JacocoSettings}.
+     */
+    @Parameter
+    protected JacocoSettings jacoco;
 
     @Parameter(defaultValue = "${localRepository}")
     protected ArtifactRepository localRepository;
@@ -193,7 +200,7 @@ public class DistMojo extends AbstractMojo {
         }
         Map<String, String> systemProperties = environment.getSystemProperties();
         String currentValue = systemProperties.get(RichConsoleConstants.SYSPROP_ENVIRONMENT_ID);
-        if (currentValue != null && !currentValue.equals(environmentId)) {
+        if ((currentValue != null) && !currentValue.equals(environmentId)) {
             throw new MojoExecutionException("If defined, the system property "
                     + RichConsoleConstants.SYSPROP_ENVIRONMENT_ID
                     + " must be the same as environment id: " + environment.getId());
@@ -291,7 +298,7 @@ public class DistMojo extends AbstractMojo {
                 artifactCopyMode = artifact.getCopyMode();
             }
             boolean fileChanged = fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
-            if (fileChanged && environmentSocket != null) {
+            if (fileChanged && (environmentSocket != null)) {
                 BundleDataType bundle = artifact.getBundle();
                 if (bundle != null) {
                     OSGiActionType osgiAction = bundle.getAction();
@@ -318,6 +325,7 @@ public class DistMojo extends AbstractMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        processJacocoSettings();
         defineUpgradePorts();
         fileManager = new FileManager(getLog());
         try {
@@ -466,7 +474,7 @@ public class DistMojo extends AbstractMojo {
     /**
      * Getting the processed artifacts of the project. The artifact list is calculated each time when the function is
      * called therefore the developer should not call it inside an iteration.
-     * 
+     *
      * @param environment
      *            Configuration of the environment that the distributable artifacts will be generated for.
      * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
@@ -498,7 +506,7 @@ public class DistMojo extends AbstractMojo {
     }
 
     protected EnvironmentConfiguration getDefaultEnvironment() {
-        getLog().info("There is no environment specified in the project. Creating equinox environment with"
+        getLog().info("There is no environment specified in the project. Creating felix environment with"
                 + " default settings");
         EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
         defaultEnvironment.setId("equinox");
@@ -515,7 +523,7 @@ public class DistMojo extends AbstractMojo {
     }
 
     public EnvironmentConfiguration[] getEnvironments() {
-        if (environments == null || environments.length == 0) {
+        if ((environments == null) || (environments.length == 0)) {
             environments = new EnvironmentConfiguration[] { getDefaultEnvironment() };
         }
         return environments;
@@ -525,7 +533,7 @@ public class DistMojo extends AbstractMojo {
      * Getting an array of the environment configurations that should be processed based on the value of the
      * {@link #environmentId} parameter. The value, that is returned, is calculated the first time the function is
      * called.
-     * 
+     *
      * @return The array of environment ids that should be processed.
      */
     protected EnvironmentConfiguration[] getEnvironmentsToProcess() {
@@ -544,7 +552,7 @@ public class DistMojo extends AbstractMojo {
             for (EnvironmentConfiguration tmpEnvironment : tmpEnvironments) {
                 boolean found = false;
                 int j = 0, n = environmentIdArray.length;
-                while (!found && j < n) {
+                while (!found && (j < n)) {
                     if (environmentIdArray[j].equals(tmpEnvironments[j].getId())) {
                         found = true;
                         result.add(tmpEnvironment);
@@ -555,6 +563,10 @@ public class DistMojo extends AbstractMojo {
             environmentsToProcess = result.toArray(new EnvironmentConfiguration[result.size()]);
         }
         return environmentsToProcess;
+    }
+
+    public JacocoSettings getJacoco() {
+        return jacoco;
     }
 
     protected DistributionPackageType parseConfiguration(final File distFolderFile,
@@ -609,7 +621,7 @@ public class DistMojo extends AbstractMojo {
     /**
      * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF file inside contains
      * a Bundle-SymbolicName.
-     * 
+     *
      * @param environment
      *            The environment that uses the artifact.
      * @param artifact
@@ -640,7 +652,7 @@ public class DistMojo extends AbstractMojo {
             String version = mainAttributes.getValue(Constants.BUNDLE_VERSION);
 
             DistributableArtifactBundleMeta bundleData = null;
-            if (symbolicName != null && version != null) {
+            if ((symbolicName != null) && (version != null)) {
                 int semicolonIndex = symbolicName.indexOf(';');
                 if (semicolonIndex >= 0) {
                     symbolicName = symbolicName.substring(0, semicolonIndex);
@@ -667,13 +679,63 @@ public class DistMojo extends AbstractMojo {
         }
     }
 
+    private void processJacocoSettings() {
+        if (jacoco != null) {
+            File globalReportFolderFile = new File(reportFolder);
+
+            System.out.println(pluginArtifactMap.keySet());
+            Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
+            File jacocoAgentFile = jacocoAgentArtifact.getFile();
+            String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
+
+            StringBuilder sb = new StringBuilder("-javaagent:");
+            sb.append(jacocoAgentAbsPath);
+            sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
+            sb.append(",dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
+            if (jacoco.getIncludes() != null) {
+                sb.append(",includes=").append(jacoco.getIncludes());
+            }
+            if (jacoco.getExcludes() != null) {
+                sb.append(",excludes=").append(jacoco.getExcludes());
+            }
+
+            if (jacoco.getOutput() != null) {
+                sb.append(",output=").append(jacoco.getOutput());
+
+            }
+            if (jacoco.getAddress() != null) {
+                sb.append(",address=").append(jacoco.getAddress());
+            }
+            if (jacoco.getPort() != null) {
+                sb.append(",port=").append(jacoco.getPort());
+            }
+
+            String jacocoAgentParam = sb.toString();
+            for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
+                File reportFolderFile = new File(globalReportFolderFile, environment.getId());
+                reportFolderFile.mkdirs();
+                File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
+                StringBuilder envSb = new StringBuilder(jacocoAgentParam);
+                envSb.append(",destfile=").append(jacocoExecFile.getAbsolutePath());
+                envSb.append(",sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
+
+                List<String> vmOptions = environment.getVmOptions();
+                if (vmOptions == null) {
+                    vmOptions = new ArrayList<String>();
+                    environment.setVmOptions(vmOptions);
+                }
+                vmOptions.add(envSb.toString());
+            }
+        }
+    }
+
     protected String queryEnvironmentIdFromPort(final InetAddress address, final int port)
             throws MojoExecutionException {
         try (Socket socket = new Socket(address, port)) {
             String response = PluginUtil.sendCommandToSocket(RichConsoleConstants.TCPCOMMAND_GET_ENVIRONMENT_ID,
                     socket, "environment", getLog());
 
-            if (response == null || response.trim().equals("")) {
+            if ((response == null) || response.trim().equals("")) {
                 return null;
             }
             return response;
@@ -686,7 +748,7 @@ public class DistMojo extends AbstractMojo {
 
     /**
      * Reading up the content of each /META-INF/eosgi-frameworks.properties file from the classpath of the plugin.
-     * 
+     *
      * @return The merged properties file.
      * @throws IOException
      *             if a read error occurs.
@@ -764,7 +826,7 @@ public class DistMojo extends AbstractMojo {
     }
 
     /**
-     * 
+     *
      * @return A three length string array that contains the groupId, artifactId and version of the dist package.
      * @throws IOException
      *             if the resrources of the default framework id configurations cannot be read.
@@ -794,6 +856,10 @@ public class DistMojo extends AbstractMojo {
             throw new MojoExecutionException("Invalid distribution package id format: " + frameworkArtifact);
         }
         return distPackageParts;
+    }
+
+    public void setJacoco(JacocoSettings jacoco) {
+        this.jacoco = jacoco;
     }
 
 }

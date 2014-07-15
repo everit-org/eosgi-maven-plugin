@@ -30,29 +30,29 @@ public class DistributableArtifact {
      */
     private Artifact artifact;
 
+    private DistributableArtifactBundleMeta bundle;
+
     /**
      * The global manifest of the jar.
      */
     private Manifest manifest;
 
-    private DistributableArtifactBundleMeta bundle;
-
     public DistributableArtifact(final Artifact artifact, final Manifest manifest,
             final DistributableArtifactBundleMeta bundleMeta) {
         this.artifact = artifact;
         this.manifest = manifest;
-        this.bundle = bundleMeta;
+        bundle = bundleMeta;
     }
 
     public Artifact getArtifact() {
         return artifact;
     }
 
-    public Manifest getManifest() {
-        return manifest;
-    }
-
     public DistributableArtifactBundleMeta getBundle() {
         return bundle;
+    }
+
+    public Manifest getManifest() {
+        return manifest;
     }
 }

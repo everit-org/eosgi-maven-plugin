@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -102,20 +101,14 @@ public class IntegrationTestMojo extends DistMojo {
      */
     private static final String EXPECTED_NUMBER_OF_INTEGRATION_TESTS = "EOSGi-TestNum";
 
-    @Parameter(defaultValue = "${executedProject}")
-    protected MavenProject executedProject;
-
-    /**
-     * The jacoco code coverage generation settings. To see the possible settings see {@link JacocoSettings}.
-     */
-    @Parameter
-    protected JacocoSettings jacoco;
-
     /**
      * Whether to log the output of the started test JVMs to the standard output and standard error or not.
      */
     @Parameter(property = "eosgi.consoleLog", defaultValue = "true")
     protected boolean consoleLog = true;
+
+    @Parameter(defaultValue = "${executedProject}")
+    protected MavenProject executedProject;
 
     /**
      * Skipping this plugin.
@@ -133,7 +126,7 @@ public class IntegrationTestMojo extends DistMojo {
         Set<String> artifactsKeys = new HashSet<>();
         for (ArtifactType artifactType : artifactList) {
             BundleDataType bundleDataType = artifactType.getBundle();
-            if (bundleDataType != null && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
+            if ((bundleDataType != null) && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
                 String artifactKey = artifactType.getGroupId() + ":" + artifactType.getArtifactId() + ":"
                         + artifactType.getVersion() + ":" + evaluateArtifactType(artifactType.getType()) + ":"
                         + evaluateClassifier(artifactType.getClassifier());
@@ -220,15 +213,118 @@ public class IntegrationTestMojo extends DistMojo {
         return false;
     }
 
+    private Closeable doStreamRedirections(final Process process, final File stdOutFile, final File stdErrFile)
+            throws MojoExecutionException {
+        FileOutputStream stdOutFileOut;
+        try {
+            stdOutFileOut = new FileOutputStream(stdOutFile);
+        } catch (FileNotFoundException e) {
+            throw new MojoExecutionException("Could not open standard output file for writing", e);
+        }
+        List<OutputStream> stdOuts = new ArrayList<OutputStream>();
+        stdOuts.add(stdOutFileOut);
+        if (consoleLog) {
+            stdOuts.add(new OutputStream() {
+
+                @Override
+                public void close() throws IOException {
+                }
+
+                @Override
+                public void write(final int b) throws IOException {
+                    System.out.write(b);
+                };
+            });
+        }
+
+        FileOutputStream stdErrFileOut;
+        try {
+            stdErrFileOut = new FileOutputStream(stdOutFile);
+        } catch (FileNotFoundException e) {
+            throw new MojoExecutionException("Could not open standard output file for writing", e);
+        }
+        List<OutputStream> stdErrs = new ArrayList<OutputStream>();
+        stdErrs.add(stdErrFileOut);
+        if (consoleLog) {
+            stdErrs.add(new OutputStream() {
+
+                @Override
+                public void close() throws IOException {
+                }
+
+                @Override
+                public void write(final int b) throws IOException {
+                    System.err.write(b);
+                };
+            });
+        }
+
+        final DaemonStreamRedirector deamonFileWriterStreamPoller =
+                new DaemonStreamRedirector(process.getInputStream(), stdOuts.toArray(new OutputStream[0]), getLog());
+        try {
+            deamonFileWriterStreamPoller.start();
+        } catch (IOException e) {
+            try {
+                deamonFileWriterStreamPoller.close();
+            } catch (IOException e1) {
+                e.addSuppressed(e1);
+            }
+            throw new MojoExecutionException("Could not start stream redirector for standard output", e);
+        }
+
+        final DaemonStreamRedirector deamonStdErrPoller =
+                new DaemonStreamRedirector(process.getErrorStream(), stdErrs.toArray(new OutputStream[0]), getLog());
+        try {
+            deamonStdErrPoller.start();
+        } catch (IOException e) {
+            try {
+                deamonFileWriterStreamPoller.close();
+            } catch (IOException e1) {
+                e.addSuppressed(e1);
+            }
+            try {
+                deamonStdErrPoller.close();
+            } catch (IOException e1) {
+                e.addSuppressed(e1);
+            }
+            throw new MojoExecutionException("Could not start stream redirector for standard output", e);
+        }
+
+        return new Closeable() {
+
+            @Override
+            public void close() throws IOException {
+                IOException thrownE = null;
+                try {
+                    deamonFileWriterStreamPoller.close();
+                } catch (IOException e) {
+                    thrownE = e;
+                }
+                try {
+                    deamonStdErrPoller.close();
+                } catch (IOException e) {
+                    if (thrownE != null) {
+                        thrownE.addSuppressed(e);
+                    } else {
+                        thrownE = e;
+                    }
+                }
+                if (thrownE != null) {
+                    throw thrownE;
+                }
+            }
+        };
+    }
+
     private String evaluateArtifactType(final String artifactType) {
-        if (artifactType == null || artifactType.trim().equals("")) {
+        if ((artifactType == null) || artifactType.trim().equals("")) {
             return "jar";
         }
         return artifactType;
     }
 
     private String evaluateClassifier(final String classifier) {
-        if (classifier == null || classifier.trim().length() == 0) {
+        if ((classifier == null) || (classifier.trim().length() == 0)) {
             return null;
         }
         return classifier;
@@ -240,7 +336,6 @@ public class IntegrationTestMojo extends DistMojo {
             return;
         }
 
-        processJacocoSettings();
         super.execute();
 
         File testReportFolderFile = new File(reportFolder);
@@ -427,149 +522,6 @@ public class IntegrationTestMojo extends DistMojo {
         }
     }
 
-    private Closeable doStreamRedirections(Process process, File stdOutFile, File stdErrFile)
-            throws MojoExecutionException {
-        FileOutputStream stdOutFileOut;
-        try {
-            stdOutFileOut = new FileOutputStream(stdOutFile);
-        } catch (FileNotFoundException e) {
-            throw new MojoExecutionException("Could not open standard output file for writing", e);
-        }
-        List<OutputStream> stdOuts = new ArrayList<OutputStream>();
-        stdOuts.add(stdOutFileOut);
-        if (consoleLog) {
-            stdOuts.add(new OutputStream() {
-
-                @Override
-                public void write(int b) throws IOException {
-                    System.out.write(b);
-                }
-
-                public void close() throws IOException {
-                };
-            });
-        }
-
-        FileOutputStream stdErrFileOut;
-        try {
-            stdErrFileOut = new FileOutputStream(stdOutFile);
-        } catch (FileNotFoundException e) {
-            throw new MojoExecutionException("Could not open standard output file for writing", e);
-        }
-        List<OutputStream> stdErrs = new ArrayList<OutputStream>();
-        stdErrs.add(stdErrFileOut);
-        if (consoleLog) {
-            stdErrs.add(new OutputStream() {
-
-                @Override
-                public void write(int b) throws IOException {
-                    System.err.write(b);
-                }
-
-                public void close() throws IOException {
-                };
-            });
-        }
-
-        final DaemonStreamRedirector deamonFileWriterStreamPoller =
-                new DaemonStreamRedirector(process.getInputStream(), stdOuts.toArray(new OutputStream[0]), getLog());
-        try {
-            deamonFileWriterStreamPoller.start();
-        } catch (IOException e) {
-            try {
-                deamonFileWriterStreamPoller.close();
-            } catch (IOException e1) {
-                e.addSuppressed(e1);
-            }
-            throw new MojoExecutionException("Could not start stream redirector for standard output", e);
-        }
-
-        final DaemonStreamRedirector deamonStdErrPoller =
-                new DaemonStreamRedirector(process.getErrorStream(), stdErrs.toArray(new OutputStream[0]), getLog());
-        try {
-            deamonStdErrPoller.start();
-        } catch (IOException e) {
-            try {
-                deamonFileWriterStreamPoller.close();
-            } catch (IOException e1) {
-                e.addSuppressed(e1);
-            }
-            try {
-                deamonStdErrPoller.close();
-            } catch (IOException e1) {
-                e.addSuppressed(e1);
-            }
-            throw new MojoExecutionException("Could not start stream redirector for standard output", e);
-        }
-
-        return new Closeable() {
-
-            @Override
-            public void close() throws IOException {
-                IOException thrownE = null;
-                try {
-                    deamonFileWriterStreamPoller.close();
-                } catch (IOException e) {
-                    thrownE = e;
-                }
-                try {
-                    deamonStdErrPoller.close();
-                } catch (IOException e) {
-                    if (thrownE != null) {
-                        thrownE.addSuppressed(e);
-                    } else {
-                        thrownE = e;
-                    }
-                }
-                if (thrownE != null) {
-                    throw thrownE;
-                }
-            }
-        };
-    }
-
-    public JacocoSettings getJacoco() {
-        return jacoco;
-    }
-
-    private void processJacocoSettings() {
-        if (jacoco != null) {
-            File globalReportFolderFile = new File(reportFolder);
-
-            System.out.println(pluginArtifactMap.keySet());
-            Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
-            File jacocoAgentFile = jacocoAgentArtifact.getFile();
-            String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
-
-            StringBuilder sb = new StringBuilder("-javaagent:");
-            sb.append(jacocoAgentAbsPath);
-            sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
-            sb.append(",dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
-            if (jacoco.getIncludes() != null) {
-                sb.append(",includes=").append(jacoco.getIncludes());
-            }
-            if (jacoco.getExcludes() != null) {
-                sb.append(",excludes=").append(jacoco.getExcludes());
-            }
-            String jacocoAgentParam = sb.toString();
-            for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
-                File reportFolderFile = new File(globalReportFolderFile, environment.getId());
-                reportFolderFile.mkdirs();
-                File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
-                StringBuilder envSb = new StringBuilder(jacocoAgentParam);
-                envSb.append(",destfile=").append(jacocoExecFile.getAbsolutePath());
-                envSb.append(",sessionid=").append(environment.getId()).append("_").append(new Date().getTime());
-
-                List<String> vmOptions = environment.getVmOptions();
-                if (vmOptions == null) {
-                    vmOptions = new ArrayList<String>();
-                    environment.setVmOptions(vmOptions);
-                }
-                vmOptions.add(envSb.toString());
-            }
-        }
-    }
-
     private void processResults(final File resultFolder, final TestResult results) throws MojoFailureException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder documentBuilder = null;
@@ -622,11 +574,7 @@ public class IntegrationTestMojo extends DistMojo {
         }
     }
 
-    public void setJacoco(final JacocoSettings jacoco) {
-        this.jacoco = jacoco;
-    }
-
-    private void shutdownProcess(Process process, int shutdownTimeout) {
+    private void shutdownProcess(final Process process, final int shutdownTimeout) {
         getLog().warn("Stopping test process: " + process.getPid());
         if (process.isRunning()) {
             if (process instanceof WindowsXPProcess) {
@@ -659,7 +607,7 @@ public class IntegrationTestMojo extends DistMojo {
 
         final long latestEndTime = startTime + timeout;
         long currentTime = startTime;
-        while (process.isRunning() && currentTime < latestEndTime) {
+        while (process.isRunning() && (currentTime < latestEndTime)) {
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
@@ -667,7 +615,7 @@ public class IntegrationTestMojo extends DistMojo {
                 getLog().info("Waiting for tests was interrupted.");
                 return;
             }
-            if (!consoleLog && currentTime > nextExpectedLogging) {
+            if (!consoleLog && (currentTime > nextExpectedLogging)) {
                 long secondsSinceStart = (nextExpectedLogging - startTime) / 1000;
                 getLog().info("Waiting for test results since " + secondsSinceStart + "s");
                 nextExpectedLogging = nextExpectedLogging + loggingInterval;

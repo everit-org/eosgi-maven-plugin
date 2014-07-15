@@ -35,13 +35,13 @@ public class ArtifactKey {
     private final String version;
 
     public ArtifactKey(final ArtifactType artifact) {
-        this.groupId = artifact.getGroupId();
-        this.artifactId = artifact.getArtifactId();
-        this.version = artifact.getVersion();
-        this.type = artifact.getType();
-        this.classifier = artifact.getClassifier();
-        this.targetFolder = artifact.getTargetFolder();
-        this.targetFile = artifact.getTargetFile();
+        groupId = artifact.getGroupId();
+        artifactId = artifact.getArtifactId();
+        version = artifact.getVersion();
+        type = artifact.getType();
+        classifier = artifact.getClassifier();
+        targetFolder = artifact.getTargetFolder();
+        targetFile = artifact.getTargetFile();
     }
 
     @Override
@@ -140,13 +140,13 @@ public class ArtifactKey {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((artifactId == null) ? 0 : artifactId.hashCode());
-        result = prime * result + ((classifier == null) ? 0 : classifier.hashCode());
-        result = prime * result + ((groupId == null) ? 0 : groupId.hashCode());
-        result = prime * result + ((targetFile == null) ? 0 : targetFile.hashCode());
-        result = prime * result + ((targetFolder == null) ? 0 : targetFolder.hashCode());
-        result = prime * result + ((type == null) ? 0 : type.hashCode());
-        result = prime * result + ((version == null) ? 0 : version.hashCode());
+        result = (prime * result) + ((artifactId == null) ? 0 : artifactId.hashCode());
+        result = (prime * result) + ((classifier == null) ? 0 : classifier.hashCode());
+        result = (prime * result) + ((groupId == null) ? 0 : groupId.hashCode());
+        result = (prime * result) + ((targetFile == null) ? 0 : targetFile.hashCode());
+        result = (prime * result) + ((targetFolder == null) ? 0 : targetFolder.hashCode());
+        result = (prime * result) + ((type == null) ? 0 : type.hashCode());
+        result = (prime * result) + ((version == null) ? 0 : version.hashCode());
         return result;
     }
 

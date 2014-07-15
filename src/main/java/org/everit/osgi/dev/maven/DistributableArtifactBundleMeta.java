@@ -18,22 +18,22 @@ package org.everit.osgi.dev.maven;
 
 public class DistributableArtifactBundleMeta {
 
-    private final String symbolicName;
-
-    private final String version;
+    private final String exportPackage;
 
     private final String fragmentHost;
 
     private final String importPackage;
 
-    private final String exportPackage;
-
     private final Integer startLevel;
 
-    public DistributableArtifactBundleMeta(String symbolicName, String version, String fragmentHost,
-            String importPackage,
-            String exportPackage,
-            Integer startLevel) {
+    private final String symbolicName;
+
+    private final String version;
+
+    public DistributableArtifactBundleMeta(final String symbolicName, final String version, final String fragmentHost,
+            final String importPackage,
+            final String exportPackage,
+            final Integer startLevel) {
         this.symbolicName = symbolicName;
         this.version = version;
         this.fragmentHost = fragmentHost;
@@ -42,12 +42,8 @@ public class DistributableArtifactBundleMeta {
         this.startLevel = startLevel;
     }
 
-    public String getSymbolicName() {
-        return symbolicName;
-    }
-
-    public String getVersion() {
-        return version;
+    public String getExportPackage() {
+        return exportPackage;
     }
 
     public String getFragmentHost() {
@@ -58,11 +54,15 @@ public class DistributableArtifactBundleMeta {
         return importPackage;
     }
 
-    public String getExportPackage() {
-        return exportPackage;
-    }
-
     public Integer getStartLevel() {
         return startLevel;
+    }
+
+    public String getSymbolicName() {
+        return symbolicName;
+    }
+
+    public String getVersion() {
+        return version;
     }
 }

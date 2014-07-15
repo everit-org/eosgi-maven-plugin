@@ -46,7 +46,7 @@ public class DaemonStreamRedirector implements Closeable {
                 return;
             }
 
-            while (!closed.get() && r > -1) {
+            while (!closed.get() && (r > -1)) {
                 Iterator<OutputStream> iterator = outputStreamList.iterator();
                 while (iterator.hasNext()) {
                     OutputStream out = iterator.next();
@@ -70,16 +70,16 @@ public class DaemonStreamRedirector implements Closeable {
 
     private AtomicBoolean closed = new AtomicBoolean(true);
 
-    private List<OutputStream> outputStreamList;
-
     private InputStream inputStream;
 
     private Log log;
 
+    private List<OutputStream> outputStreamList;
+
     public DaemonStreamRedirector(final InputStream inputStream, final OutputStream[] outputStreams, final Log log) {
         this.inputStream = inputStream;
         this.log = log;
-        this.outputStreamList = new ArrayList<OutputStream>(Arrays.asList(outputStreams));
+        outputStreamList = new ArrayList<OutputStream>(Arrays.asList(outputStreams));
     }
 
     /**

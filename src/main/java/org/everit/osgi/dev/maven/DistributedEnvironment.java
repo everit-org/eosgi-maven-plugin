@@ -40,7 +40,7 @@ public class DistributedEnvironment {
         this.environment = environment;
         this.distributionPackage = distributionPackage;
         this.distributionFolder = distributionFolder;
-        this.distributableArtifacts = bundleArtifacts;
+        distributableArtifacts = bundleArtifacts;
     }
 
     public List<DistributableArtifact> getDistributableArtifacts() {
@@ -60,7 +60,7 @@ public class DistributedEnvironment {
     }
 
     public void setDistributableArtifacts(final List<DistributableArtifact> bundleArtifacts) {
-        this.distributableArtifacts = bundleArtifacts;
+        distributableArtifacts = bundleArtifacts;
     }
 
     public void setDistributionFolder(final File distributionFolder) {
