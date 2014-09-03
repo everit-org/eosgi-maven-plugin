@@ -25,23 +25,23 @@
     <p>The aim of the maven plugin is to speed up development by means of an OSGi environment. It runs integration
     tests as a life-cycle phase of the compilation and supports creation of custom OSGi distribution packages.</p>
   <h1>Usage</h1>
-  <h2>Dependency collection</h2>
+  <h2 id="dependency_collection">Dependency collection</h2>
   <p>In case of dist or integration-test goals the plugin checks the project which the goal was started with all of
     it's dependencies, except for the provided scope if they are OSGi bundles. The OSGi bundles will be deployed to the
     generated environment where the checks ran successfully. A dependency is an OSGi bundle if it has the
     Bundle-SymbolicName and the Bundle-Version manifest headers defined.</p>
-  <h2>Distribution packages</h2>
+  <h2 id="distribution_packages">Distribution packages</h2>
   <p>In the goals this plugin uses distribution packages. A distribution package is a simple ZIP file available in a
     maven repository with the dependencies and configuration files of the framework. By default, there is an Equinox
     based distribution package. To see how to create your own distribution package, check one of the existing ones and
     the the documentation in the XSD that is available in the source of this plugin.</p>
 
-  <h2>Environments</h2>
+  <h2 id="environments">Environments</h2>
 
   <p>In the configuration part of the maven plugin, it is possible to define multiple environments. An environment
     is based on a framework, which is basically a link to a distribution package. If no environment is configured for
     the plugin, the default Equinox environment with the id 'equinox' is used.</p>
-  <h3>Default configuration</h3>
+  <h3 id="default_configuration">Default configuration</h3>
   <p>In the following, most simple configuration, where no custom environment is defined:</p>
   <div class="source">
     <pre>
@@ -68,7 +68,7 @@
     &lt;/configuration&gt;
 &lt;/plugin&gt;</pre>
   </div>
-  <h3>Environment settings</h3>
+  <h3 id="environment_settings">Environment settings</h3>
   <p>A plugin configuration may contain multiple environment configurations. The environment can be configured
     deeply. Here is the list of entries that can be used inside an environment:</p>
   <table>
@@ -182,8 +182,8 @@
   </table>
   <p>There are additional settings that can be defined for the goals. To see them, please check the documentation of
     the goal you want to run!</p>
-  <h2>Integrate tests as a maven compilation lifecycle</h2>
-  <h3>Additional dependencies of the project</h3>
+  <h2 id="integrate_tests_as_maven_compilation_lifecycle">Integrate tests as a maven compilation lifecycle</h2>
+  <h3 id="integrate_tests_additional_dependencies">Additional dependencies of the project</h3>
   <p>To be able to run tests with the maven plugin, the started OSGi containers must contain the osgi-testrunner
     bundle and at least one Test Engine bundle. At the moment there is one Test Engine implementation that makes it
     possible to run tests with JUnit4. To have all necessary bundles within the environment, add the following
@@ -196,7 +196,7 @@
   &lt;version&gt;3.0.3&lt;/version&gt;
 &lt;/dependency&gt;</pre>
   </div>
-  <h3>Configuration of the maven plugin</h3>
+  <h3 id="integrate_tests_configuration">Configuration of the maven plugin</h3>
   <p>In order to run the integration-test goal at the integration phase of maven you can use the following
     configuration snippet:</p>
   <div class="source">
@@ -217,7 +217,7 @@
 &lt;/plugin&gt;</pre>
   </div>
   <p>The configuration of the plugin (with the environments) can go on the plugin level or on the execution level.</p>
-  <h3>Defining the number of expected tests</h3>
+  <h3 id="integrate_tests_number_of_tests">Defining the number of expected tests</h3>
   <p>When the integration-test goal runs, it will be successful if the number of successful tests is equal to the
     amount defined in the bundle headers. When an OSGi bundle dependency or the current header has the manifest header
     "EOSGi-TestNum", it adds the value of this header entry to the total number of expected test count. Normally, you
@@ -245,7 +245,7 @@
     one of the bundles contains the test code but the OSGi test services are provided by another bundle multiple times.
     In that case, it is better to define the manifest header in the bundle, where we know how many test services will be
     provided exactly.</p>
-  <h2>Jacoco configuration</h2>
+  <h2 id="jacoco_configuration">Jacoco configuration</h2>
   <p>There is a possibility to add coverage results to projects. To do that, insert the following to the plugin
     configuration:</p>
   <div class="source">
@@ -272,7 +272,7 @@
       href="http://www.eclemma.org/jacoco/trunk/doc/agent.html">Jacoco java agent documentation</a> as the parameters
     are passed directly to the agent. The output is set to the target/eosgi-reports/environmentId/jacoco.exec file.
   </p>
-  <h3>Trick: Use different output mode based on starting environment</h3>
+  <h3 id="jacoco_trick_different_output_mode">Trick: Use different output mode based on starting environment</h3>
   <p>With the default distribution packages it is possible to use expression in the settings. It is possible to
     define that Jacoco should dump the results into file if a full compilation is done while it should work as a
     TCPServer if the test environment is started in the console. To achieve this goal, the following should be defined
@@ -285,7 +285,7 @@
 &lt;/jacoco&gt;</pre>
   </div>
 
-  <h2>Incremental update</h2>
+  <h2 id="incremental_update">Incremental update</h2>
   It is possible to run incremental updates on distributions. To carry out an update, simply run the following command:
   <div class="source">
     <pre>mvn eosgi:dist</pre>
@@ -293,7 +293,7 @@
   <p>By running the command, all extracted environments will be updated. In case there is an incremental update, the
     copy mode of the original distribution is used. It is important to either stop all environments before an
     incremental update is carried out or to specify their service ports.</p>
-  <h2>Changing bundles in the OSGi container without a restart</h2>
+  <h2 id="changing_bundles_without_restart">Changing bundles in the OSGi container without a restart</h2>
   <p>
     In case <a href="https://github.com/everit-org/osgi-richconsole">Everit OSGi RichConsole</a> is deployed, it listens
     on a specific TCP port. The port is displayed in the deployer window and also in the log. For more information about
