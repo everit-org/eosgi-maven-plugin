@@ -795,7 +795,7 @@ public class DistMojo extends AbstractMojo {
                 }
             } catch (JAXBException e) {
                 throw new MojoExecutionException("Failed to process already existing distribution configuration file: "
-                        + distConfigFile.getAbsolutePath());
+                        + distConfigFile.getAbsolutePath(), e);
             }
         } else {
             return null;
