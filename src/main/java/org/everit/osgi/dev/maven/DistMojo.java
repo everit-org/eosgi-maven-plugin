@@ -553,7 +553,7 @@ public class DistMojo extends AbstractMojo {
                 boolean found = false;
                 int j = 0, n = environmentIdArray.length;
                 while (!found && (j < n)) {
-                    if (environmentIdArray[j].equals(tmpEnvironments[j].getId())) {
+                    if (environmentIdArray[j].equals(tmpEnvironment.getId())) {
                         found = true;
                         result.add(tmpEnvironment);
                     }
