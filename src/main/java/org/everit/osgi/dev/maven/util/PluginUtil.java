@@ -1,18 +1,17 @@
-/**
- * This file is part of Everit - Maven OSGi plugin.
+/*
+ * Copyright (C) 2011 Everit Kft. (http://everit.org)
  *
- * Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.everit.osgi.dev.maven.util;
 
@@ -28,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -36,145 +36,215 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
 
-public class PluginUtil {
+/**
+ * Util functions for every plugin in this library.
+ */
+public final class PluginUtil {
 
-    public static final String OS_LINUX_UNIX = "linux";
+  public static final String OS_LINUX_UNIX = "linux";
 
-    public static final String OS_MACINTOSH = "mac";
+  public static final String OS_MACINTOSH = "mac";
 
-    public static final String OS_SUNOS = "sunos";
+  public static final String OS_SUNOS = "sunos";
 
-    public static final String OS_WINDOWS = "windows";
+  public static final String OS_WINDOWS = "windows";
 
-    public static List<String[]> convertMapToList(final Map<String, String> map) {
-        List<String[]> result = new ArrayList<>();
-        for (Entry<String, String> entry : map.entrySet()) {
-            String[] newEntry = new String[] { entry.getKey(), entry.getValue() };
-            result.add(newEntry);
-        }
-        return result;
+  /**
+   * Converts a Map to a list where the entry of the list contains an array with the key and the
+   * value.
+   *
+   * @param map
+   *          The map that will be converted.
+   * @return A list of String arrays where the first element of the array is the key and the second
+   *         is the value.
+   */
+  public static List<String[]> convertMapToList(final Map<String, String> map) {
+    List<String[]> result = new ArrayList<>();
+    for (Entry<String, String> entry : map.entrySet()) {
+      String[] newEntry = new String[] { entry.getKey(), entry.getValue() };
+      result.add(newEntry);
     }
+    return result;
+  }
 
-    public static Map<ArtifactKey, ArtifactType> createArtifactMap(final DistributionPackageType distributionPackage) {
-        if (distributionPackage == null) {
-            return Collections.emptyMap();
-        }
-        ArtifactsType artifacts = distributionPackage.getArtifacts();
-        if (artifacts == null) {
-            return Collections.emptyMap();
-        }
-        Map<ArtifactKey, ArtifactType> result = new HashMap<>();
-        List<ArtifactType> artifactList = artifacts.getArtifact();
-        for (ArtifactType artifact : artifactList) {
-            ArtifactKey artifactKey = new ArtifactKey(artifact);
-            if (result.containsKey(artifactKey)) {
-                throw new DuplicateArtifactException(artifactKey);
-            }
-            result.put(artifactKey, artifact);
-        }
-        return result;
+  /**
+   * Creates the artifact map for the distribution package.
+   *
+   * @param distributionPackage
+   *          The distribution package.
+   * @return The artifact map.
+   */
+  public static Map<ArtifactKey, ArtifactType> createArtifactMap(
+      final DistributionPackageType distributionPackage) {
+    if (distributionPackage == null) {
+      return Collections.emptyMap();
     }
+    ArtifactsType artifacts = distributionPackage.getArtifacts();
+    if (artifacts == null) {
+      return Collections.emptyMap();
+    }
+    Map<ArtifactKey, ArtifactType> result = new HashMap<>();
+    List<ArtifactType> artifactList = artifacts.getArtifact();
+    for (ArtifactType artifact : artifactList) {
+      ArtifactKey artifactKey = new ArtifactKey(artifact);
+      if (result.containsKey(artifactKey)) {
+        throw new DuplicateArtifactException(artifactKey);
+      }
+      result.put(artifactKey, artifact);
+    }
+    return result;
+  }
 
-    public static void deleteFolderRecurse(final File folder) {
-        if (folder.exists()) {
-            File[] subFiles = folder.listFiles();
-            for (File subFile : subFiles) {
-                if (subFile.isDirectory()) {
-                    PluginUtil.deleteFolderRecurse(subFile);
-                } else {
-                    subFile.delete();
-                }
-            }
-            folder.delete();
+  /**
+   * Deletes a folder with its content from the computer.
+   *
+   * @param folder
+   *          The folder that should be deleted.
+   */
+  public static void deleteFolderRecurse(final File folder) {
+    if (folder.exists()) {
+      File[] subFiles = folder.listFiles();
+      for (File subFile : subFiles) {
+        if (subFile.isDirectory()) {
+          PluginUtil.deleteFolderRecurse(subFile);
+        } else {
+          subFile.delete();
         }
+      }
+      folder.delete();
     }
+  }
 
-    public static List<ArtifactType> getArtifactsToRemove(final Map<ArtifactKey, ArtifactType> currentArtifactMap,
-            final DistributionPackageType current) {
-        Map<ArtifactKey, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
-        ArtifactsType artifacts = current.getArtifacts();
-        if (artifacts == null) {
-            return new ArrayList<>(currentArtifactMap.values());
-        }
-        List<ArtifactType> artifactList = artifacts.getArtifact();
-        for (ArtifactType artifact : artifactList) {
-            ArtifactKey artifactKey = new ArtifactKey(artifact);
-            tmpArtifactMap.remove(artifactKey);
-        }
-        return new ArrayList<>(tmpArtifactMap.values());
+  /**
+   * Calculates the artifacts that should be deleted after an upgrade.
+   *
+   * @param currentArtifactMap
+   *          The artifact map that is currently installed.
+   * @param newDistributionPackage
+   *          The new distribution package that will be installed.
+   * @return The artifact list that should be deleted.
+   */
+  public static List<ArtifactType> getArtifactsToRemove(
+      final Map<ArtifactKey, ArtifactType> currentArtifactMap,
+      final DistributionPackageType newDistributionPackage) {
+    Map<ArtifactKey, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
+    ArtifactsType artifacts = newDistributionPackage.getArtifacts();
+    if (artifacts == null) {
+      return new ArrayList<>(currentArtifactMap.values());
     }
+    List<ArtifactType> artifactList = artifacts.getArtifact();
+    for (ArtifactType artifact : artifactList) {
+      ArtifactKey artifactKey = new ArtifactKey(artifact);
+      tmpArtifactMap.remove(artifactKey);
+    }
+    return new ArrayList<>(tmpArtifactMap.values());
+  }
 
-    public static String getOS() {
-        String os = System.getProperty("os.name").toLowerCase();
-        if (os.indexOf("win") >= 0) {
-            return OS_WINDOWS;
-        }
-        if (os.indexOf("mac") >= 0) {
-            return OS_MACINTOSH;
-        }
-        if (((os.indexOf("nix") >= 0) || (os.indexOf("nux") >= 0))) {
-            return OS_LINUX_UNIX;
-        }
-        if (os.indexOf("sunos") >= 0) {
-            return OS_SUNOS;
-        }
-        return null;
+  /**
+   * Returns the OS type.
+   *
+   * @return The operating system type.
+   */
+  public static String getOS() {
+    String os = System.getProperty("os.name").toLowerCase(Locale.getDefault());
+    if (os.indexOf("win") >= 0) {
+      return OS_WINDOWS;
     }
+    if (os.indexOf("mac") >= 0) {
+      return OS_MACINTOSH;
+    }
+    if (((os.indexOf("nix") >= 0) || (os.indexOf("nux") >= 0))) {
+      return OS_LINUX_UNIX;
+    }
+    if (os.indexOf("sunos") >= 0) {
+      return OS_SUNOS;
+    }
+    return null;
+  }
 
-    public static boolean isBufferSame(final byte[] original, final int originalLength, final byte[] target) {
-        if (originalLength != target.length) {
-            return false;
-        }
-        int i = 0;
-        boolean same = true;
-        while ((i < originalLength) && same) {
-            same = original[i] == target[i];
-            i++;
-        }
-        return same;
+  /**
+   * Checks whether the content of the two buffers are the same.
+   *
+   * @param original
+   *          The original buffer.
+   * @param originalLength
+   *          The length of the original buffer that should be checked.
+   * @param target
+   *          The target buffer that should be the same.
+   * @return Whether the two buffers are the same or not.
+   */
+  public static boolean isBufferSame(final byte[] original, final int originalLength,
+      final byte[] target) {
+    if (originalLength != target.length) {
+      return false;
     }
+    int i = 0;
+    boolean same = true;
+    while ((i < originalLength) && same) {
+      same = original[i] == target[i];
+      i++;
+    }
+    return same;
+  }
 
-    /**
-     * Getting the normalized version of an artifact. The artifact has to have at least three digits inside the version
-     * separated by dots. If there are less than two dots inside the version it is extended with the necessary numbers
-     * of ".0".
-     *
-     * @param version
-     *            The version that is checked.
-     * @return A normalizad version.
-     */
-    public static String normalizeVersion(final String version) {
-        int dotCount = 0;
-        char[] versionCharArray = version.toCharArray();
-        for (int i = 0, n = versionCharArray.length; (i < n) && (dotCount < 2); i++) {
-            if (versionCharArray[i] == '.') {
-                dotCount++;
-            }
-        }
-        StringBuilder result = new StringBuilder(version);
-        if (dotCount < 2) {
-            result.append(".0");
-        }
-        if (dotCount < 1) {
-            result.append(".0");
-        }
-        return result.toString();
+  /**
+   * Getting the normalized version of an artifact. The artifact has to have at least three digits
+   * inside the version separated by dots. If there are less than two dots inside the version it is
+   * extended with the necessary numbers of ".0".
+   *
+   * @param version
+   *          The version that is checked.
+   * @return A normalizad version.
+   */
+  public static String normalizeVersion(final String version) {
+    int dotCount = 0;
+    char[] versionCharArray = version.toCharArray();
+    for (int i = 0, n = versionCharArray.length; (i < n) && (dotCount < 2); i++) {
+      if (versionCharArray[i] == '.') {
+        dotCount++;
+      }
     }
+    StringBuilder result = new StringBuilder(version);
+    if (dotCount < 2) {
+      result.append(".0");
+    }
+    if (dotCount < 1) {
+      result.append(".0");
+    }
+    return result.toString();
+  }
 
-    public static String sendCommandToSocket(final String command, final Socket socket, final String serverName,
-            final Log log)
-            throws IOException {
-        log.debug("Sending command to " + serverName + ": " + command);
-        InputStream inputStream = socket.getInputStream();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        OutputStream outputStream = socket.getOutputStream();
-        outputStream.write((command + "\n").getBytes(Charset.defaultCharset()));
-        outputStream.flush();
-        String response = reader.readLine();
-        log.debug("Got response from " + serverName + ": " + response);
-        return response;
-    }
+  /**
+   * Sends a command to a socket and returns a response. This function works based on line breaks.
+   *
+   * @param command
+   *          The command to send.
+   * @param socket
+   *          The socket to send the command to.
+   * @param serverName
+   *          The name of the server.
+   * @param log
+   *          The logger where debug information will be written.
+   * @return The response from the server.
+   * @throws IOException
+   *           if there is a problem in the connection.
+   */
+  public static String sendCommandToSocket(final String command, final Socket socket,
+      final String serverName,
+      final Log log)
+          throws IOException {
+    log.debug("Sending command to " + serverName + ": " + command);
+    InputStream inputStream = socket.getInputStream();
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(inputStream, Charset.defaultCharset()));
+    OutputStream outputStream = socket.getOutputStream();
+    outputStream.write((command + "\n").getBytes(Charset.defaultCharset()));
+    outputStream.flush();
+    String response = reader.readLine();
+    log.debug("Got response from " + serverName + ": " + response);
+    return response;
+  }
 
-    private PluginUtil() {
-    }
+  private PluginUtil() {
+  }
 }

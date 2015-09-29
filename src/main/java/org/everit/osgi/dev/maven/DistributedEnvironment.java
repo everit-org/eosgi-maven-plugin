@@ -1,18 +1,17 @@
-/**
- * This file is part of Everit - Maven OSGi plugin.
+/*
+ * Copyright (C) 2011 Everit Kft. (http://everit.org)
  *
- * Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.everit.osgi.dev.maven;
 
@@ -21,58 +20,64 @@ import java.util.List;
 
 import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
 
+/**
+ * Metadata of a distributed environment.
+ */
 public class DistributedEnvironment {
 
-    private List<DistributableArtifact> distributableArtifacts;
+  private List<DistributableArtifact> distributableArtifacts;
 
-    private File distributionFolder;
+  private File distributionFolder;
 
-    private DistributionPackageType distributionPackage;
+  private DistributionPackageType distributionPackage;
 
-    private EnvironmentConfiguration environment;
+  private EnvironmentConfiguration environment;
 
-    public DistributedEnvironment() {
-    }
+  public DistributedEnvironment() {
+  }
 
-    public DistributedEnvironment(final EnvironmentConfiguration environment,
-            final DistributionPackageType distributionPackage, final File distributionFolder,
-            final List<DistributableArtifact> bundleArtifacts) {
-        this.environment = environment;
-        this.distributionPackage = distributionPackage;
-        this.distributionFolder = distributionFolder;
-        distributableArtifacts = bundleArtifacts;
-    }
+  /**
+   * Constructor.
+   */
+  public DistributedEnvironment(final EnvironmentConfiguration environment,
+      final DistributionPackageType distributionPackage, final File distributionFolder,
+      final List<DistributableArtifact> bundleArtifacts) {
+    this.environment = environment;
+    this.distributionPackage = distributionPackage;
+    this.distributionFolder = distributionFolder;
+    distributableArtifacts = bundleArtifacts;
+  }
 
-    public List<DistributableArtifact> getDistributableArtifacts() {
-        return distributableArtifacts;
-    }
+  public List<DistributableArtifact> getDistributableArtifacts() {
+    return distributableArtifacts;
+  }
 
-    public File getDistributionFolder() {
-        return distributionFolder;
-    }
+  public File getDistributionFolder() {
+    return distributionFolder;
+  }
 
-    public DistributionPackageType getDistributionPackage() {
-        return distributionPackage;
-    }
+  public DistributionPackageType getDistributionPackage() {
+    return distributionPackage;
+  }
 
-    public EnvironmentConfiguration getEnvironment() {
-        return environment;
-    }
+  public EnvironmentConfiguration getEnvironment() {
+    return environment;
+  }
 
-    public void setDistributableArtifacts(final List<DistributableArtifact> bundleArtifacts) {
-        distributableArtifacts = bundleArtifacts;
-    }
+  public void setDistributableArtifacts(final List<DistributableArtifact> bundleArtifacts) {
+    distributableArtifacts = bundleArtifacts;
+  }
 
-    public void setDistributionFolder(final File distributionFolder) {
-        this.distributionFolder = distributionFolder;
-    }
+  public void setDistributionFolder(final File distributionFolder) {
+    this.distributionFolder = distributionFolder;
+  }
 
-    public void setDistributionPackage(final DistributionPackageType distributionPackage) {
-        this.distributionPackage = distributionPackage;
-    }
+  public void setDistributionPackage(final DistributionPackageType distributionPackage) {
+    this.distributionPackage = distributionPackage;
+  }
 
-    public void setEnvironment(final EnvironmentConfiguration environment) {
-        this.environment = environment;
-    }
+  public void setEnvironment(final EnvironmentConfiguration environment) {
+    this.environment = environment;
+  }
 
 }

@@ -1,110 +1,110 @@
-/**
- * This file is part of Everit - Maven OSGi plugin.
+/*
+ * Copyright (C) 2011 Everit Kft. (http://everit.org)
  *
- * Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.everit.osgi.dev.maven;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
- * Settings for jacoco. For more information, please see {@link http://www.eclemma.org/jacoco/trunk/doc/agent.html}.
+ * Settings for jacoco. For more information, please see
+ * {@link http://www.eclemma.org/jacoco/trunk/doc/agent.html}.
  *
  */
 public class JacocoSettings {
 
-    @Parameter
-    private String address;
+  @Parameter
+  private String address;
 
-    @Parameter
-    private boolean append = true;
+  @Parameter
+  private boolean append = true;
 
-    @Parameter
-    private boolean dumponexit = true;
+  @Parameter
+  private boolean dumponexit = true;
 
-    @Parameter
-    private String excludes;
+  @Parameter
+  private String excludes;
 
-    @Parameter
-    private String includes;
+  @Parameter
+  private String includes;
 
-    @Parameter
-    private String output;
+  @Parameter
+  private String output;
 
-    @Parameter
-    private Integer port;
+  @Parameter
+  private Integer port;
 
-    public String getAddress() {
-        return address;
-    }
+  public String getAddress() {
+    return address;
+  }
 
-    public String getExcludes() {
-        return excludes;
-    }
+  public String getExcludes() {
+    return excludes;
+  }
 
-    public String getIncludes() {
-        return includes;
-    }
+  public String getIncludes() {
+    return includes;
+  }
 
-    public String getOutput() {
-        return output;
-    }
+  public String getOutput() {
+    return output;
+  }
 
-    public Integer getPort() {
-        return port;
-    }
+  public Integer getPort() {
+    return port;
+  }
 
-    public boolean isAppend() {
-        return append;
-    }
+  public boolean isAppend() {
+    return append;
+  }
 
-    public boolean isDumponexit() {
-        return dumponexit;
-    }
+  public boolean isDumponexit() {
+    return dumponexit;
+  }
 
-    public void setAddress(final String address) {
-        this.address = address;
-    }
+  public void setAddress(final String address) {
+    this.address = address;
+  }
 
-    public void setAppend(final boolean append) {
-        this.append = append;
-    }
+  public void setAppend(final boolean append) {
+    this.append = append;
+  }
 
-    public void setDumponexit(final boolean dumponexit) {
-        this.dumponexit = dumponexit;
-    }
+  public void setDumponexit(final boolean dumponexit) {
+    this.dumponexit = dumponexit;
+  }
 
-    public void setExcludes(final String excludes) {
-        this.excludes = excludes;
-    }
+  public void setExcludes(final String excludes) {
+    this.excludes = excludes;
+  }
 
-    public void setIncludes(final String includes) {
-        this.includes = includes;
-    }
+  public void setIncludes(final String includes) {
+    this.includes = includes;
+  }
 
-    public void setOutput(final String output) {
-        this.output = output;
-    }
+  public void setOutput(final String output) {
+    this.output = output;
+  }
 
-    public void setPort(final Integer port) {
-        this.port = port;
-    }
+  public void setPort(final Integer port) {
+    this.port = port;
+  }
 
-    @Override
-    public String toString() {
-        return "JacocoSettings [append=" + append + ", includes=" + includes + ", excludes=" + excludes
-                + ", dumponexit=" + dumponexit + "]";
-    }
+  @Override
+  public String toString() {
+    return "JacocoSettings [append=" + append + ", includes=" + includes + ", excludes=" + excludes
+        + ", dumponexit=" + dumponexit + "]";
+  }
 
 }

@@ -1,18 +1,17 @@
-/**
- * This file is part of Everit - Maven OSGi plugin.
+/*
+ * Copyright (C) 2011 Everit Kft. (http://everit.org)
  *
- * Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.everit.osgi.dev.maven;
 
@@ -28,148 +27,154 @@ import org.apache.maven.plugins.annotations.Parameter;
  */
 public class EnvironmentConfiguration {
 
-    /**
-     * Setting non-default behaviors for bundles. For more information see the javadoc of {@link BundleSettings} class.
-     *
-     */
-    @Parameter
-    private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
+  private static final int DEFAULT_SHUTDOWN_TIMEOUT = 30000;
 
-    /**
-     * The default startlevel for newly installed bundles
-     *
-     */
-    @Parameter
-    private Integer bundleStartLevel;
+  private static final int DEFAULT_TEST_RUN_TIMEOUT = 180000;
 
-    /**
-     * The name of the osgi framework. Currently equinox is supported. Default is equinox.
-     *
-     */
-    @Parameter
-    private String framework;
+  /**
+   * Setting non-default behaviors for bundles. For more information see the javadoc of
+   * {@link BundleSettings} class.
+   *
+   */
+  @Parameter
+  private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
 
-    /**
-     * The default start level of the OSGi framework.
-     *
-     */
-    @Parameter
-    private Integer frameworkStartLevel;
+  /**
+   * The default startlevel for newly installed bundles.
+   *
+   */
+  @Parameter
+  private Integer bundleStartLevel;
 
-    /**
-     * The id that will be used to identify this configuration in system property of the framework.
-     *
-     */
-    @Parameter
-    private String id;
+  /**
+   * The name of the osgi framework. Currently equinox is supported. Default is equinox.
+   *
+   */
+  @Parameter
+  private String framework;
 
-    /**
-     * The amount of time in milliseconds until the plugin waits for the environment to stop after a CTRL+C was sent.
-     * Default value is half a minute.
-     */
-    @Parameter
-    private int shutdownTimeout = 30000;
+  /**
+   * The default start level of the OSGi framework.
+   *
+   */
+  @Parameter
+  private Integer frameworkStartLevel;
 
-    /**
-     * System properties that will be added to the JVM of started OSGI container.
-     *
-     */
-    @Parameter
-    private Map<String, String> systemProperties = new HashMap<String, String>();
+  /**
+   * The id that will be used to identify this configuration in system property of the framework.
+   *
+   */
+  @Parameter
+  private String id;
 
-    /**
-     * The timeout in milliseconds after the Tests should be finished for sure. The environment will be stopped when
-     * this exceeds. Default value is five minutes.
-     *
-     */
-    @Parameter
-    private int timeout = 180000;
+  /**
+   * The amount of time in milliseconds until the plugin waits for the environment to stop after a
+   * CTRL+C was sent. Default value is half a minute.
+   */
+  @Parameter(defaultValue = "30000")
+  private int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
 
-    /**
-     * The JVM options that will be applied during starting the OSGI Container.
-     *
-     */
-    @Parameter
-    private List<String> vmOptions;
+  /**
+   * System properties that will be added to the JVM of started OSGI container.
+   *
+   */
+  @Parameter
+  private Map<String, String> systemProperties = new HashMap<String, String>();
 
-    public List<BundleSettings> getBundleSettings() {
-        return bundleSettings;
-    }
+  /**
+   * The timeout in milliseconds after the Tests should be finished for sure. The environment will
+   * be stopped when this exceeds. Default value is five minutes.
+   *
+   */
+  @Parameter(defaultValue = "180000")
+  private int timeout = DEFAULT_TEST_RUN_TIMEOUT;
 
-    public Integer getBundleStartLevel() {
-        return bundleStartLevel;
-    }
+  /**
+   * The JVM options that will be applied during starting the OSGI Container.
+   *
+   */
+  @Parameter
+  private List<String> vmOptions;
 
-    public String getFramework() {
-        return framework;
-    }
+  public List<BundleSettings> getBundleSettings() {
+    return bundleSettings;
+  }
 
-    public Integer getFrameworkStartLevel() {
-        return frameworkStartLevel;
-    }
+  public Integer getBundleStartLevel() {
+    return bundleStartLevel;
+  }
 
-    public String getId() {
-        return id;
-    }
+  public String getFramework() {
+    return framework;
+  }
 
-    public int getShutdownTimeout() {
-        return shutdownTimeout;
-    }
+  public Integer getFrameworkStartLevel() {
+    return frameworkStartLevel;
+  }
 
-    public Map<String, String> getSystemProperties() {
-        return systemProperties;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public int getTimeout() {
-        return timeout;
-    }
+  public int getShutdownTimeout() {
+    return shutdownTimeout;
+  }
 
-    public List<String> getVmOptions() {
-        return vmOptions;
-    }
+  public Map<String, String> getSystemProperties() {
+    return systemProperties;
+  }
 
-    public void setBundleSettings(final List<BundleSettings> bundleSettings) {
-        this.bundleSettings = bundleSettings;
-    }
+  public int getTimeout() {
+    return timeout;
+  }
 
-    public void setBundleStartLevel(final Integer bundleStartLevel) {
-        this.bundleStartLevel = bundleStartLevel;
-    }
+  public List<String> getVmOptions() {
+    return vmOptions;
+  }
 
-    public void setFramework(final String framework) {
-        this.framework = framework;
-    }
+  public void setBundleSettings(final List<BundleSettings> bundleSettings) {
+    this.bundleSettings = bundleSettings;
+  }
 
-    public void setFrameworkStartLevel(final Integer frameworkStartLevel) {
-        this.frameworkStartLevel = frameworkStartLevel;
-    }
+  public void setBundleStartLevel(final Integer bundleStartLevel) {
+    this.bundleStartLevel = bundleStartLevel;
+  }
 
-    public void setId(final String id) {
-        this.id = id;
-    }
+  public void setFramework(final String framework) {
+    this.framework = framework;
+  }
 
-    public void setShutdownTimeout(final int shutdownTimeout) {
-        this.shutdownTimeout = shutdownTimeout;
-    }
+  public void setFrameworkStartLevel(final Integer frameworkStartLevel) {
+    this.frameworkStartLevel = frameworkStartLevel;
+  }
 
-    public void setSystemProperties(final Map<String, String> systemProperties) {
-        this.systemProperties = systemProperties;
-    }
+  public void setId(final String id) {
+    this.id = id;
+  }
 
-    public void setTimeout(final int timeout) {
-        this.timeout = timeout;
-    }
+  public void setShutdownTimeout(final int shutdownTimeout) {
+    this.shutdownTimeout = shutdownTimeout;
+  }
 
-    public void setVmOptions(final List<String> vmOptions) {
-        this.vmOptions = vmOptions;
-    }
+  public void setSystemProperties(final Map<String, String> systemProperties) {
+    this.systemProperties = systemProperties;
+  }
 
-    @Override
-    public String toString() {
-        return "EnvironmentConfiguration [id=" + id + ", framework=" + framework + ", frameworkStartLevel="
-                + frameworkStartLevel + ", timeout=" + timeout + ", shutdownTimeout=" + shutdownTimeout
-                + ", bundleStartLevel=" + bundleStartLevel + ", bundleSettings=" + bundleSettings
-                + ", systemProperties=" + systemProperties + ", vmOptions=" + vmOptions + "]";
-    }
+  public void setTimeout(final int timeout) {
+    this.timeout = timeout;
+  }
+
+  public void setVmOptions(final List<String> vmOptions) {
+    this.vmOptions = vmOptions;
+  }
+
+  @Override
+  public String toString() {
+    return "EnvironmentConfiguration [id=" + id + ", framework=" + framework
+        + ", frameworkStartLevel="
+        + frameworkStartLevel + ", timeout=" + timeout + ", shutdownTimeout=" + shutdownTimeout
+        + ", bundleStartLevel=" + bundleStartLevel + ", bundleSettings=" + bundleSettings
+        + ", systemProperties=" + systemProperties + ", vmOptions=" + vmOptions + "]";
+  }
 
 }

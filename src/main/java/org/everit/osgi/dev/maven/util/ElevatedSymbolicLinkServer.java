@@ -1,18 +1,17 @@
-/**
- * This file is part of Everit - Maven OSGi plugin.
+/*
+ * Copyright (C) 2011 Everit Kft. (http://everit.org)
  *
- * Everit - Maven OSGi plugin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Everit - Maven OSGi plugin is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ *         http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Everit - Maven OSGi plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.everit.osgi.dev.maven.util;
 
@@ -31,122 +30,136 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class is intended to internal usage only!
  *
- * The purpose of this class to make it possible to create symbolic links in elevated mode on windows systems. The main
- * class takes one argument that is a port where a server will listen. The socket server accepts two commands:
+ * <p>
+ * The purpose of this class to make it possible to create symbolic links in elevated mode on
+ * windows systems. The main class takes one argument that is a port where a server will listen. The
+ * socket server accepts two commands:
  * <ul>
  * <li>createSymbolicLink sourceURI targetURI</li>
  * <li>stop</li>
  * </ul>
  */
-public class ElevatedSymbolicLinkServer {
+public final class ElevatedSymbolicLinkServer {
 
-    public static final String COMMAND_CREATE_SYMBOLIC_LINK = "createSymbolicLink";
+  public static final String COMMAND_CREATE_SYMBOLIC_LINK = "createSymbolicLink";
 
-    private static final String COMMAND_STOP = "stop";
+  private static final String COMMAND_STOP = "stop";
 
-    private static ServerSocket serverSocket;
+  private static final Logger LOGGER = Logger.getLogger(ElevatedSymbolicLinkServer.class.getName());
 
-    private static void createTestSymbolicLink() throws IOException {
-        File tempFile = null;
-        File tmpSymbolicLinkFile = null;
-        try {
-            tempFile = File.createTempFile("eosgi-", "-testFile");
-            tmpSymbolicLinkFile = File.createTempFile("eosgi-", "-testSymbolicLink");
-            tmpSymbolicLinkFile.delete();
+  private static ServerSocket serverSocket;
 
-            Path tmpSymbolicLinkPath = tmpSymbolicLinkFile.toPath();
-            Files.createSymbolicLink(tmpSymbolicLinkPath, tempFile.toPath());
+  private static void createTestSymbolicLink() throws IOException {
+    File tempFile = null;
+    File tmpSymbolicLinkFile = null;
+    try {
+      tempFile = File.createTempFile("eosgi-", "-testFile");
+      tmpSymbolicLinkFile = File.createTempFile("eosgi-", "-testSymbolicLink");
+      tmpSymbolicLinkFile.delete();
 
-            Path originalPath = Files.readSymbolicLink(tmpSymbolicLinkPath);
-            File originalFile = originalPath.toFile();
-            if (!originalFile.equals(tempFile)) {
-                throw new IOException("It seems that the system cannot handle symbolic links. "
-                        + "Error during checking test symbolic links. " + tempFile + " and " + originalFile
-                        + " should be the same.");
-            }
-        } finally {
-            if (tmpSymbolicLinkFile != null) {
-                tmpSymbolicLinkFile.delete();
-            }
-            if (tempFile != null) {
-                tempFile.delete();
-            }
-        }
+      Path tmpSymbolicLinkPath = tmpSymbolicLinkFile.toPath();
+      Files.createSymbolicLink(tmpSymbolicLinkPath, tempFile.toPath());
+
+      Path originalPath = Files.readSymbolicLink(tmpSymbolicLinkPath);
+      File originalFile = originalPath.toFile();
+      if (!originalFile.equals(tempFile)) {
+        throw new IOException("It seems that the system cannot handle symbolic links. "
+            + "Error during checking test symbolic links. " + tempFile + " and " + originalFile
+            + " should be the same.");
+      }
+    } finally {
+      if (tmpSymbolicLinkFile != null) {
+        tmpSymbolicLinkFile.delete();
+      }
+      if (tempFile != null) {
+        tempFile.delete();
+      }
+    }
+  }
+
+  /**
+   * Main method of the class.
+   */
+  public static void main(final String[] args) {
+    try {
+      ElevatedSymbolicLinkServer.createTestSymbolicLink();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
 
-    public static void main(final String[] args) {
+    int port = Integer.parseInt(args[0]);
+    try {
+      InetAddress localAddress = InetAddress.getLocalHost();
+      System.out
+          .println("Opening symbolicLinkServer at " + localAddress.toString() + " on port " + port);
+      serverSocket = new ServerSocket(port, 1, localAddress);
+      Socket socket = serverSocket.accept();
+      InputStream in = socket.getInputStream();
+      OutputStream outputStream = socket.getOutputStream();
+      InputStreamReader reader = new InputStreamReader(in, Charset.defaultCharset());
+      BufferedReader br = new BufferedReader(reader);
+      String line = br.readLine();
+      boolean stopped = false;
+      while (!stopped && (line != null)) {
+        if (!line.equals(COMMAND_STOP)) {
+          ElevatedSymbolicLinkServer.processLine(line, outputStream);
+          line = br.readLine();
+        } else {
+          LOGGER.info("Caughed stop command. Stopping server.");
+          stopped = true;
+        }
+      }
+    } catch (UnknownHostException e) {
+      throw new RuntimeException("Could not get localhost address");
+    } catch (IOException e) {
+      throw new RuntimeException("Could not bind to local address on port " + port, e);
+    } finally {
+      if (serverSocket != null) {
         try {
-            ElevatedSymbolicLinkServer.createTestSymbolicLink();
+          serverSocket.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+          LOGGER.log(Level.SEVERE, "Error during closing elevated communication socket", e);
         }
-
-        int port = Integer.valueOf(args[0]);
-        try {
-            InetAddress localAddress = InetAddress.getLocalHost();
-            System.out.println("Opening symbolicLinkServer at " + localAddress.toString() + " on port " + port);
-            serverSocket = new ServerSocket(port, 1, localAddress);
-            Socket socket = serverSocket.accept();
-            InputStream in = socket.getInputStream();
-            OutputStream outputStream = socket.getOutputStream();
-            InputStreamReader reader = new InputStreamReader(in, Charset.defaultCharset());
-            BufferedReader br = new BufferedReader(reader);
-            String line = br.readLine();
-            boolean stopped = false;
-            while (!stopped && (line != null)) {
-                if (!line.equals(COMMAND_STOP)) {
-                    ElevatedSymbolicLinkServer.processLine(line, outputStream);
-                    line = br.readLine();
-                } else {
-                    System.out.println("Caughed stop command. Stopping server.");
-                    stopped = true;
-                }
-            }
-        } catch (UnknownHostException e) {
-            throw new RuntimeException("Could not get localhost address");
-        } catch (IOException e) {
-            throw new RuntimeException("Could not bind to local address on port " + port, e);
-        } finally {
-            if (serverSocket != null) {
-                try {
-                    serverSocket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+      }
     }
+  }
 
-    private static void processLine(final String line, final OutputStream out) {
-        if (line.startsWith(COMMAND_CREATE_SYMBOLIC_LINK)) {
+  private static void processLine(final String line, final OutputStream out) {
+    if (line.startsWith(COMMAND_CREATE_SYMBOLIC_LINK)) {
 
-            String[] fileURIs = line.substring(COMMAND_CREATE_SYMBOLIC_LINK.length() + 1).split(" ");
-            String sourceURIString = fileURIs[0];
-            String targetURIString = fileURIs[1];
-            try {
-                URI sourceURI = new URI(sourceURIString);
-                URI targetURI = new URI(targetURIString);
-                File sourceFile = new File(sourceURI);
-                File targetFile = new File(targetURI);
+      String[] fileURIs = line.substring(COMMAND_CREATE_SYMBOLIC_LINK.length() + 1).split(" ");
+      String sourceURIString = fileURIs[0];
+      String targetURIString = fileURIs[1];
+      try {
+        URI sourceURI = new URI(sourceURIString);
+        URI targetURI = new URI(targetURIString);
+        File sourceFile = new File(sourceURI);
+        File targetFile = new File(targetURI);
 
-                System.out.println("Creating symbolic link " + targetFile.getAbsolutePath() + " that points to "
-                        + sourceFile.getAbsolutePath());
-                Files.createSymbolicLink(targetFile.toPath(), sourceFile.toPath());
-                if (sourceFile.canExecute()) {
-                    targetFile.setExecutable(true);
-                } else {
-                    targetFile.setExecutable(false);
-                }
-                out.write("ok\n".getBytes(Charset.defaultCharset()));
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        System.out
+            .println("Creating symbolic link " + targetFile.getAbsolutePath() + " that points to "
+                + sourceFile.getAbsolutePath());
+        Files.createSymbolicLink(targetFile.toPath(), sourceFile.toPath());
+        if (sourceFile.canExecute()) {
+          targetFile.setExecutable(true);
+        } else {
+          targetFile.setExecutable(false);
         }
+        out.write("ok\n".getBytes(Charset.defaultCharset()));
+      } catch (URISyntaxException e) {
+        throw new RuntimeException(e);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
+  }
+
+  private ElevatedSymbolicLinkServer() {
+  }
 }
