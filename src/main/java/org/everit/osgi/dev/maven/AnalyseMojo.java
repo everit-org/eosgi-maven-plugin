@@ -36,6 +36,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
@@ -52,10 +53,19 @@ import org.osgi.framework.wiring.BundleCapability;
 import org.osgi.framework.wiring.BundleRequirement;
 import org.osgi.framework.wiring.FrameworkWiring;
 
-@Mojo(name = "diagnose", defaultPhase = LifecyclePhase.PACKAGE, requiresProject = true,
+/**
+ * Analyses the environment settings based on different algorythms and provides useful tips how to
+ * improve their configuration.
+ * 
+ * <p>
+ * At the moment, this goal shows the unsatisfied dependencies in case no package is exported from
+ * the JDK. This information can be useful to find out what should be specified for
+ * <i>org.osgi.framework.system.packages</i> property and what could be added as a bundle.
+ */
+@Mojo(name = "analyse", requiresProject = true,
     requiresDependencyResolution = ResolutionScope.COMPILE)
 @Execute(phase = LifecyclePhase.PACKAGE)
-public class DiagnoseMojo extends DistMojo {
+public class AnalyseMojo extends AbstractEOSGiMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
@@ -88,6 +98,12 @@ public class DiagnoseMojo extends DistMojo {
     }
     return null;
   }
+
+  /**
+   * Map of plugin artifacts.
+   */
+  @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
+  protected Map<String, Artifact> pluginArtifactMap;
 
   private Framework startOSGiContainer(final String[] bundleLocations,
       final String tempDirPath) throws BundleException {
