@@ -18,11 +18,10 @@ package org.everit.osgi.dev.maven;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,8 +37,6 @@ import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.eclipse.osgi.framework.internal.core.Constants;
-import org.eclipse.osgi.framework.internal.core.FrameworkProperties;
 import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
 import org.eclipse.osgi.service.resolver.PlatformAdmin;
@@ -47,6 +44,7 @@ import org.eclipse.osgi.service.resolver.State;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
+import org.osgi.framework.Constants;
 import org.osgi.framework.ServiceReference;
 import org.osgi.framework.launch.Framework;
 import org.osgi.framework.launch.FrameworkFactory;
@@ -108,14 +106,24 @@ public class DiagnoseMojo extends DistMojo {
 
     resetFrameworkProperties();
     Framework framework = frameworkFactory.newFramework(config);
-    framework.start();
+    framework.init();
 
     BundleContext systemBundleContext = framework.getBundleContext();
+
+    Artifact equinoxCompatibilityStateArtifact =
+        pluginArtifactMap.get("org.eclipse.tycho:org.eclipse.osgi.compatibility.state");
+
+    URI compatibilityBundleURI = equinoxCompatibilityStateArtifact.getFile().toURI();
+
+    systemBundleContext.installBundle("reference:" + compatibilityBundleURI.toString());
+
+    framework.start();
+
     for (String bundleLocation : bundleLocations) {
       try {
         systemBundleContext.installBundle(bundleLocation);
       } catch (BundleException e) {
-        getLog().warn("Could not start bundle " + bundleLocation, e);
+        getLog().warn("Could not install bundle " + bundleLocation, e);
       }
     }
     FrameworkWiring frameworkWiring = framework
@@ -131,20 +139,20 @@ public class DiagnoseMojo extends DistMojo {
   private static void resetFrameworkProperties() {
     // FIXME avoid having to do this hack!!! equinox internal classes should be available via the
     // jvm classloader
-    Class<FrameworkProperties> clazz = FrameworkProperties.class;
-    try {
-      Field propertiesField = clazz.getDeclaredField("properties");
-      propertiesField.setAccessible(true);
-      propertiesField.set(null, null);
-    } catch (NoSuchFieldException e) {
-      throw new RuntimeException(e);
-    } catch (SecurityException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalArgumentException e) {
-      throw new RuntimeException(e);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    }
+    // Class<FrameworkProperties> clazz = FrameworkProperties.class;
+    // try {
+    // Field propertiesField = clazz.getDeclaredField("properties");
+    // propertiesField.setAccessible(true);
+    // propertiesField.set(null, null);
+    // } catch (NoSuchFieldException e) {
+    // throw new RuntimeException(e);
+    // } catch (SecurityException e) {
+    // throw new RuntimeException(e);
+    // } catch (IllegalArgumentException e) {
+    // throw new RuntimeException(e);
+    // } catch (IllegalAccessException e) {
+    // throw new RuntimeException(e);
+    // }
   }
 
   private void diagnose(String[] bundleLocations) {
@@ -239,7 +247,7 @@ public class DiagnoseMojo extends DistMojo {
     printMissingSummary(optionalSum);
     getLog().info("");
     getLog().info("");
-    
+
   }
 
   private void printMissingSummary(Set<String> importPackages) {

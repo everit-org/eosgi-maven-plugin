@@ -190,9 +190,14 @@
       <version>2.0</version>
     </dependency>
     <dependency>
-      <groupId>org.eclipse</groupId>
-      <artifactId>osgi</artifactId>
-      <version>3.9.1-v20140110-1610</version>
+      <groupId>org.eclipse.tycho</groupId>
+      <artifactId>org.eclipse.osgi</artifactId>
+      <version>3.10.100.v20150529-1857</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.tycho</groupId>
+      <artifactId>org.eclipse.osgi.compatibility.state</artifactId>
+      <version>1.0.100.v20150402-1551</version>
     </dependency>
   </dependencies>
 
