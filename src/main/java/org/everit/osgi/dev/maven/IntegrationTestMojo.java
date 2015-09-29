@@ -388,7 +388,10 @@ public class IntegrationTestMojo extends DistMojo {
                 OperatingSystem operatingSystem = OperatingSystem.instance();
                 Process process;
                 getLog().info("Operating system is " + operatingSystem.getOperatingSystemName());
-                if (operatingSystem.getOperatingSystemName().toLowerCase().contains("linux")) {
+                
+                String lowerCaseOperatingSystemName = operatingSystem.getOperatingSystemName().toLowerCase();
+                
+                if (lowerCaseOperatingSystemName.contains("linux") || lowerCaseOperatingSystemName.startsWith("mac os x")) {
                     getLog().info("Starting BSD process");
                     process = new BSDProcess();
                 } else {
