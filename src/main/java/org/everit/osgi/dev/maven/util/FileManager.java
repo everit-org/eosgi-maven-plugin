@@ -35,9 +35,12 @@ import java.nio.charset.Charset;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.annotation.Generated;
@@ -76,59 +79,113 @@ public class FileManager implements AutoCloseable {
     }
   }
 
-  private static final int UNIX_PERMISSION_BITMASK_EXECUTE;
+  private static final int GROUP_EXECUTE_BITMASK;
 
-  private static final int UNIX_PERMISSION_BITMASK_EXECUTE_BY_OTHERS;
+  private static final int GROUP_READ_BITMASK;
 
-  private static final int UNIX_PERMISSION_BITMASK_READ;
+  private static final int GROUP_WRITE_BITMASK;
 
-  private static final int UNIX_PERMISSION_BITMASK_READ_BY_OTHERS;
+  private static final int OTHERS_EXECUTE_BITMASK;
 
-  private static final int UNIX_PERMISSION_BITMASK_WRITE;
+  private static final int OTHERS_READ_BITMASK;
 
-  private static final int UNIX_PERMISSION_BITMASK_WRITE_BY_OTHERS;
+  private static final int OTHERS_WRITE_BITMASK;
+
+  private static final int OWNER_EXECUTE_BITMASK;
+
+  private static final int OWNER_READ_BITMASK;
+
+  private static final int OWNER_WRITE_BITMASK;
 
   static {
     final int octalDigitNum = 3;
     final int executeOctal = 1;
-    UNIX_PERMISSION_BITMASK_EXECUTE_BY_OTHERS = executeOctal << octalDigitNum + executeOctal;
+    OTHERS_EXECUTE_BITMASK = executeOctal;
+    GROUP_EXECUTE_BITMASK = OTHERS_EXECUTE_BITMASK << octalDigitNum;
+    OWNER_EXECUTE_BITMASK = GROUP_EXECUTE_BITMASK << octalDigitNum;
 
-    UNIX_PERMISSION_BITMASK_EXECUTE =
-        UNIX_PERMISSION_BITMASK_EXECUTE_BY_OTHERS << octalDigitNum + executeOctal;
+    final int writeOctal = 2;
+
+    OTHERS_WRITE_BITMASK = writeOctal;
+    GROUP_WRITE_BITMASK = OTHERS_WRITE_BITMASK << octalDigitNum;
+    OWNER_WRITE_BITMASK = GROUP_WRITE_BITMASK << octalDigitNum;
 
     final int readOctal = 4;
-    UNIX_PERMISSION_BITMASK_READ_BY_OTHERS = readOctal << octalDigitNum + readOctal;
 
-    UNIX_PERMISSION_BITMASK_READ =
-        UNIX_PERMISSION_BITMASK_READ_BY_OTHERS << octalDigitNum + readOctal;
+    OTHERS_READ_BITMASK = readOctal;
+    GROUP_READ_BITMASK = OTHERS_READ_BITMASK << octalDigitNum;
+    OWNER_READ_BITMASK = GROUP_READ_BITMASK << octalDigitNum;
 
-    final int writeOctal = 4;
-    UNIX_PERMISSION_BITMASK_WRITE_BY_OTHERS = writeOctal << octalDigitNum + writeOctal;
-
-    UNIX_PERMISSION_BITMASK_WRITE =
-        UNIX_PERMISSION_BITMASK_WRITE_BY_OTHERS << octalDigitNum + writeOctal;
   }
 
-  private static void setUnixPermissionsOnFileIfNecessary(final File file,
-      final ZipArchiveEntry entry) {
+  private static void setPermissionsOnFile(final File file,
+      final ZipArchiveEntry entry) throws IOException {
     if (entry.getPlatform() == ZipArchiveEntry.PLATFORM_FAT) {
       return;
     }
     int unixPermissions = entry.getUnixMode();
-    // Executable
-    boolean doable = (unixPermissions & UNIX_PERMISSION_BITMASK_EXECUTE) > 0;
-    boolean doableByOthers = (unixPermissions & UNIX_PERMISSION_BITMASK_EXECUTE_BY_OTHERS) > 0;
-    file.setExecutable(doable, !doableByOthers);
 
-    // Writeable
-    doable = (unixPermissions & UNIX_PERMISSION_BITMASK_WRITE) > 0;
-    doableByOthers = (unixPermissions & UNIX_PERMISSION_BITMASK_WRITE_BY_OTHERS) > 0;
-    file.setWritable(doable, !doableByOthers);
+    Set<PosixFilePermission> perms = new HashSet<>();
 
-    // Readable
-    doable = (unixPermissions & UNIX_PERMISSION_BITMASK_READ) > 0;
-    doableByOthers = (unixPermissions & UNIX_PERMISSION_BITMASK_READ_BY_OTHERS) > 0;
-    file.setReadable(doable, !doableByOthers);
+    if ((unixPermissions & OWNER_EXECUTE_BITMASK) > 0) {
+      perms.add(PosixFilePermission.OWNER_EXECUTE);
+    }
+
+    if ((unixPermissions & GROUP_EXECUTE_BITMASK) > 0) {
+      perms.add(PosixFilePermission.GROUP_EXECUTE);
+    }
+
+    if ((unixPermissions & OTHERS_EXECUTE_BITMASK) > 0) {
+      perms.add(PosixFilePermission.OTHERS_EXECUTE);
+    }
+
+    if ((unixPermissions & OWNER_READ_BITMASK) > 0) {
+      perms.add(PosixFilePermission.OWNER_READ);
+    }
+
+    if ((unixPermissions & GROUP_READ_BITMASK) > 0) {
+      perms.add(PosixFilePermission.GROUP_READ);
+    }
+
+    if ((unixPermissions & OTHERS_READ_BITMASK) > 0) {
+      perms.add(PosixFilePermission.OTHERS_READ);
+    }
+
+    if ((unixPermissions & OWNER_WRITE_BITMASK) > 0) {
+      perms.add(PosixFilePermission.OWNER_WRITE);
+    }
+
+    if ((unixPermissions & GROUP_WRITE_BITMASK) > 0) {
+      perms.add(PosixFilePermission.GROUP_WRITE);
+    }
+
+    if ((unixPermissions & OTHERS_WRITE_BITMASK) > 0) {
+      perms.add(PosixFilePermission.OTHERS_WRITE);
+    }
+
+    Path path = file.toPath();
+    if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+      Files.setPosixFilePermissions(path, perms);
+    } else {
+      setPermissionsOnFileInNonPosixSystem(file, perms);
+    }
+  }
+
+  private static void setPermissionsOnFileInNonPosixSystem(final File file,
+      final Set<PosixFilePermission> perms) {
+
+    if (perms.contains(PosixFilePermission.OWNER_EXECUTE)) {
+      file.setExecutable(true, !perms.contains(PosixFilePermission.OTHERS_EXECUTE));
+    }
+
+    if (perms.contains(PosixFilePermission.OWNER_READ)) {
+      file.setReadable(true, !perms.contains(PosixFilePermission.OTHERS_READ));
+    }
+
+    if (perms.contains(PosixFilePermission.OWNER_WRITE)) {
+      file.setWritable(true, !perms.contains(PosixFilePermission.OTHERS_WRITE));
+    }
+
   }
 
   private final Log log;
@@ -490,7 +547,7 @@ public class FileManager implements AutoCloseable {
           parentFolder.mkdirs();
           InputStream inputStream = zipFile.getInputStream(entry);
           overCopyFile(inputStream, destFile);
-          FileManager.setUnixPermissionsOnFileIfNecessary(destFile, entry);
+          FileManager.setPermissionsOnFile(destFile, entry);
         }
 
       }
