@@ -29,7 +29,7 @@
 
   <groupId>org.everit.osgi.dev</groupId>
   <artifactId>eosgi-maven-plugin</artifactId>
-  <version>3.3.2-SNAPSHOT</version>
+  <version>3.3.3</version>
 
   <packaging>maven-plugin</packaging>
 
