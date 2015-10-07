@@ -85,7 +85,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     private final int shutdownTimeout;
 
-    public ShutdownHook(final Process process, final int shutdownTimeout) {
+    ShutdownHook(final Process process, final int shutdownTimeout) {
       this.process = process;
       this.shutdownTimeout = shutdownTimeout;
     }
@@ -103,7 +103,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     private final OutputStream outputStream;
 
-    public SimpleWriterOutputStream(final OutputStream outputStream) {
+    SimpleWriterOutputStream(final OutputStream outputStream) {
       this.outputStream = outputStream;
     }
 

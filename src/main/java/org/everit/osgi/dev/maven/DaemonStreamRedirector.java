@@ -82,7 +82,7 @@ public class DaemonStreamRedirector implements Closeable {
 
   /**
    * Constructor.
-   * 
+   *
    * @param inputStream
    *          The inputstream where data will be read from.
    * @param outputStreams
