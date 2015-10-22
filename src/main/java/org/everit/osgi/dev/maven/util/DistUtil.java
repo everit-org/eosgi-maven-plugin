@@ -20,16 +20,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.apache.velocity.tools.generic.EscapeTool;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
+import org.unbescape.properties.PropertiesEscape;
 
 /**
- * Util methods for distribution mojo.
+ * Utility methods for distribution mojo.
  */
 public final class DistUtil {
 
-  private final EscapeTool escapeTool = new EscapeTool();
+  private String escape(final String value) {
+    return value.replace(",", "\\,").replace("=", "\\=").replace(" ", "\\ ");
+  }
 
   /**
    * Creates an ordered map that is sorted by the start level of the bundles that should be
@@ -68,10 +70,11 @@ public final class DistUtil {
   }
 
   public String propertyKey(final String key) {
-    return escapeTool.propertyKey(key).replace(",", "\\,");
+    return escape(PropertiesEscape.escapePropertiesKey(key));
   }
 
   public String propertyValue(final String value) {
-    return escapeTool.propertyKey(value).replace(",", "\\,");
+    return escape(PropertiesEscape.escapePropertiesValue(value));
   }
+
 }

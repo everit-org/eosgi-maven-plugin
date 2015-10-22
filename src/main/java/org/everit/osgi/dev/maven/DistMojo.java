@@ -52,8 +52,6 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.tools.generic.EscapeTool;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
@@ -441,14 +439,13 @@ public class DistMojo extends AbstractEOSGiMojo {
           throws MojoExecutionException {
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
-    VelocityContext context = new VelocityContext();
-    context.put("distributableArtifacts", distributableArtifacts);
-    context.put("environment", environment);
-    context.put("copyMode", environmentCopyMode.value());
-    context.put("escapeTool", new EscapeTool());
-    context.put("distUtil", new DistUtil());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("distributableArtifacts", distributableArtifacts);
+    vars.put("environment", environment);
+    vars.put("copyMode", environmentCopyMode.value());
+    vars.put("distUtil", new DistUtil());
     try {
-      fileManager.replaceFileWithParsed(configFile, context, "UTF8");
+      fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
     } catch (IOException e) {
       throw new MojoExecutionException(
           "Could not run velocity on configuration file: " + configFile.getName(), e);
@@ -464,12 +461,11 @@ public class DistMojo extends AbstractEOSGiMojo {
       final List<DistributableArtifact> distributableArtifacts,
       final EnvironmentConfiguration environment)
           throws MojoExecutionException {
-    VelocityContext context = new VelocityContext();
-    context.put("distributableArtifacts", distributableArtifacts);
-    context.put("distributionPackage", distributionPackage);
-    context.put("environment", environment);
-    context.put("escapeTool", new EscapeTool());
-    context.put("distUtil", new DistUtil());
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("distributableArtifacts", distributableArtifacts);
+    vars.put("distributionPackage", distributionPackage);
+    vars.put("environment", environment);
+    vars.put("distUtil", new DistUtil());
     ParseablesType parseables = distributionPackage.getParseables();
     if (parseables != null) {
       List<ParseableType> parseable = parseables.getParseable();
@@ -481,7 +477,7 @@ public class DistMojo extends AbstractEOSGiMojo {
               + parseableFile.getAbsolutePath());
         }
         try {
-          fileManager.replaceFileWithParsed(parseableFile, context, p.getEncoding());
+          fileManager.replaceFileWithParsed(parseableFile, vars, p.getEncoding());
         } catch (IOException e) {
           throw new MojoExecutionException(
               "Could not replace parseable with parsed content: " + p.getPath(),

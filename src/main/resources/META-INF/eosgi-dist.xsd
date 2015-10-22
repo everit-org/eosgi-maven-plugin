@@ -26,7 +26,6 @@
   <li>distributableArtifacts: List of DistributableArtifact objects</li>
   <li>environment: An EnvironmentConfiguration object</li>
   <li>copyMode: The default copy mode that should be used during distributing artifacts</li>
-  <li>escapeTool:  A simply utility class that can be used to do escapes</li>
   <li>distUtil: A class that contains util functions that help creating a distribution package.</li>
 </ul>
 </documentation></annotation>

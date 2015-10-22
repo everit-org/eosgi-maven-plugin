@@ -21,7 +21,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
@@ -39,6 +38,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -47,11 +47,15 @@ import javax.annotation.Generated;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
+import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.app.VelocityEngine;
+import org.everit.expression.ExpressionCompiler;
+import org.everit.expression.ParserConfiguration;
+import org.everit.expression.mvel.MvelExpressionCompiler;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
+import org.everit.templating.CompiledTemplate;
+import org.everit.templating.text.TextTemplateCompiler;
 import org.rzo.yajsw.os.OperatingSystem;
 import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
 import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcessManager;
@@ -167,7 +171,7 @@ public class FileManager implements AutoCloseable {
     if (path.getFileSystem().supportedFileAttributeViews().contains("posix")) {
       Files.setPosixFilePermissions(path, perms);
     } else {
-      setPermissionsOnFileInNonPosixSystem(file, perms);
+      FileManager.setPermissionsOnFileInNonPosixSystem(file, perms);
     }
   }
 
@@ -423,34 +427,25 @@ public class FileManager implements AutoCloseable {
     return fileChanged;
   }
 
-  public final void replaceFileWithParsed(final File parseableFile, final VelocityContext context,
+  public final void replaceFileWithParsed(final File parseableFile, final Map<String, Object> vars,
       final String encoding) throws IOException, MojoExecutionException {
-    VelocityEngine ve = new VelocityEngine();
+
     File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
-    FileOutputStream fout = null;
-    FileInputStream fin = null;
-    InputStreamReader reader = null;
-    OutputStreamWriter writer = null;
-    try {
-      fin = new FileInputStream(parseableFile);
-      fout = new FileOutputStream(tmpFile);
-      reader = new InputStreamReader(fin);
-      writer = new OutputStreamWriter(fout);
-      ve.evaluate(context, writer, parseableFile.getName(), reader);
-    } finally {
-      if (reader != null) {
-        reader.close();
-      }
-      if (writer != null) {
-        writer.close();
-      }
-      if (fin != null) {
-        fin.close();
-      }
-      if (fout != null) {
-        fout.close();
-      }
+
+    ExpressionCompiler expressionCompiler = new MvelExpressionCompiler();
+    TextTemplateCompiler compiler = new TextTemplateCompiler(expressionCompiler);
+    ClassLoader cl = this.getClass().getClassLoader();
+    ParserConfiguration configuration = new ParserConfiguration(cl);
+
+    try (FileInputStream fin = new FileInputStream(parseableFile);
+        FileOutputStream fout = new FileOutputStream(tmpFile);
+        OutputStreamWriter writer = new OutputStreamWriter(fout)) {
+
+      String templateText = IOUtils.toString(fin);
+      CompiledTemplate compiledTemplate = compiler.compile(templateText, configuration);
+      compiledTemplate.render(writer, vars);
     }
+
     copyFile(tmpFile, parseableFile, CopyModeType.FILE);
     tmpFile.delete();
   }
