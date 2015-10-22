@@ -170,9 +170,15 @@ public class IntegrationTestMojo extends DistMojo {
   protected boolean consoleLog = true;
 
   /**
+   * Skipping the integration tests, only execute the dist goal.
+   */
+  @Parameter(property = "eosgi.distOnly", defaultValue = "false")
+  protected boolean distOnly = false;
+
+  /**
    * Skipping this plugin.
    */
-  @Parameter(property = "maven.test.skip", defaultValue = "false")
+  @Parameter(property = "eosgi.test.skip", defaultValue = "false")
   protected boolean skipTests = false;
 
   private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
@@ -461,6 +467,12 @@ public class IntegrationTestMojo extends DistMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+
+    if (distOnly) {
+      super.execute();
+      return;
+    }
+
     if (skipTests) {
       return;
     }
@@ -567,10 +579,14 @@ public class IntegrationTestMojo extends DistMojo {
             + resultFile.getAbsolutePath() + ". Root element is not testsuite.");
       }
 
-      results.tests += convertTestSuiteAttributeToInt(testSuite, "tests", resultFile);
-      results.failure += convertTestSuiteAttributeToInt(testSuite, "failures", resultFile);
-      results.error += convertTestSuiteAttributeToInt(testSuite, "errors", resultFile);
-      results.skipped += convertTestSuiteAttributeToInt(testSuite, "skipped", resultFile);
+      results.tests +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "tests", resultFile);
+      results.failure +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "failures", resultFile);
+      results.error +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "errors", resultFile);
+      results.skipped +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "skipped", resultFile);
     } catch (SAXException e) {
       throw new MojoFailureException(
           "Invalid test result file " + resultFile.getAbsolutePath());
