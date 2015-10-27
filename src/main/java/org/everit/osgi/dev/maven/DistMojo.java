@@ -320,6 +320,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+    UsageStatistics stats = sendUsageStatistics();
     processJacocoSettings();
     defineUpgradePorts();
 
@@ -342,6 +343,7 @@ public class DistMojo extends AbstractEOSGiMojo {
         getLog().error("Could not close file manager", e);
       }
     }
+    stats.shutdown(10000);
   }
 
   private void executeOnEnvironment(final File globalDistFolderFile,

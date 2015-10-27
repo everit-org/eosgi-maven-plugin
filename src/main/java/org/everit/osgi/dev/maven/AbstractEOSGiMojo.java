@@ -27,6 +27,8 @@ import java.util.jar.Manifest;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.util.PluginUtil;
@@ -36,6 +38,12 @@ import org.osgi.framework.Constants;
  * Mojos that extend this class can use the environment information defined for the plugin.
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
+
+  @Parameter(property = "eosgi.analytics.referer.eclipse", defaultValue = "false")
+  private boolean analyticsRefererEclipse;
+
+  @Parameter(property = "eosgi.analytics.disabled", defaultValue = "false")
+  private boolean disabledAnalytics;
 
   /**
    * Comma separated list of the id of the environments that should be processed. Default is * that
@@ -54,6 +62,9 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   @Parameter(property = "executedProject")
   protected MavenProject executedProject;
+
+  @Parameter(defaultValue = "${mojoExecution}", readonly = true)
+  private MojoExecution mojo;
 
   /**
    * The Maven project.
@@ -236,5 +247,15 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     } catch (IOException e) {
       return new DistributableArtifact(artifact, null, null);
     }
+  }
+
+  protected UsageStatistics sendUsageStatistics() {
+    MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
+    String goalName = mojoDescriptor.getGoal();
+    UsageStatistics usageStats = new UsageStatistics(analyticsRefererEclipse, goalName, getLog());
+    if (!disabledAnalytics) {
+      usageStats.startSending();
+    }
+    return usageStats;
   }
 }
