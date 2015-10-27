@@ -31,6 +31,7 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.everit.osgi.dev.maven.statistic.UsageAnalytics;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.osgi.framework.Constants;
 
@@ -39,11 +40,18 @@ import org.osgi.framework.Constants;
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
+  /**
+   * The plugin is called from Eclipse or not. Default value is <code>false</code>.
+   */
   @Parameter(property = "eosgi.analytics.referer.eclipse", defaultValue = "false")
   private boolean analyticsRefererEclipse;
 
-  @Parameter(property = "eosgi.analytics.disabled", defaultValue = "false")
-  private boolean disabledAnalytics;
+  /**
+   * The tracking is disabled or not. That means send event statistics to Google Analytics or not.
+   * Default value is <code>false</code> that means send statistics.
+   */
+  @Parameter(property = "eosgi.disable.tracking", defaultValue = "false")
+  private boolean disableTracking;
 
   /**
    * Comma separated list of the id of the environments that should be processed. Default is * that
@@ -249,13 +257,16 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     }
   }
 
-  protected UsageStatistics sendUsageStatistics() {
+  /**
+   * Send event to Google Analytics if not disable tracking.
+   */
+  protected UsageAnalytics sendUsageStatistics() {
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
-    UsageStatistics usageStats = new UsageStatistics(analyticsRefererEclipse, goalName, getLog());
-    if (!disabledAnalytics) {
-      usageStats.startSending();
+    UsageAnalytics usageAnalytics = new UsageAnalytics(analyticsRefererEclipse, goalName, getLog());
+    if (!disableTracking) {
+      usageAnalytics.startSending();
     }
-    return usageStats;
+    return usageAnalytics;
   }
 }
