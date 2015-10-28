@@ -16,9 +16,9 @@
 package org.everit.osgi.dev.maven.statistic;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -86,7 +86,7 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       params.add(new BasicNameValuePair("cd1", macAddressHash)); // anonym_user_id
       try {
         UrlEncodedFormEntity entity =
-            new UrlEncodedFormEntity(params, "UTF-8");
+            new UrlEncodedFormEntity(params, StandardCharsets.UTF_8.name());
         post.setEntity(entity);
         httpClient.execute(post);
       } catch (IOException e) {
@@ -126,43 +126,21 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
     this.skipAnalytics = skipAnalytics;
   }
 
-  @Override
-  public void cancelEventSending(final long eventId) {
-    if (skipAnalytics) {
-      return;
-    }
-
-    Thread thread = sendingEvents.get(eventId);
-    if ((thread == null) || !thread.isAlive()) {
-      return;
-    }
-
-    try {
-      thread.join(analyticsWaitingTimeInMs);
-      if (thread.isAlive()) {
-        thread.interrupt();
-      }
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-  }
-
   private String getMacAddressHash() {
     try {
       Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
       if (networkInterfaces.hasMoreElements()) {
         NetworkInterface network = networkInterfaces.nextElement();
         byte[] macAddress = network.getHardwareAddress();
-        MessageDigest messageDigest = MessageDigest.getInstance("SHA");
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
         messageDigest.update(macAddress);
         byte[] macAddressHash = messageDigest.digest();
         byte[] encodedMacAddressHash = Base64.encodeBase64(macAddressHash);
-        return new String(encodedMacAddressHash, "UTF-8");
+        return new String(encodedMacAddressHash, StandardCharsets.UTF_8);
       } else {
         return UNKNOWN_MAC_ADDRESS;
       }
-    } catch (SocketException | UnsupportedEncodingException | NoSuchAlgorithmException e) {
+    } catch (SocketException | NoSuchAlgorithmException e) {
       return UNKNOWN_MAC_ADDRESS;
     }
   }
@@ -183,6 +161,28 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
     thread.start();
 
     return eventId;
+  }
+
+  @Override
+  public void waitForEventSending(final long eventId) {
+    if (skipAnalytics) {
+      return;
+    }
+
+    Thread thread = sendingEvents.get(eventId);
+    if ((thread == null) || !thread.isAlive()) {
+      return;
+    }
+
+    try {
+      thread.join(analyticsWaitingTimeInMs);
+      if (thread.isAlive()) {
+        thread.interrupt();
+      }
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
   }
 
 }

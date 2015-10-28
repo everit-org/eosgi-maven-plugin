@@ -102,10 +102,11 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     String goalName = mojoDescriptor.getGoal();
     long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
 
-    doExecute();
-
-    getGoogleAnalyticsTrackingService().cancelEventSending(eventId);
-
+    try {
+      doExecute();
+    } finally {
+      getGoogleAnalyticsTrackingService().waitForEventSending(eventId);
+    }
   }
 
   private BundleSettings findMatchingSettings(final EnvironmentConfiguration environment,
