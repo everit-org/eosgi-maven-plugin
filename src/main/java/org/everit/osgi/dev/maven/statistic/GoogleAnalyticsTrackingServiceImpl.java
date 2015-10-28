@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -81,7 +83,7 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       params.add(new BasicNameValuePair("t", "event")); // hit type
       params.add(new BasicNameValuePair("ec", analyticsReferer)); // event category
       params.add(new BasicNameValuePair("ea", executedGoalName)); // event action
-      params.add(new BasicNameValuePair("dimension1", macAddressHash)); // anonym_user_id
+      params.add(new BasicNameValuePair("cd1", macAddressHash)); // anonym_user_id
       try {
         UrlEncodedFormEntity entity =
             new UrlEncodedFormEntity(params, "UTF-8");
@@ -102,35 +104,48 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
 
   private final ConcurrentMap<Long, Thread> sendingEvents = new ConcurrentHashMap<>();
 
-  private final boolean skipTracking;
+  private final boolean skipAnalytics;
 
-  private final String trackingId = "UA-69304815-1";
+  private final String trackingId;
 
-  public GoogleAnalyticsTrackingServiceImpl(final long analyticsWaitingTimeInMs,
-      final boolean disableTracking) {
+  /**
+   * Constructor.
+   *
+   * @param trackingId
+   *          the id of tracking.
+   * @param analyticsWaitingTimeInMs
+   *          the waiting time to send the analytics to Google Analytics server.
+   * @param skipAnalytics
+   *          skip analytics tracking or not.
+   */
+  public GoogleAnalyticsTrackingServiceImpl(final String trackingId,
+      final long analyticsWaitingTimeInMs,
+      final boolean skipAnalytics) {
+    this.trackingId = trackingId;
     this.analyticsWaitingTimeInMs = analyticsWaitingTimeInMs;
-    skipTracking = disableTracking;
+    this.skipAnalytics = skipAnalytics;
   }
 
   @Override
   public void cancelEventSending(final long eventId) {
-    if (skipTracking) {
+    if (skipAnalytics) {
       return;
     }
 
     Thread thread = sendingEvents.get(eventId);
-    if ((thread != null) && thread.isAlive()) {
-
-      try {
-        thread.join(analyticsWaitingTimeInMs);
-        if (thread.isAlive()) {
-          thread.interrupt();
-        }
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-
+    if ((thread == null) || !thread.isAlive()) {
+      return;
     }
+
+    try {
+      thread.join(analyticsWaitingTimeInMs);
+      if (thread.isAlive()) {
+        thread.interrupt();
+      }
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
   }
 
   private String getMacAddressHash() {
@@ -139,19 +154,22 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       if (networkInterfaces.hasMoreElements()) {
         NetworkInterface network = networkInterfaces.nextElement();
         byte[] macAddress = network.getHardwareAddress();
-        byte[] encodedMacAddress = Base64.encodeBase64(macAddress);
-        return new String(encodedMacAddress, "UTF-8");
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA");
+        messageDigest.update(macAddress);
+        byte[] macAddressHash = messageDigest.digest();
+        byte[] encodedMacAddressHash = Base64.encodeBase64(macAddressHash);
+        return new String(encodedMacAddressHash, "UTF-8");
       } else {
         return UNKNOWN_MAC_ADDRESS;
       }
-    } catch (SocketException | UnsupportedEncodingException e) {
+    } catch (SocketException | UnsupportedEncodingException | NoSuchAlgorithmException e) {
       return UNKNOWN_MAC_ADDRESS;
     }
   }
 
   @Override
   public long sendEvent(final String analyticsReferer, final String executedGoalName) {
-    if (skipTracking) {
+    if (skipAnalytics) {
       return -1;
     }
 

@@ -43,6 +43,8 @@ import org.osgi.framework.Constants;
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
+  private static final String TRACKING_ID = "UA-69304815-1";
+
   /**
    * The name of the referer that means who execute goal (example: eosgi-maven-plugin or
    * eclipse-e4-plugin, ...). Default value is "eosgi-maven-plugin".
@@ -86,16 +88,16 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   protected MavenProject project;
 
   /**
-   * Skip tracking or not. That means send event statistics to Google Analytics or not. Default
-   * value is <code>false</code> that means send statistics.
+   * Skip analytics tracking or not. That means send event statistics to Google Analytics or not.
+   * Default value is <code>false</code> that means send statistics.
    */
-  @Parameter(property = "eosgi.tracking.skip", defaultValue = "false")
-  private boolean skipTracking;
+  @Parameter(property = "eosgi.analytics.skip", defaultValue = "false")
+  private boolean skipAnalytics;
 
   protected abstract void doExecute() throws MojoExecutionException, MojoFailureException;
 
   @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
+  public final void execute() throws MojoExecutionException, MojoFailureException {
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
     long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
@@ -226,7 +228,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   private GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
     if (googleAnalyticsTrackingService == null) {
       googleAnalyticsTrackingService =
-          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs, skipTracking);
+          new GoogleAnalyticsTrackingServiceImpl(TRACKING_ID, analyticsWaitingTimeInMs,
+              skipAnalytics);
     }
     return googleAnalyticsTrackingService;
   }
