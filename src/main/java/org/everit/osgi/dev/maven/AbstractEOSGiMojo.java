@@ -28,10 +28,10 @@ import java.util.jar.Manifest;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
-import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.everit.osgi.dev.maven.statistic.UsageAnalytics;
+import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingService;
+import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.osgi.framework.Constants;
 
@@ -43,8 +43,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   /**
    * The plugin is called from Eclipse or not. Default value is <code>false</code>.
    */
-  @Parameter(property = "eosgi.analytics.referer.eclipse", defaultValue = "false")
-  private boolean analyticsRefererEclipse;
+  @Parameter(property = "eosgi.analytics.referer", defaultValue = "eosgi-maven-plugin")
+  protected String analyticsReferer;
 
   /**
    * The waiting time to send analytics to Google Analytics.
@@ -77,8 +77,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   @Parameter(property = "executedProject")
   protected MavenProject executedProject;
 
+  private GoogleAnalyticsTrackingService googleAnalyticsTrackingService;
+
   @Parameter(defaultValue = "${mojoExecution}", readonly = true)
-  private MojoExecution mojo;
+  protected MojoExecution mojo;
 
   /**
    * The Maven project.
@@ -201,6 +203,17 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   }
 
   /**
+   * Gets {@link GoogleAnalyticsTrackingService} instance.
+   */
+  protected GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
+    if (googleAnalyticsTrackingService == null) {
+      googleAnalyticsTrackingService =
+          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs, disableTracking);
+    }
+    return googleAnalyticsTrackingService;
+  }
+
+  /**
    * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF
    * file inside contains a Bundle-SymbolicName.
    *
@@ -263,17 +276,4 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     }
   }
 
-  /**
-   * Send event to Google Analytics if not disable tracking.
-   */
-  protected UsageAnalytics sendUsageStatistics() {
-    MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
-    String goalName = mojoDescriptor.getGoal();
-    UsageAnalytics usageAnalytics =
-        new UsageAnalytics(analyticsRefererEclipse, goalName, analyticsWaitingTimeInMs, getLog());
-    if (!disableTracking) {
-      usageAnalytics.startSending();
-    }
-    return usageAnalytics;
-  }
 }

@@ -41,7 +41,6 @@ import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
 import org.eclipse.osgi.service.resolver.PlatformAdmin;
 import org.eclipse.osgi.service.resolver.State;
-import org.everit.osgi.dev.maven.statistic.UsageAnalytics;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -137,7 +136,8 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
-    UsageAnalytics usageStatistics = sendUsageStatistics();
+    long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer,
+        mojo.getMojoDescriptor().getGoal());
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
@@ -154,7 +154,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
       }
       diagnose(bundleLocations.toArray(new String[bundleLocations.size()]));
     }
-    usageStatistics.shutdown();
+    getGoogleAnalyticsTrackingService().cancelEventSending(eventId);
   }
 
   private List<BundleCapability> getAllCapabilities(final Bundle[] bundles, final State state) {

@@ -63,7 +63,6 @@ import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseableType;
 import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseablesType;
-import org.everit.osgi.dev.maven.statistic.UsageAnalytics;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -321,7 +320,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
-    UsageAnalytics usageStatistics = sendUsageStatistics();
+    long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer,
+        mojo.getMojoDescriptor().getGoal());
     processJacocoSettings();
     defineUpgradePorts();
 
@@ -344,7 +344,7 @@ public class DistMojo extends AbstractEOSGiMojo {
         getLog().error("Could not close file manager", e);
       }
     }
-    usageStatistics.shutdown();
+    getGoogleAnalyticsTrackingService().cancelEventSending(eventId);
   }
 
   private void executeOnEnvironment(final File globalDistFolderFile,
