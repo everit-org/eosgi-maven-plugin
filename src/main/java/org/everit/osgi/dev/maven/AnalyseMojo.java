@@ -135,9 +135,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
   }
 
   @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
-    long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer,
-        mojo.getMojoDescriptor().getGoal());
+  protected void doExecute() throws MojoExecutionException, MojoFailureException {
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
@@ -154,7 +152,6 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
       }
       diagnose(bundleLocations.toArray(new String[bundleLocations.size()]));
     }
-    getGoogleAnalyticsTrackingService().cancelEventSending(eventId);
   }
 
   private List<BundleCapability> getAllCapabilities(final Bundle[] bundles, final State state) {

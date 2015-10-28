@@ -305,23 +305,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private void downloadArtifactIfNecessary(final Artifact mavenArtifact)
-      throws MojoExecutionException {
-    try {
-      artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
-    } catch (ArtifactResolutionException e) {
-      throw new MojoExecutionException(
-          "Could not resolve artifact for creating distribution package", e);
-    } catch (ArtifactNotFoundException e) {
-      throw new MojoExecutionException(
-          "Could not resolve artifact for creating distribution package", e);
-    }
-  }
-
   @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
-    long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer,
-        mojo.getMojoDescriptor().getGoal());
+  protected void doExecute() throws MojoExecutionException, MojoFailureException {
     processJacocoSettings();
     defineUpgradePorts();
 
@@ -344,7 +329,19 @@ public class DistMojo extends AbstractEOSGiMojo {
         getLog().error("Could not close file manager", e);
       }
     }
-    getGoogleAnalyticsTrackingService().cancelEventSending(eventId);
+  }
+
+  private void downloadArtifactIfNecessary(final Artifact mavenArtifact)
+      throws MojoExecutionException {
+    try {
+      artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
+    } catch (ArtifactResolutionException e) {
+      throw new MojoExecutionException(
+          "Could not resolve artifact for creating distribution package", e);
+    } catch (ArtifactNotFoundException e) {
+      throw new MojoExecutionException(
+          "Could not resolve artifact for creating distribution package", e);
+    }
   }
 
   private void executeOnEnvironment(final File globalDistFolderFile,

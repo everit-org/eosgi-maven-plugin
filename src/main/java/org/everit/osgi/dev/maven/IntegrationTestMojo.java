@@ -374,6 +374,32 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
+  @Override
+  protected void doExecute() throws MojoExecutionException, MojoFailureException {
+    if (skipTests) {
+      return;
+    }
+
+    super.doExecute();
+
+    getLog().info("OSGi Integrations tests running started");
+
+    File testReportFolderFile = initializeReportFolder();
+
+    List<TestResult> testResults = new ArrayList<TestResult>();
+    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
+      runIntegrationTestsOnEnvironment(testReportFolderFile, testResults, distributedEnvironment);
+    }
+
+    TestResult resultSum = calculateTestResultSum(testResults);
+
+    List<TestResult> expectedTestNumFailures = calculateExpectedTestNumFailures(testResults);
+
+    printTestResultSum(resultSum);
+
+    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, resultSum);
+  }
+
   private Closeable doStreamRedirections(final Process process, final File resultFolder)
       throws MojoExecutionException {
 
@@ -459,32 +485,6 @@ public class IntegrationTestMojo extends DistMojo {
     return classifier;
   }
 
-  @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
-    if (skipTests) {
-      return;
-    }
-
-    super.execute();
-
-    getLog().info("OSGi Integrations tests running started");
-
-    File testReportFolderFile = initializeReportFolder();
-
-    List<TestResult> testResults = new ArrayList<TestResult>();
-    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
-      runIntegrationTestsOnEnvironment(testReportFolderFile, testResults, distributedEnvironment);
-    }
-
-    TestResult resultSum = calculateTestResultSum(testResults);
-
-    List<TestResult> expectedTestNumFailures = calculateExpectedTestNumFailures(testResults);
-
-    printTestResultSum(resultSum);
-
-    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, resultSum);
-  }
-
   private File initializeReportFolder() {
     File testReportFolderFile = new File(reportFolder);
     getLog().info("Integration test output directory: " + testReportFolderFile.getAbsolutePath());
@@ -567,10 +567,14 @@ public class IntegrationTestMojo extends DistMojo {
             + resultFile.getAbsolutePath() + ". Root element is not testsuite.");
       }
 
-      results.tests += convertTestSuiteAttributeToInt(testSuite, "tests", resultFile);
-      results.failure += convertTestSuiteAttributeToInt(testSuite, "failures", resultFile);
-      results.error += convertTestSuiteAttributeToInt(testSuite, "errors", resultFile);
-      results.skipped += convertTestSuiteAttributeToInt(testSuite, "skipped", resultFile);
+      results.tests +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "tests", resultFile);
+      results.failure +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "failures", resultFile);
+      results.error +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "errors", resultFile);
+      results.skipped +=
+          IntegrationTestMojo.convertTestSuiteAttributeToInt(testSuite, "skipped", resultFile);
     } catch (SAXException e) {
       throw new MojoFailureException(
           "Invalid test result file " + resultFile.getAbsolutePath());

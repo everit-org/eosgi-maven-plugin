@@ -42,13 +42,13 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
    * Simple implementation of the {@link Runnable}. Responsible to send event the Google Analytics
    * server.
    */
-  private class SendingEventRunnable implements Runnable {
+  private class EventSender implements Runnable {
 
     private final String analyticsReferer;
 
-    private HttpClient client;
-
     private final String executedGoalName;
+
+    private final HttpClient httpClient;
 
     private final String macAddressHash;
 
@@ -63,12 +63,12 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
      * @param macAddressHash
      *          the MAC address hash to anonym_user_id dimension.
      */
-    SendingEventRunnable(final String analyticsReferer, final String executedGoalName,
+    EventSender(final String analyticsReferer, final String executedGoalName,
         final String macAddressHash) {
       this.analyticsReferer = analyticsReferer;
       this.executedGoalName = executedGoalName;
       this.macAddressHash = macAddressHash;
-      client = new DefaultHttpClient();
+      httpClient = new DefaultHttpClient();
     }
 
     @Override
@@ -76,7 +76,7 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       HttpPost post = new HttpPost(GA_ENDPOINT);
       List<NameValuePair> params = new ArrayList<>();
       params.add(new BasicNameValuePair("v", "1")); // version
-      params.add(new BasicNameValuePair("tid", TRACKING_ID)); // tracking id
+      params.add(new BasicNameValuePair("tid", trackingId)); // tracking id
       params.add(new BasicNameValuePair("cid", macAddressHash)); // client id
       params.add(new BasicNameValuePair("t", "event")); // hit type
       params.add(new BasicNameValuePair("ec", analyticsReferer)); // event category
@@ -86,34 +86,38 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
         UrlEncodedFormEntity entity =
             new UrlEncodedFormEntity(params, "UTF-8");
         post.setEntity(entity);
-        client.execute(post);
+        httpClient.execute(post);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
     }
   }
 
-  private static final String DEFAULT_MAC_ADDRESS_HASH = "MAC_ADDRESS_ANONYM";
-
   private static final String GA_ENDPOINT =
       "http://www.google-analytics.com/collect?payload_data";
 
-  private static final String TRACKING_ID = "UA-69304815-1";
+  private static final String UNKNOWN_MAC_ADDRESS = "UNKNOWN_MAC_ADDRESS";
 
   private final long analyticsWaitingTimeInMs;
 
-  private final boolean disableTracking;
-
   private final ConcurrentMap<Long, Thread> sendingEvents = new ConcurrentHashMap<>();
+
+  private final boolean skipTracking;
+
+  private final String trackingId = "UA-69304815-1";
 
   public GoogleAnalyticsTrackingServiceImpl(final long analyticsWaitingTimeInMs,
       final boolean disableTracking) {
     this.analyticsWaitingTimeInMs = analyticsWaitingTimeInMs;
-    this.disableTracking = disableTracking;
+    skipTracking = disableTracking;
   }
 
   @Override
   public void cancelEventSending(final long eventId) {
+    if (skipTracking) {
+      return;
+    }
+
     Thread thread = sendingEvents.get(eventId);
     if ((thread != null) && thread.isAlive()) {
 
@@ -138,29 +142,28 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
         byte[] encodedMacAddress = Base64.encodeBase64(macAddress);
         return new String(encodedMacAddress, "UTF-8");
       } else {
-        return DEFAULT_MAC_ADDRESS_HASH;
+        return UNKNOWN_MAC_ADDRESS;
       }
     } catch (SocketException | UnsupportedEncodingException e) {
-      return DEFAULT_MAC_ADDRESS_HASH;
+      return UNKNOWN_MAC_ADDRESS;
     }
-  }
-
-  private long getNextEventId() {
-    return sendingEvents.size() + 1;
   }
 
   @Override
   public long sendEvent(final String analyticsReferer, final String executedGoalName) {
-    SendingEventRunnable sendingEvent =
-        new SendingEventRunnable(analyticsReferer, executedGoalName, getMacAddressHash());
+    if (skipTracking) {
+      return -1;
+    }
+
+    EventSender sendingEvent =
+        new EventSender(analyticsReferer, executedGoalName, getMacAddressHash());
     Thread thread = new Thread(sendingEvent);
 
-    long eventId = getNextEventId();
+    long eventId = thread.getId();
     sendingEvents.put(eventId, thread);
 
-    if (!disableTracking) {
-      thread.start();
-    }
+    thread.start();
+
     return eventId;
   }
 

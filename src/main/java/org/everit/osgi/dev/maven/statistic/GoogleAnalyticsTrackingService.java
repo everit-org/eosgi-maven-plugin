@@ -36,7 +36,8 @@ public interface GoogleAnalyticsTrackingService {
    *          eclipse-e4-plugin).
    * @param executedGoalName
    *          the name of the executed goal.
-   * @return the unique identifier the created event.
+   * @return the unique identifier the event. The event identifier is positive. If event identifier
+   *         is -1 that means skip tracking and not send event to the Google Analytics server.
    */
   long sendEvent(String analyticsReferer, String executedGoalName);
 }

@@ -28,6 +28,9 @@ import java.util.jar.Manifest;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingService;
@@ -52,13 +55,6 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   @Parameter(property = "eosgi.analytics.waiting.time", defaultValue = "3000")
   private long analyticsWaitingTimeInMs;
-
-  /**
-   * The tracking is disabled or not. That means send event statistics to Google Analytics or not.
-   * Default value is <code>false</code> that means send statistics.
-   */
-  @Parameter(property = "eosgi.disable.tracking", defaultValue = "false")
-  private boolean disableTracking;
 
   /**
    * Comma separated list of the id of the environments that should be processed. Default is * that
@@ -88,6 +84,27 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   @Parameter(property = "project")
   protected MavenProject project;
+
+  /**
+   * Skip tracking or not. That means send event statistics to Google Analytics or not. Default
+   * value is <code>false</code> that means send statistics.
+   */
+  @Parameter(property = "eosgi.tracking.skip", defaultValue = "false")
+  private boolean skipTracking;
+
+  protected abstract void doExecute() throws MojoExecutionException, MojoFailureException;
+
+  @Override
+  public void execute() throws MojoExecutionException, MojoFailureException {
+    MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
+    String goalName = mojoDescriptor.getGoal();
+    long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
+
+    doExecute();
+
+    getGoogleAnalyticsTrackingService().cancelEventSending(eventId);
+
+  }
 
   private BundleSettings findMatchingSettings(final EnvironmentConfiguration environment,
       final String symbolicName,
@@ -206,10 +223,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   /**
    * Gets {@link GoogleAnalyticsTrackingService} instance.
    */
-  protected GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
+  private GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
     if (googleAnalyticsTrackingService == null) {
       googleAnalyticsTrackingService =
-          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs, disableTracking);
+          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs, skipTracking);
     }
     return googleAnalyticsTrackingService;
   }
