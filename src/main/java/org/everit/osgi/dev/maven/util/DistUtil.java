@@ -20,8 +20,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.TreeMap;
 
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.unbescape.properties.PropertiesEscape;
 
 /**
@@ -30,6 +30,9 @@ import org.unbescape.properties.PropertiesEscape;
 public final class DistUtil {
 
   private String escape(final String value) {
+    if (value == null) {
+      return null;
+    }
     return value.replace(",", "\\,").replace("=", "\\=").replace(" ", "\\ ");
   }
 

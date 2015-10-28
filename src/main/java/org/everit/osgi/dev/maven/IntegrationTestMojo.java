@@ -28,7 +28,6 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,13 +47,14 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.CommandArgumentsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.LaunchConfigurationType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.SystemPropertiesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.VmOptionsType;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
@@ -64,6 +64,7 @@ import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
 import org.rzo.yajsw.os.posix.bsd.BSDProcess;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 /**
@@ -72,8 +73,7 @@ import org.xml.sax.SAXException;
  * make this goal work.
  */
 @Mojo(name = "integration-test", defaultPhase = LifecyclePhase.INTEGRATION_TEST,
-    requiresProject = true,
-    requiresDependencyResolution = ResolutionScope.TEST)
+    requiresProject = true, requiresDependencyResolution = ResolutionScope.TEST)
 public class IntegrationTestMojo extends DistMojo {
 
   /**
@@ -236,33 +236,6 @@ public class IntegrationTestMojo extends DistMojo {
     return expecationTestNumFailures;
   }
 
-  private LauncherType calculateLauncherForCurrentOS(
-      final DistributedEnvironment distributedEnvironment) {
-
-    LaunchersType launchers = distributedEnvironment.getDistributionPackage().getLaunchers();
-    if (launchers == null) {
-      return null;
-    }
-
-    List<LauncherType> launcherList = launchers.getLauncher();
-
-    if (launcherList.size() == 0) {
-      return null;
-    }
-
-    String os = PluginUtil.getOS();
-
-    LauncherType selectedLauncher = null;
-    Iterator<LauncherType> iterator = launcherList.iterator();
-    while ((selectedLauncher == null) && iterator.hasNext()) {
-      LauncherType launcher = iterator.next();
-      if (os.equals(launcher.getOs())) {
-        selectedLauncher = launcher;
-      }
-    }
-    return selectedLauncher;
-  }
-
   private TestResult calculateTestResultSum(final List<TestResult> testResults) {
     TestResult resultSum = new TestResult();
 
@@ -326,7 +299,7 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private Process createTestProcess(final DistributedEnvironment distributedEnvironment,
-      final CommandType startCommand, final File resultFolder, final File tmpPath) {
+      final String[] command, final File resultFolder, final File tmpPath) {
     OperatingSystem operatingSystem = OperatingSystem.instance();
 
     getLog().info("Operating system is " + operatingSystem.getOperatingSystemName());
@@ -345,7 +318,7 @@ public class IntegrationTestMojo extends DistMojo {
     }
     process.setTitle("EOSGi TestProcess - " + distributedEnvironment.getEnvironment().getId());
 
-    process.setCommand(startCommand.getValue().split(" "));
+    process.setCommand(command);
     getLog().info("Setting tmp path: " + tmpPath.getAbsolutePath());
     process.setTmpPath(tmpPath.getAbsolutePath());
     process.setVisible(false);
@@ -360,8 +333,7 @@ public class IntegrationTestMojo extends DistMojo {
     List<String[]> env = PluginUtil.convertMapToList(envMap);
 
     process.setEnvironment(env);
-    File commandFolder = resolveCommandFolder(distributedEnvironment, startCommand);
-    process.setWorkingDir(commandFolder.getAbsolutePath());
+    process.setWorkingDir(distributedEnvironment.getDistributionFolder().getAbsolutePath());
     return process;
   }
 
@@ -596,30 +568,48 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private File resolveCommandFolder(final DistributedEnvironment distributedEnvironment,
-      final CommandType command) {
-    File commandFolder = distributedEnvironment.getDistributionFolder();
-
-    String folder = command.getFolder();
-    if (folder != null) {
-      commandFolder = new File(commandFolder, folder);
-    }
-    return commandFolder;
-  }
-
-  private CommandType resolveStartCommandForEnvironment(
+  private String[] resolveCommandForEnvironment(
       final DistributedEnvironment distributedEnvironment)
           throws MojoFailureException {
-    LauncherType launcher = calculateLauncherForCurrentOS(distributedEnvironment);
 
-    if (launcher == null) {
-      throw new MojoFailureException(
-          "No start command specified for tests in the distribution package of "
-              + distributedEnvironment.getEnvironment().getId());
+    List<String> command = new ArrayList<>();
+
+    LaunchConfigurationType launchConfiguration =
+        distributedEnvironment.getDistributionPackage().getLaunchConfiguration();
+
+    command.add(PluginUtil.getJavaCommand());
+    command.add("-jar");
+    command.add(launchConfiguration.getMainJar());
+    command.add(launchConfiguration.getMainClass());
+
+    String classPath = launchConfiguration.getClassPath();
+    if ((classPath != null) && classPath.trim().isEmpty()) {
+      command.add("-classpath");
+      command.add(classPath);
     }
 
-    CommandType startCommand = launcher.getStartCommand();
-    return startCommand;
+    CommandArgumentsType commandArguments = launchConfiguration.getCommandArguments();
+    if (commandArguments != null) {
+      command.addAll(commandArguments.getCommandArgument());
+    }
+
+    SystemPropertiesType systemProperties = launchConfiguration.getSystemProperties();
+    if (systemProperties != null) {
+      List<Object> systemPropertyNodes = systemProperties.getAny();
+      for (Object systemPropertyNode : systemPropertyNodes) {
+        Node node = (Node) systemPropertyNode;
+        String systemPropertyKey = node.getNodeName();
+        String systemPropertyValue = node.getTextContent();
+        command.add("-D" + systemPropertyKey + "=" + systemPropertyValue);
+      }
+    }
+
+    VmOptionsType vmOptions = launchConfiguration.getVmOptions();
+    if (vmOptions != null) {
+      command.addAll(vmOptions.getVmOption());
+    }
+
+    return command.toArray(new String[] {});
   }
 
   private void runIntegrationTestsOnEnvironment(final File testReportFolderFile,
@@ -632,7 +622,7 @@ public class IntegrationTestMojo extends DistMojo {
     testResult.expectedTestNum = calculateExpectedTestNum(distributedEnvironment);
     testResults.add(testResult);
 
-    CommandType startCommand = resolveStartCommandForEnvironment(distributedEnvironment);
+    String[] command = resolveCommandForEnvironment(distributedEnvironment);
 
     try {
 
@@ -641,8 +631,8 @@ public class IntegrationTestMojo extends DistMojo {
       resultFolder.mkdirs();
       File tmpPath = createTempFolder();
 
-      Process process =
-          createTestProcess(distributedEnvironment, startCommand, resultFolder, tmpPath);
+      Process process = createTestProcess(
+          distributedEnvironment, command, resultFolder, tmpPath);
 
       boolean timeoutHappened = false;
       ShutdownHook shutdownHook =

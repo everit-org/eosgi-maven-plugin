@@ -34,35 +34,30 @@ public class EnvironmentConfiguration {
   /**
    * Setting non-default behaviors for bundles. For more information see the javadoc of
    * {@link BundleSettings} class.
-   *
    */
   @Parameter
   private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
 
   /**
    * The default startlevel for newly installed bundles.
-   *
    */
   @Parameter
   private Integer bundleStartLevel;
 
   /**
    * The name of the osgi framework. Currently equinox is supported. Default is equinox.
-   *
    */
   @Parameter
   private String framework;
 
   /**
    * The default start level of the OSGi framework.
-   *
    */
   @Parameter
   private Integer frameworkStartLevel;
 
   /**
    * The id that will be used to identify this configuration in system property of the framework.
-   *
    */
   @Parameter
   private String id;
@@ -76,7 +71,6 @@ public class EnvironmentConfiguration {
 
   /**
    * System properties that will be added to the JVM of started OSGI container.
-   *
    */
   @Parameter
   private Map<String, String> systemProperties = new HashMap<String, String>();
@@ -84,14 +78,12 @@ public class EnvironmentConfiguration {
   /**
    * The timeout in milliseconds after the Tests should be finished for sure. The environment will
    * be stopped when this exceeds. Default value is five minutes.
-   *
    */
   @Parameter(defaultValue = "180000")
   private int timeout = DEFAULT_TEST_RUN_TIMEOUT;
 
   /**
    * The JVM options that will be applied during starting the OSGI Container.
-   *
    */
   @Parameter
   private List<String> vmOptions;

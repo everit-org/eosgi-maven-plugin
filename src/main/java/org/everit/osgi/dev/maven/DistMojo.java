@@ -52,15 +52,14 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseableType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseablesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ObjectFactory;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParseableType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParseablesType;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -87,16 +86,6 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   @Component
   protected ArtifactResolver artifactResolver;
-
-  /**
-   * If link than the generated files in the dist folder will be links instead of real copied files.
-   * Two possible values: symbolicLink, file. In case this is an incrementel update, the default
-   * mode is the same as the mode of the previous build. In case this is a clean build, the default
-   * mode is 'file'.
-   */
-  @Parameter(property = "eosgi.copyMode")
-  @Deprecated
-  protected String copyMode;
 
   protected final JAXBContext distConfigJAXBContext;
 
@@ -179,7 +168,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoExecutionException
    *           if error occurs.
    */
-  protected void addDefaultSettingsToEnvironment(final EnvironmentConfiguration environment)
+  private void addDefaultSettingsToEnvironment(final EnvironmentConfiguration environment)
       throws MojoExecutionException {
     String environmentId = environment.getId();
     if (environmentId == null) {
@@ -216,7 +205,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoExecutionException
    *           in case the environment cannot be determined based on the port number.
    */
-  protected void defineUpgradePorts() throws MojoExecutionException {
+  private void defineUpgradePorts() throws MojoExecutionException {
     upgradePortByEnvironmentId = new HashMap<String, Integer>();
     if (servicePort != null) {
       String[] servicePortArray = servicePort.split(",");
@@ -240,7 +229,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   }
 
   private void distributeArtifact(final File envDistFolderFile, final Socket environmentSocket,
-      final CopyModeType environmentCopyMode, final ArtifactType artifact)
+      final ArtifactType artifact)
           throws MojoExecutionException, IOException {
     Artifact mavenArtifact = resolveMavenArtifactByArtifactType(artifact);
     downloadArtifactIfNecessary(mavenArtifact);
@@ -257,10 +246,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
     File targetFile = new File(targetFileFolder, targetFileName);
 
-    CopyModeType artifactCopyMode = resolveArtifactCopyMode(environmentCopyMode, artifact);
-
-    boolean fileChanged =
-        fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
+    boolean fileChanged = fileManager.overCopyFile(mavenArtifact.getFile(), targetFile);
     if (fileChanged && (environmentSocket != null)) {
       BundleDataType bundle = artifact.getBundle();
       if (bundle != null) {
@@ -297,9 +283,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     List<ArtifactType> artifacts = artifactsJaxbObj
         .getArtifact();
 
-    CopyModeType environmentCopyMode = distributionPackage.getCopyMode();
     for (ArtifactType artifact : artifacts) {
-      distributeArtifact(envDistFolderFile, environmentSocket, environmentCopyMode, artifact);
+      distributeArtifact(envDistFolderFile, environmentSocket, artifact);
     }
   }
 
@@ -318,27 +303,20 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   @Override
   public void execute() throws MojoExecutionException, MojoFailureException {
+
     processJacocoSettings();
     defineUpgradePorts();
 
-    fileManager = new FileManager(getLog());
-    try {
-      File globalDistFolderFile = new File(getDistFolder());
+    fileManager = new FileManager();
+    File globalDistFolderFile = new File(getDistFolder());
 
-      distributedEnvironments = new ArrayList<DistributedEnvironment>();
-      EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
-      checkIfEveryPortCanBeUpdated(environmentsToProcess);
-      InetAddress localAddress = resolveLocalInetAddress();
+    distributedEnvironments = new ArrayList<DistributedEnvironment>();
+    EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
+    checkIfEveryPortCanBeUpdated(environmentsToProcess);
+    InetAddress localAddress = resolveLocalInetAddress();
 
-      for (EnvironmentConfiguration environment : environmentsToProcess) {
-        executeOnEnvironment(globalDistFolderFile, localAddress, environment);
-      }
-    } finally {
-      try {
-        fileManager.close();
-      } catch (IOException e) {
-        getLog().error("Could not close file manager", e);
-      }
+    for (EnvironmentConfiguration environment : environmentsToProcess) {
+      executeOnEnvironment(globalDistFolderFile, localAddress, environment);
     }
   }
 
@@ -360,8 +338,6 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     DistributionPackageType existingDistConfig = readDistConfig(distFolderFile);
 
-    CopyModeType environmentCopyMode = resolveEnvironmentCopyMode(existingDistConfig);
-
     Socket environmentSocket = null;
     try (ZipFile distPackageZipFile = new ZipFile(distPackageFile)) {
       Integer environmentServicePort = upgradePortByEnvironmentId.get(environment.getId());
@@ -373,13 +349,12 @@ public class DistMojo extends AbstractEOSGiMojo {
       if (sourceDistPath != null) {
         File sourceDistPathFile = new File(sourceDistPath);
         if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
-          fileManager.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
+          fileManager.copyDirectory(sourceDistPathFile, distFolderFile);
         }
       }
 
       DistributionPackageType distributionPackage =
-          parseConfiguration(distFolderFile, processedArtifacts, environment,
-              environmentCopyMode);
+          parseConfiguration(distFolderFile, processedArtifacts, environment);
 
       Map<ArtifactKey, ArtifactType> artifactMap =
           PluginUtil.createArtifactMap(existingDistConfig);
@@ -394,7 +369,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
       distributeArtifacts(distributionPackage, distFolderFile, environmentSocket);
 
-      parseParseables(distributionPackage, distFolderFile, processedArtifacts, environment);
+      parseParseables(distFolderFile, distributionPackage);
       distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
           distFolderFile, processedArtifacts));
 
@@ -413,10 +388,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  public String getCopyMode() {
-    return copyMode;
-  }
-
   public String getDistFolder() {
     return distFolder;
   }
@@ -432,17 +403,21 @@ public class DistMojo extends AbstractEOSGiMojo {
   /**
    * Parses the configuration of a distribution package.
    */
-  protected DistributionPackageType parseConfiguration(final File distFolderFile,
+  private DistributionPackageType parseConfiguration(final File distFolderFile,
       final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment,
-      final CopyModeType environmentCopyMode)
+      final EnvironmentConfiguration environment)
           throws MojoExecutionException {
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributableArtifacts", distributableArtifacts);
     vars.put("environment", environment);
-    vars.put("copyMode", environmentCopyMode.value());
+    vars.put("mainJar", "org.eclipse.osgi_3.10.100.v20150529-1857.jar"); // TODO mainJar
+    vars.put("mainClass", "org.eclipse.core.runtime.adaptor.EclipseStarter"); // TODO mainClass
+    vars.put("classPath", ""); // TODO classPath
+    vars.put("commandArguments", new String[] { "-configuration" }); // TODO commandArguements
+    vars.put("systemProperties", environment.getSystemProperties());
+    vars.put("vmOptions", environment.getVmOptions());
     vars.put("distUtil", new DistUtil());
     try {
       fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
@@ -456,15 +431,11 @@ public class DistMojo extends AbstractEOSGiMojo {
   /**
    * Parses and processes the files that are templates.
    */
-  protected void parseParseables(final DistributionPackageType distributionPackage,
-      final File distFolderFile,
-      final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment)
+  private void parseParseables(final File distFolderFile,
+      final DistributionPackageType distributionPackage)
           throws MojoExecutionException {
     Map<String, Object> vars = new HashMap<>();
-    vars.put("distributableArtifacts", distributableArtifacts);
     vars.put("distributionPackage", distributionPackage);
-    vars.put("environment", environment);
     vars.put("distUtil", new DistUtil());
     ParseablesType parseables = distributionPackage.getParseables();
     if (parseables != null) {
@@ -563,7 +534,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws IOException
    *           if a read error occurs.
    */
-  protected Properties readDefaultFrameworkPops() throws IOException {
+  private Properties readDefaultFrameworkPops() throws IOException {
     Enumeration<URL> resources =
         this.getClass().getClassLoader().getResources("META-INF/eosgi-frameworks.properties");
     Properties result = new Properties();
@@ -655,15 +626,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private CopyModeType resolveArtifactCopyMode(final CopyModeType environmentCopyMode,
-      final ArtifactType artifact) {
-    CopyModeType artifactCopyMode = environmentCopyMode;
-    if (artifact.getCopyMode() != null) {
-      artifactCopyMode = artifact.getCopyMode();
-    }
-    return artifactCopyMode;
-  }
-
   private Artifact resolveDistPackage(final EnvironmentConfiguration environment)
       throws MojoExecutionException {
     String[] distPackageIdParts;
@@ -699,7 +661,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoExecutionException
    *           if the distPackage expression configured for this plugin has wrong format.
    */
-  protected String[] resolveDistPackageId(final EnvironmentConfiguration environment)
+  private String[] resolveDistPackageId(final EnvironmentConfiguration environment)
       throws IOException,
       MojoExecutionException {
     String frameworkArtifact = environment.getFramework();
@@ -726,25 +688,6 @@ public class DistMojo extends AbstractEOSGiMojo {
           "Invalid distribution package id format: " + frameworkArtifact);
     }
     return distPackageParts;
-  }
-
-  private CopyModeType resolveEnvironmentCopyMode(final DistributionPackageType distConfig)
-      throws MojoExecutionException {
-    CopyModeType environmentCopyMode =
-        (getCopyMode() != null) ? CopyModeType.fromValue(getCopyMode()) : null;
-
-    if (distConfig != null) {
-      environmentCopyMode = distConfig.getCopyMode();
-    }
-    if (environmentCopyMode == null) {
-      environmentCopyMode = CopyModeType.FILE;
-    }
-    if (CopyModeType.SYMBOLIC_LINK.equals(environmentCopyMode)
-        && !fileManager.isSystemSymbolicLinkCapable()) {
-      throw new MojoExecutionException(
-          "It seems that the operating system does not support symbolic links");
-    }
-    return environmentCopyMode;
   }
 
   private InetAddress resolveLocalInetAddress() throws MojoExecutionException {

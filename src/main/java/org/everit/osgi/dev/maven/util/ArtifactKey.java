@@ -17,7 +17,7 @@ package org.everit.osgi.dev.maven.util;
 
 import javax.annotation.Generated;
 
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 
 /**
  * Key of a maven artifact.
@@ -145,6 +145,7 @@ public class ArtifactKey {
   }
 
   @Override
+  @Generated("eclipse")
   public int hashCode() {
     final int prime = 31;
     int result = 1;
@@ -159,11 +160,11 @@ public class ArtifactKey {
   }
 
   @Override
+  @Generated("eclipse")
   public String toString() {
     return "ArtifactKey [groupId=" + groupId + ", artifactId=" + artifactId + ", version=" + version
-        + ", type="
-        + type + ", classifier=" + classifier + ", targetFolder=" + targetFolder + ", targetFile="
-        + targetFile
+        + ", type=" + type + ", classifier=" + classifier + ", targetFolder=" + targetFolder
+        + ", targetFile=" + targetFile
         + "]";
   }
 }

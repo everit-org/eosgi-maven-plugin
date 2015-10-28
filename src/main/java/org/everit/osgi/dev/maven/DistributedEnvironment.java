@@ -18,7 +18,7 @@ package org.everit.osgi.dev.maven;
 import java.io.File;
 import java.util.List;
 
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 
 /**
  * Metadata of a distributed environment.
