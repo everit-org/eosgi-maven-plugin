@@ -6,6 +6,14 @@ package org.everit.osgi.dev.maven.statistic;
 public interface GoogleAnalyticsTrackingService {
 
   /**
+   * Cancel sending event process based on event id.
+   *
+   * @param eventId
+   *          the id of the event that want so cancel.
+   */
+  void cancelEventSending(long eventId);
+
+  /**
    * Send event tracking message to Google Analytics.
    *
    * @param analyticsReferer
@@ -13,11 +21,7 @@ public interface GoogleAnalyticsTrackingService {
    *          eclipse-e4-plugin).
    * @param executedGoalName
    *          the name of the executed goal.
+   * @return the unique event id the send event.
    */
-  void sendEvent(String analyticsReferer, String executedGoalName);
-
-  /**
-   * Shutdown sending process.
-   */
-  void shutdown();
+  long sendEvent(String analyticsReferer, String executedGoalName);
 }
