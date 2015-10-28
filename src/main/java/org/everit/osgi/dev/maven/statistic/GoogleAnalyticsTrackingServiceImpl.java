@@ -39,7 +39,7 @@ import org.apache.http.message.BasicNameValuePair;
 public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTrackingService {
 
   /**
-   * Simple implementation of the {@link Runnable}. Responsible to send event to Google Analytics
+   * Simple implementation of the {@link Runnable}. Responsible to send event the Google Analytics
    * server.
    */
   private class SendingEventRunnable implements Runnable {
@@ -56,7 +56,7 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
      * Constructor.
      *
      * @param analyticsReferer
-     *          the name of the referer. That means who execute goal (example: eosgi-maven-plugin or
+     *          the name of the referer that means who execute goal (example: eosgi-maven-plugin or
      *          eclipse-e4-plugin).
      * @param executedGoalName
      *          the name of the executed goal.

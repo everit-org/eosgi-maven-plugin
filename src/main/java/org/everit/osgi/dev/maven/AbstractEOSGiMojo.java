@@ -41,13 +41,14 @@ import org.osgi.framework.Constants;
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   /**
-   * The plugin is called from Eclipse or not. Default value is <code>false</code>.
+   * The name of the referer that means who execute goal (example: eosgi-maven-plugin or
+   * eclipse-e4-plugin, ...). Default value is "eosgi-maven-plugin".
    */
   @Parameter(property = "eosgi.analytics.referer", defaultValue = "eosgi-maven-plugin")
   protected String analyticsReferer;
 
   /**
-   * The waiting time to send analytics to Google Analytics.
+   * The waiting time to send the analytics to Google Analytics server.
    */
   @Parameter(property = "eosgi.analytics.waiting.time", defaultValue = "3000")
   private long analyticsWaitingTimeInMs;
