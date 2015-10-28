@@ -47,6 +47,12 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   private boolean analyticsRefererEclipse;
 
   /**
+   * The waiting time to send analytics to Google Analytics.
+   */
+  @Parameter(property = "eosgi.analytics.waiting.time", defaultValue = "3000")
+  private long analyticsWaitingTimeInMs;
+
+  /**
    * The tracking is disabled or not. That means send event statistics to Google Analytics or not.
    * Default value is <code>false</code> that means send statistics.
    */
@@ -263,7 +269,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   protected UsageAnalytics sendUsageStatistics() {
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
-    UsageAnalytics usageAnalytics = new UsageAnalytics(analyticsRefererEclipse, goalName, getLog());
+    UsageAnalytics usageAnalytics =
+        new UsageAnalytics(analyticsRefererEclipse, goalName, analyticsWaitingTimeInMs, getLog());
     if (!disableTracking) {
       usageAnalytics.startSending();
     }

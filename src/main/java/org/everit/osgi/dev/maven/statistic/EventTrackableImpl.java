@@ -17,10 +17,10 @@ package org.everit.osgi.dev.maven.statistic;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -43,7 +43,6 @@ public class EventTrackableImpl implements EventTrackable {
   @Override
   public void trackEventToGoogleAnalytics(final String categoryName, final String goalName,
       final String macAddressHash) {
-    System.out.println("----------------- send ------------");
     HttpPost post = new HttpPost(GA_ENDPOINT);
     List<NameValuePair> params = new ArrayList<>();
     params.add(new BasicNameValuePair("v", "1")); // version
@@ -54,11 +53,9 @@ public class EventTrackableImpl implements EventTrackable {
     params.add(new BasicNameValuePair("ea", goalName)); // event action
     params.add(new BasicNameValuePair("anonym_user_id", macAddressHash));
     try {
-      UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params, "UTF-8");
+      UrlEncodedFormEntity entity = new UrlEncodedFormEntity(params, StandardCharsets.UTF_8.name());
       post.setEntity(entity);
-      HttpResponse response = client.execute(post);
-      System.out
-          .println("+++++++++++++++++++++++++++++++++ " + response.getStatusLine().toString());
+      client.execute(post);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }

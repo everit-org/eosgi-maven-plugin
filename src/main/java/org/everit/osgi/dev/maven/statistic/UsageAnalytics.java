@@ -35,7 +35,6 @@ public class UsageAnalytics {
 
     @Override
     public void run() {
-      System.out.println("----------------- run ------------");
       new EventTrackableImpl()
           .trackEventToGoogleAnalytics(getCategory(), goalName, getMacAddressHash());
     }
@@ -49,9 +48,9 @@ public class UsageAnalytics {
 
   private final boolean analyticsRefererEclipse;
 
-  private final String goalName;
+  private final long analyticsWaitingTimeInMs;
 
-  private final int maxWaitingTimeInMs = 10000;
+  private final String goalName;
 
   private final Thread thread;
 
@@ -66,14 +65,13 @@ public class UsageAnalytics {
    *          the {@link Log} instance.
    */
   public UsageAnalytics(final boolean analyticsRefererEclipse, final String goalName,
-      final Log log) {
+      final long analyticsWaitingTimeInMs, final Log log) {
     log.info("\n\nWe collect usage statictics and upload to google analytics. "
         + "Read more details from http://www.everit.org/eosgi-maven-plugin/.\n\n");
 
     this.analyticsRefererEclipse = analyticsRefererEclipse;
-    System.out.println(analyticsRefererEclipse);
     this.goalName = goalName;
-    System.err.println(goalName);
+    this.analyticsWaitingTimeInMs = analyticsWaitingTimeInMs;
     thread = new Thread(new TrackingRunnable());
   }
 
@@ -101,11 +99,10 @@ public class UsageAnalytics {
    * seconds to thread finish run, after force to stop thread.
    */
   public void shutdown() {
-    System.out.println("----------------- shutdown ------------");
     if (thread.isAlive()) {
 
       try {
-        thread.join(maxWaitingTimeInMs);
+        thread.join(analyticsWaitingTimeInMs);
         if (thread.isAlive()) {
           thread.interrupt();
         }
@@ -120,7 +117,6 @@ public class UsageAnalytics {
    * Start to send tracking information.
    */
   public void startSending() {
-    System.out.println("----------------- start ------------");
     thread.start();
   }
 
