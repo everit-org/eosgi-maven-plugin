@@ -32,11 +32,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.zip.ZipFile;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -52,14 +47,19 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.everit.osgi.dev.eosgi.dist.schema.util.DistSchemaProvider;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ObjectFactory;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParseableType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParseablesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsableType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.configuration.JacocoSettings;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -87,8 +87,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Component
   protected ArtifactResolver artifactResolver;
 
-  protected final JAXBContext distConfigJAXBContext;
-
   /**
    * Path to folder where the distribution will be generated. The content of this folder will be
    * overridden if the files with same name already exist.
@@ -99,11 +97,13 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   protected List<DistributedEnvironment> distributedEnvironments;
 
+  private DistSchemaProvider distSchemaProvider = new DistSchemaProvider();
+
   private FileManager fileManager = null;
 
   /**
    * The jacoco code coverage generation settings. To see the possible settings see
-   * {@link JacocoSettings}.
+   * {@link JacocoConfiguration}.
    */
   @Parameter
   protected JacocoSettings jacoco;
@@ -144,20 +144,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   protected String sourceDistPath;
 
   protected Map<String, Integer> upgradePortByEnvironmentId = null;
-
-  /**
-   * Constructor that initializes JAXB.
-   */
-  public DistMojo() {
-    try {
-      distConfigJAXBContext =
-          JAXBContext.newInstance(ObjectFactory.class.getPackage().getName(),
-              ObjectFactory.class.getClassLoader());
-    } catch (JAXBException e) {
-      throw new RuntimeException(
-          "Could not create JAXB Context for distribution configuration file", e);
-    }
-  }
 
   /**
    * Adds the default settings (e.g.: system properties) that are necessary for every environment
@@ -280,8 +266,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     if (artifactsJaxbObj == null) {
       return;
     }
-    List<ArtifactType> artifacts = artifactsJaxbObj
-        .getArtifact();
+    List<ArtifactType> artifacts = artifactsJaxbObj.getArtifact();
 
     for (ArtifactType artifact : artifacts) {
       distributeArtifact(envDistFolderFile, environmentSocket, artifact);
@@ -336,7 +321,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     File distPackageFile = distPackageArtifact.getFile();
     File distFolderFile = new File(globalDistFolderFile, environment.getId());
 
-    DistributionPackageType existingDistConfig = readDistConfig(distFolderFile);
+    DistributionPackageType existingDistConfig = distSchemaProvider.readDistConfig(distFolderFile);
 
     Socket environmentSocket = null;
     try (ZipFile distPackageZipFile = new ZipFile(distPackageFile)) {
@@ -353,13 +338,13 @@ public class DistMojo extends AbstractEOSGiMojo {
         }
       }
 
-      DistributionPackageType distributionPackage =
-          parseConfiguration(distFolderFile, processedArtifacts, environment);
+      DistributionPackageType overridedDistributionPackage =
+          parseConfiguration(distFolderFile, processedArtifacts, environment, UseByType.PARSABLES);
 
       Map<ArtifactKey, ArtifactType> artifactMap =
           PluginUtil.createArtifactMap(existingDistConfig);
       List<ArtifactType> artifactsToRemove = PluginUtil.getArtifactsToRemove(artifactMap,
-          distributionPackage);
+          overridedDistributionPackage);
 
       if (environmentSocket != null) {
         removeArtifactsRemotely(environmentSocket, artifactsToRemove);
@@ -367,11 +352,12 @@ public class DistMojo extends AbstractEOSGiMojo {
 
       removeArtifactsFromDistributedEnvironment(distFolderFile, artifactsToRemove);
 
-      distributeArtifacts(distributionPackage, distFolderFile, environmentSocket);
+      distributeArtifacts(overridedDistributionPackage, distFolderFile, environmentSocket);
 
-      parseParseables(distFolderFile, distributionPackage);
-      distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
-          distFolderFile, processedArtifacts));
+      parseParsables(distFolderFile, overridedDistributionPackage);
+      distributedEnvironments.add(
+          new DistributedEnvironment(environment, overridedDistributionPackage,
+              distFolderFile, processedArtifacts));
 
     } catch (IOException e) {
       throw new MojoExecutionException("Could not uncompress distribution package file: "
@@ -403,10 +389,13 @@ public class DistMojo extends AbstractEOSGiMojo {
   /**
    * Parses the configuration of a distribution package.
    */
-  private DistributionPackageType parseConfiguration(final File distFolderFile,
+  private DistributionPackageType parseConfiguration(
+      final File distFolderFile,
       final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment)
+      final EnvironmentConfiguration environment,
+      final UseByType useBy)
           throws MojoExecutionException {
+
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
     Map<String, Object> vars = new HashMap<>();
@@ -415,9 +404,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     vars.put("mainJar", "org.eclipse.osgi_3.10.100.v20150529-1857.jar"); // TODO mainJar
     vars.put("mainClass", "org.eclipse.core.runtime.adaptor.EclipseStarter"); // TODO mainClass
     vars.put("classPath", ""); // TODO classPath
-    vars.put("commandArguments", new String[] { "-configuration" }); // TODO commandArguements
-    vars.put("systemProperties", environment.getSystemProperties());
-    vars.put("vmOptions", environment.getVmOptions());
     vars.put("distUtil", new DistUtil());
     try {
       fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
@@ -425,34 +411,33 @@ public class DistMojo extends AbstractEOSGiMojo {
       throw new MojoExecutionException(
           "Could not run velocity on configuration file: " + configFile.getName(), e);
     }
-    return readDistConfig(distFolderFile);
+    return distSchemaProvider.geOverridedDistributionPackage(distFolderFile, useBy);
   }
 
   /**
    * Parses and processes the files that are templates.
    */
-  private void parseParseables(final File distFolderFile,
+  private void parseParsables(final File distFolderFile,
       final DistributionPackageType distributionPackage)
           throws MojoExecutionException {
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributionPackage", distributionPackage);
     vars.put("distUtil", new DistUtil());
-    ParseablesType parseables = distributionPackage.getParseables();
-    if (parseables != null) {
-      List<ParseableType> parseable = parseables.getParseable();
-      for (ParseableType p : parseable) {
+    ParsablesType parsables = distributionPackage.getParsables();
+    if (parsables != null) {
+      List<ParsableType> parsable = parsables.getParsable();
+      for (ParsableType p : parsable) {
         String path = p.getPath();
-        File parseableFile = new File(distFolderFile, path);
-        if (!parseableFile.exists()) {
+        File parsableFile = new File(distFolderFile, path);
+        if (!parsableFile.exists()) {
           throw new MojoExecutionException("File that should be parsed does not exist: "
-              + parseableFile.getAbsolutePath());
+              + parsableFile.getAbsolutePath());
         }
         try {
-          fileManager.replaceFileWithParsed(parseableFile, vars, p.getEncoding());
+          fileManager.replaceFileWithParsed(parsableFile, vars, p.getEncoding());
         } catch (IOException e) {
           throw new MojoExecutionException(
-              "Could not replace parseable with parsed content: " + p.getPath(),
-              e);
+              "Could not replace parsable with parsed content: " + p.getPath(), e);
         }
       }
     }
@@ -552,38 +537,6 @@ public class DistMojo extends AbstractEOSGiMojo {
       result.putAll(tmpProps);
     }
     return result;
-  }
-
-  private DistributionPackageType readDistConfig(final File distFolderFile)
-      throws MojoExecutionException {
-    File distConfigFile = new File(distFolderFile, "/.eosgi.dist.xml");
-    if (distConfigFile.exists()) {
-      try {
-        Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
-        Object distributionPackage = unmarshaller.unmarshal(distConfigFile);
-        if (distributionPackage instanceof JAXBElement) {
-
-          @SuppressWarnings("unchecked")
-          JAXBElement<DistributionPackageType> jaxbDistPack =
-              (JAXBElement<DistributionPackageType>) distributionPackage;
-          distributionPackage = jaxbDistPack.getValue();
-        }
-        if (distributionPackage instanceof DistributionPackageType) {
-          return (DistributionPackageType) distributionPackage;
-        } else {
-          throw new MojoExecutionException(
-              "The root element in the provided distribution configuration file "
-                  + "is not the expected DistributionPackage element");
-        }
-      } catch (JAXBException e) {
-        throw new MojoExecutionException(
-            "Failed to process already existing distribution configuration file: "
-                + distConfigFile.getAbsolutePath(),
-            e);
-      }
-    } else {
-      return null;
-    }
   }
 
   private void removeArtifactsFromDistributedEnvironment(final File distFolderFile,

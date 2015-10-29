@@ -13,19 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.everit.osgi.dev.maven;
+package org.everit.osgi.dev.maven.configuration;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
+
+import javax.annotation.Generated;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
- * The OSGI environment that is specified in the pom.xml for the plugin. *
+ * The OSGI environment that is specified in the pom.xml for the plugin.
  */
-public class EnvironmentConfiguration {
+public class EnvironmentConfiguration extends EnvironmentOverride {
 
   private static final int DEFAULT_SHUTDOWN_TIMEOUT = 30000;
 
@@ -63,6 +64,12 @@ public class EnvironmentConfiguration {
   private String id;
 
   /**
+   * The overrides applied on this environment.
+   */
+  @Parameter
+  private EnvironmentOverride[] overrides;
+
+  /**
    * The amount of time in milliseconds until the plugin waits for the environment to stop after a
    * CTRL+C was sent. Default value is half a minute.
    */
@@ -70,23 +77,11 @@ public class EnvironmentConfiguration {
   private int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
 
   /**
-   * System properties that will be added to the JVM of started OSGI container.
-   */
-  @Parameter
-  private Map<String, String> systemProperties = new HashMap<String, String>();
-
-  /**
    * The timeout in milliseconds after the Tests should be finished for sure. The environment will
    * be stopped when this exceeds. Default value is five minutes.
    */
   @Parameter(defaultValue = "180000")
   private int timeout = DEFAULT_TEST_RUN_TIMEOUT;
-
-  /**
-   * The JVM options that will be applied during starting the OSGI Container.
-   */
-  @Parameter
-  private List<String> vmOptions;
 
   public List<BundleSettings> getBundleSettings() {
     return bundleSettings;
@@ -108,20 +103,16 @@ public class EnvironmentConfiguration {
     return id;
   }
 
+  public EnvironmentOverride[] getOverrides() {
+    return overrides;
+  }
+
   public int getShutdownTimeout() {
     return shutdownTimeout;
   }
 
-  public Map<String, String> getSystemProperties() {
-    return systemProperties;
-  }
-
   public int getTimeout() {
     return timeout;
-  }
-
-  public List<String> getVmOptions() {
-    return vmOptions;
   }
 
   public void setBundleSettings(final List<BundleSettings> bundleSettings) {
@@ -144,29 +135,27 @@ public class EnvironmentConfiguration {
     this.id = id;
   }
 
-  public void setShutdownTimeout(final int shutdownTimeout) {
-    this.shutdownTimeout = shutdownTimeout;
+  public void setOverrides(final EnvironmentOverride[] overrides) {
+    this.overrides = overrides;
   }
 
-  public void setSystemProperties(final Map<String, String> systemProperties) {
-    this.systemProperties = systemProperties;
+  public void setShutdownTimeout(final int shutdownTimeout) {
+    this.shutdownTimeout = shutdownTimeout;
   }
 
   public void setTimeout(final int timeout) {
     this.timeout = timeout;
   }
 
-  public void setVmOptions(final List<String> vmOptions) {
-    this.vmOptions = vmOptions;
-  }
-
   @Override
+  @Generated("eclipse")
   public String toString() {
-    return "EnvironmentConfiguration [id=" + id + ", framework=" + framework
-        + ", frameworkStartLevel="
-        + frameworkStartLevel + ", timeout=" + timeout + ", shutdownTimeout=" + shutdownTimeout
-        + ", bundleStartLevel=" + bundleStartLevel + ", bundleSettings=" + bundleSettings
-        + ", systemProperties=" + systemProperties + ", vmOptions=" + vmOptions + "]";
+    return "EnvironmentConfiguration [bundleSettings=" + bundleSettings + ", bundleStartLevel="
+        + bundleStartLevel + ", framework=" + framework + ", frameworkStartLevel="
+        + frameworkStartLevel + ", id=" + id + ", overrides=" + Arrays.toString(overrides)
+        + ", shutdownTimeout=" + shutdownTimeout + ", timeout=" + timeout
+        + ", getSystemProperties()=" + getSystemProperties() + ", getUseBy()=" + getUseBy()
+        + ", getVmOptions()=" + getVmOptions() + "]";
   }
 
 }

@@ -50,11 +50,15 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.CommandArgumentsType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.LaunchConfigurationType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentConfigurationType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.SystemPropertiesType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.VmOptionsType;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
+import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
+import org.everit.osgi.dev.maven.util.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
@@ -574,26 +578,21 @@ public class IntegrationTestMojo extends DistMojo {
 
     List<String> command = new ArrayList<>();
 
-    LaunchConfigurationType launchConfiguration =
-        distributedEnvironment.getDistributionPackage().getLaunchConfiguration();
+    EnvironmentConfigurationType environmentConfiguration =
+        distributedEnvironment.getDistributionPackage().getEnvironmentConfiguration();
 
     command.add(PluginUtil.getJavaCommand());
     command.add("-jar");
-    command.add(launchConfiguration.getMainJar());
-    command.add(launchConfiguration.getMainClass());
+    command.add(environmentConfiguration.getMainJar());
+    command.add(environmentConfiguration.getMainClass());
 
-    String classPath = launchConfiguration.getClassPath();
+    String classPath = environmentConfiguration.getClassPath();
     if ((classPath != null) && classPath.trim().isEmpty()) {
       command.add("-classpath");
       command.add(classPath);
     }
 
-    CommandArgumentsType commandArguments = launchConfiguration.getCommandArguments();
-    if (commandArguments != null) {
-      command.addAll(commandArguments.getCommandArgument());
-    }
-
-    SystemPropertiesType systemProperties = launchConfiguration.getSystemProperties();
+    SystemPropertiesType systemProperties = environmentConfiguration.getSystemProperties();
     if (systemProperties != null) {
       List<Object> systemPropertyNodes = systemProperties.getAny();
       for (Object systemPropertyNode : systemPropertyNodes) {
@@ -604,7 +603,7 @@ public class IntegrationTestMojo extends DistMojo {
       }
     }
 
-    VmOptionsType vmOptions = launchConfiguration.getVmOptions();
+    VmOptionsType vmOptions = environmentConfiguration.getVmOptions();
     if (vmOptions != null) {
       command.addAll(vmOptions.getVmOption());
     }

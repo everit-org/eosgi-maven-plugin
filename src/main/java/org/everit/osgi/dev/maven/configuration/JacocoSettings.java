@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.everit.osgi.dev.maven;
+package org.everit.osgi.dev.maven.configuration;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
  * Settings for jacoco. For more information, please see
  * {@link http://www.eclemma.org/jacoco/trunk/doc/agent.html}.
- *
  */
 public class JacocoSettings {
 

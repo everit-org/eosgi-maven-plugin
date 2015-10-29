@@ -41,6 +41,8 @@ import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
 import org.eclipse.osgi.service.resolver.PlatformAdmin;
 import org.eclipse.osgi.service.resolver.State;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
