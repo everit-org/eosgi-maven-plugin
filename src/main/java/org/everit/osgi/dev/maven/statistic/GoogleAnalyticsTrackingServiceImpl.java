@@ -86,8 +86,9 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       params.add(new BasicNameValuePair("t", "event")); // hit type
       params.add(new BasicNameValuePair("ec", analyticsReferer)); // event category
       params.add(new BasicNameValuePair("ea", executedGoalName)); // event action
-      params.add(new BasicNameValuePair(customDimensionMacAddressHash, macAddressHash));
-      params.add(new BasicNameValuePair(customDimensionPluginVersion, pluginVersion));
+      setCustomDimensionToParams(params, customDimensionMacAddressHash, macAddressHash);
+      setCustomDimensionToParams(params, customDimensionPluginVersion, pluginVersion);
+
       try {
         UrlEncodedFormEntity entity =
             new UrlEncodedFormEntity(params, StandardCharsets.UTF_8.name());
@@ -97,10 +98,23 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
         throw new RuntimeException(e);
       }
     }
+
+    private void setCustomDimensionToParams(final List<NameValuePair> params,
+        final String parameterName, final String parameterValue) {
+      if (parameterName != null) {
+        params.add(new BasicNameValuePair(parameterName, parameterValue));
+      }
+    }
   }
 
   private static final String GA_ENDPOINT =
       "http://www.google-analytics.com/collect?payload_data";
+
+  private static final String PROP_KEY_GA_CD_MAC_ADDRESS_HASH = "ga.cd.mac.address.hash";
+
+  private static final String PROP_KEY_GA_CD_PLUGIN_VERSION = "ga.cd.plugin.version";
+
+  private static final String PROP_KEY_GA_UA = "ga.ua";
 
   private static final String UNKNOWN_MAC_ADDRESS = "UNKNOWN_MAC_ADDRESS";
 
@@ -138,28 +152,12 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
     this.log = log;
 
     Properties properties = loadProperties();
-    String gaUaValue = (String) properties.get("ga.ua");
-    if (!"${ga.ua}".equals(gaUaValue)) {
-      trackingId = gaUaValue;
-    } else {
-      trackingId = null;
-    }
 
-    String customDimensionMacAddressHashParameterName =
-        (String) properties.get("ga.cd.mac.address.hash");
-    if (!"${ga.cd.mac.address.hash}".equals(gaUaValue)) {
-      customDimensionMacAddressHash = customDimensionMacAddressHashParameterName;
-    } else {
-      customDimensionMacAddressHash = null;
-    }
+    trackingId = getProperty(properties, PROP_KEY_GA_UA);
 
-    String customDimensionPluginVersionParameterName =
-        (String) properties.get("ga.cd.plugin.version");
-    if (!"${ga.cd.plugin.version}".equals(gaUaValue)) {
-      customDimensionPluginVersion = customDimensionPluginVersionParameterName;
-    } else {
-      customDimensionPluginVersion = null;
-    }
+    customDimensionMacAddressHash = getProperty(properties, PROP_KEY_GA_CD_MAC_ADDRESS_HASH);
+
+    customDimensionPluginVersion = getProperty(properties, PROP_KEY_GA_CD_PLUGIN_VERSION);
   }
 
   private String getMacAddressHash() {
@@ -178,6 +176,15 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       }
     } catch (SocketException | NoSuchAlgorithmException e) {
       return UNKNOWN_MAC_ADDRESS;
+    }
+  }
+
+  private String getProperty(final Properties properties, final String propertyKey) {
+    String propValue = (String) properties.get(propertyKey);
+    if (!("${" + propertyKey + "}").equals(propValue)) {
+      return propValue;
+    } else {
+      return null;
     }
   }
 
