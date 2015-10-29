@@ -16,6 +16,7 @@
 package org.everit.osgi.dev.maven.statistic;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -34,6 +36,7 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.maven.plugin.logging.Log;
 
 /**
  * Implementation of {@link GoogleAnalyticsTrackingService}.
@@ -83,7 +86,8 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
       params.add(new BasicNameValuePair("t", "event")); // hit type
       params.add(new BasicNameValuePair("ec", analyticsReferer)); // event category
       params.add(new BasicNameValuePair("ea", executedGoalName)); // event action
-      params.add(new BasicNameValuePair("cd1", macAddressHash)); // anonym_user_id
+      params.add(new BasicNameValuePair(customDimensionMacAddressHash, macAddressHash));
+      params.add(new BasicNameValuePair(customDimensionPluginVersion, pluginVersion));
       try {
         UrlEncodedFormEntity entity =
             new UrlEncodedFormEntity(params, StandardCharsets.UTF_8.name());
@@ -102,6 +106,14 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
 
   private final long analyticsWaitingTimeInMs;
 
+  private final String customDimensionMacAddressHash;
+
+  private final String customDimensionPluginVersion;
+
+  private final Log log;
+
+  private final String pluginVersion;
+
   private final ConcurrentMap<Long, Thread> sendingEvents = new ConcurrentHashMap<>();
 
   private final boolean skipAnalytics;
@@ -109,21 +121,45 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
   private final String trackingId;
 
   /**
-   * Constructor.
+   * Constructor. Initialize values.
    *
-   * @param trackingId
-   *          the id of tracking.
    * @param analyticsWaitingTimeInMs
    *          the waiting time to send the analytics to Google Analytics server.
    * @param skipAnalytics
    *          skip analytics tracking or not.
+   * @param pluginVersion
+   *          the version of the plugin.
    */
-  public GoogleAnalyticsTrackingServiceImpl(final String trackingId,
-      final long analyticsWaitingTimeInMs,
-      final boolean skipAnalytics) {
-    this.trackingId = trackingId;
+  public GoogleAnalyticsTrackingServiceImpl(final long analyticsWaitingTimeInMs,
+      final boolean skipAnalytics, final String pluginVersion, final Log log) {
     this.analyticsWaitingTimeInMs = analyticsWaitingTimeInMs;
     this.skipAnalytics = skipAnalytics;
+    this.pluginVersion = pluginVersion;
+    this.log = log;
+
+    Properties properties = loadProperties();
+    String gaUaValue = (String) properties.get("ga.ua");
+    if (!"${ga.ua}".equals(gaUaValue)) {
+      trackingId = gaUaValue;
+    } else {
+      trackingId = null;
+    }
+
+    String customDimensionMacAddressHashParameterName =
+        (String) properties.get("ga.cd.mac.address.hash");
+    if (!"${ga.cd.mac.address.hash}".equals(gaUaValue)) {
+      customDimensionMacAddressHash = customDimensionMacAddressHashParameterName;
+    } else {
+      customDimensionMacAddressHash = null;
+    }
+
+    String customDimensionPluginVersionParameterName =
+        (String) properties.get("ga.cd.plugin.version");
+    if (!"${ga.cd.plugin.version}".equals(gaUaValue)) {
+      customDimensionPluginVersion = customDimensionPluginVersionParameterName;
+    } else {
+      customDimensionPluginVersion = null;
+    }
   }
 
   private String getMacAddressHash() {
@@ -145,11 +181,27 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
     }
   }
 
+  private Properties loadProperties() {
+    InputStream gaPropertiesInputStream =
+        this.getClass().getResourceAsStream("/META-INF/ga.properties");
+
+    Properties properties = new Properties();
+    try {
+      properties.load(gaPropertiesInputStream);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return properties;
+  }
+
   @Override
   public long sendEvent(final String analyticsReferer, final String executedGoalName) {
-    if (skipAnalytics) {
+    if (skipAnalytics || (trackingId == null)) {
       return -1;
     }
+
+    log.info("\n\nWe collect usage statstics with Google Analytics. "
+        + "See more information of http://www.everit.org/eosgi-maven-plugin/.\n\n");
 
     EventSender sendingEvent =
         new EventSender(analyticsReferer, executedGoalName, getMacAddressHash());
@@ -165,7 +217,7 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
 
   @Override
   public void waitForEventSending(final long eventId) {
-    if (skipAnalytics) {
+    if (skipAnalytics || (trackingId == null)) {
       return;
     }
 

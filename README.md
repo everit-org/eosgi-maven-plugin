@@ -5,4 +5,14 @@ A Maven plugin that runs Integration Tests in OSGi containers and collects OSGi 
 
 Maven site: http://everit.org/eosgi-maven-plugin
 
+## Build
+
+   mvn clean install -Dga.ua=UA-XXXXXXXX-X -Dga.cd.mac.address.hash=cdZZ -Dga.cd.plugin.version=cdYY
+
+ - **-Dga.ua=UA-XXXXXXXX-X**: the Google Analytics tracking identifier. If not add not collect usage statistics.
+ - **-Dga.cd.mac.address.hash=cdZZ**: the custom dimension in Google Analytics to MAC Address hash. We collect MAC Address hash.
+ The ZZ is number of the custom dimension index.
+ - **-Dga.cd.plugin.version=cdYY**: the custom dimenszion in Google Analytics to plugin version. We collect plugin version.
+ The YY is number of the custom dimension index.
+
 [![Analytics](https://ga-beacon.appspot.com/UA-15041869-4/everit-org/eosgi-maven-plugin)](https://github.com/igrigorik/ga-beacon)

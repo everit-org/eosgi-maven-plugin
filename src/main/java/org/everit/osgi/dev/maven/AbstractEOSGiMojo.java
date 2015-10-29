@@ -43,8 +43,6 @@ import org.osgi.framework.Constants;
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
-  private static final String TRACKING_ID = "UA-69304815-1";
-
   /**
    * The name of the referer that means who execute goal (example: eosgi-maven-plugin or
    * eclipse-e4-plugin, ...). Default value is "eosgi-maven-plugin".
@@ -228,9 +226,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   private GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
     if (googleAnalyticsTrackingService == null) {
+      String pluginVersion = this.getClass().getPackage().getImplementationVersion();
       googleAnalyticsTrackingService =
-          new GoogleAnalyticsTrackingServiceImpl(TRACKING_ID, analyticsWaitingTimeInMs,
-              skipAnalytics);
+          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs,
+              skipAnalytics, pluginVersion, getLog());
     }
     return googleAnalyticsTrackingService;
   }
