@@ -65,11 +65,9 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   @Parameter(property = "project")
   protected MavenProject project;
 
-  private BundleSettings findMatchingSettings(final EnvironmentConfiguration environment,
+  private BundleSettings findMatchingSettings(final List<BundleSettings> bundleSettingsList,
       final String symbolicName,
       final String bundleVersion) {
-    // Getting the start level
-    List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
     Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
     BundleSettings matchedSettings = null;
     while (iterator.hasNext() && (matchedSettings == null)) {
@@ -86,15 +84,15 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Getting the processed artifacts of the project. The artifact list is calculated each time when
    * the function is called therefore the developer should not call it inside an iteration.
    *
-   * @param environment
-   *          Configuration of the environment that the distributable artifacts will be generated
-   *          for.
+   * @param bundleSettingsList
+   *          The bundle settings list of the environment that the distributable artifacts will be
+   *          generated for.
    * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
    * @throws MalformedURLException
    *           if the URL for the artifact is broken.
    */
   protected List<DistributableArtifact> generateDistributableArtifacts(
-      final EnvironmentConfiguration environment) throws MalformedURLException {
+      final List<BundleSettings> bundleSettingsList) throws MalformedURLException {
     @SuppressWarnings("unchecked")
     List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
     if (executedProject != null) {
@@ -106,7 +104,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
     for (Artifact artifact : availableArtifacts) {
       if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
-        DistributableArtifact processedArtifact = processArtifact(environment, artifact);
+        DistributableArtifact processedArtifact = processArtifact(bundleSettingsList, artifact);
         result.add(processedArtifact);
       }
     }
@@ -183,15 +181,15 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF
    * file inside contains a Bundle-SymbolicName.
    *
-   * @param environment
-   *          The environment that uses the artifact.
+   * @param bundleSettingsList
+   *          The bundle settings list of the environment that uses the artifact.
    * @param artifact
    *          The artifact that is checked.
    * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version.
    *         Bundle-Version comes from MANIFEST.MF but if Bundle-Version is not available there the
    *         default 0.0.0 version is provided.
    */
-  public DistributableArtifact processArtifact(final EnvironmentConfiguration environment,
+  public DistributableArtifact processArtifact(final List<BundleSettings> bundleSettingsList,
       final Artifact artifact) {
 
     if ("pom".equals(artifact.getType())) {
@@ -225,7 +223,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
         String fragmentHost = mainAttributes.getValue(Constants.FRAGMENT_HOST);
         String importPackage = mainAttributes.getValue(Constants.IMPORT_PACKAGE);
         String exportPackage = mainAttributes.getValue(Constants.EXPORT_PACKAGE);
-        BundleSettings bundleSettings = findMatchingSettings(environment, symbolicName, version);
+        BundleSettings bundleSettings =
+            findMatchingSettings(bundleSettingsList, symbolicName, version);
         Integer startLevel = null;
         if (bundleSettings != null) {
           startLevel = bundleSettings.getStartLevel();

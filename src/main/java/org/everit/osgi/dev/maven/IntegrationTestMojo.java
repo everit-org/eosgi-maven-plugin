@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -53,6 +54,7 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentConfigurationType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.SystemPropertiesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.VmOptionsType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
@@ -303,10 +305,12 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private Process createTestProcess(final DistributedEnvironment distributedEnvironment,
-      final String[] command, final File resultFolder, final File tmpPath) {
-    OperatingSystem operatingSystem = OperatingSystem.instance();
+      final String[] command, final File resultFolder, final File tmpPathFile) {
+    String title = "EOSGi TestProcess - " + distributedEnvironment.getEnvironment().getId();
 
-    getLog().info("Operating system is " + operatingSystem.getOperatingSystemName());
+    OperatingSystem operatingSystem = OperatingSystem.instance();
+    getLog().info("[" + title + "] Operating system is "
+        + operatingSystem.getOperatingSystemName());
 
     String lowerCaseOperatingSystemName =
         operatingSystem.getOperatingSystemName().toLowerCase(Locale.getDefault());
@@ -314,30 +318,39 @@ public class IntegrationTestMojo extends DistMojo {
     Process process;
     if (lowerCaseOperatingSystemName.contains("linux")
         || lowerCaseOperatingSystemName.startsWith("mac os x")) {
-      getLog().info("Starting BSD process");
+      getLog().info("[" + title + "] Starting BSD process");
       process = new BSDProcess();
     } else {
       ProcessManager processManager = operatingSystem.processManagerInstance();
       process = processManager.createProcess();
     }
-    process.setTitle("EOSGi TestProcess - " + distributedEnvironment.getEnvironment().getId());
+    process.setTitle(title);
 
     process.setCommand(command);
-    getLog().info("Setting tmp path: " + tmpPath.getAbsolutePath());
-    process.setTmpPath(tmpPath.getAbsolutePath());
+    getLog().info("[" + title + "] Command: " + Arrays.deepToString(command));
+
+    String tmpPath = tmpPathFile.getAbsolutePath();
+    process.setTmpPath(tmpPath);
+    getLog().info("[" + title + "] Tmp path: " + tmpPath);
+
     process.setVisible(false);
     process.setTeeName(null);
     process.setPipeStreams(true, false);
     process.setLogger(Logger.getLogger("eosgi"));
+
+    String workingDir = distributedEnvironment.getDistributionFolder().getAbsolutePath();
+    process.setWorkingDir(workingDir);
+    getLog().info("[" + title + "] Working dir: " + workingDir);
 
     Map<String, String> envMap = new HashMap<String, String>(System.getenv());
     envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
     envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
 
     List<String[]> env = PluginUtil.convertMapToList(envMap);
-
     process.setEnvironment(env);
-    process.setWorkingDir(distributedEnvironment.getDistributionFolder().getAbsolutePath());
+    getLog().info("[" + title + "] Environment: "
+        + Arrays.deepToString(env.toArray(new String[][] {})));
+
     return process;
   }
 
@@ -580,14 +593,12 @@ public class IntegrationTestMojo extends DistMojo {
 
     EnvironmentConfigurationType environmentConfiguration =
         distributedEnvironment.getDistributionPackage().getEnvironmentConfiguration();
+    distSchemaProvider.applyOverride(environmentConfiguration, UseByType.INTEGRATION_TEST);
 
     command.add(PluginUtil.getJavaCommand());
-    command.add("-jar");
-    command.add(environmentConfiguration.getMainJar());
-    command.add(environmentConfiguration.getMainClass());
 
     String classPath = environmentConfiguration.getClassPath();
-    if ((classPath != null) && classPath.trim().isEmpty()) {
+    if ((classPath != null) && !classPath.trim().isEmpty()) {
       command.add("-classpath");
       command.add(classPath);
     }
@@ -607,6 +618,10 @@ public class IntegrationTestMojo extends DistMojo {
     if (vmOptions != null) {
       command.addAll(vmOptions.getVmOption());
     }
+
+    command.add("-jar");
+    command.add(environmentConfiguration.getMainJar());
+    command.add(environmentConfiguration.getMainClass());
 
     return command.toArray(new String[] {});
   }
