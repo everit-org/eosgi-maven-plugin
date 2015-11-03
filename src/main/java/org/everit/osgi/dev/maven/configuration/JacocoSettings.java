@@ -15,6 +15,12 @@
  */
 package org.everit.osgi.dev.maven.configuration;
 
+import java.io.File;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
@@ -22,6 +28,90 @@ import org.apache.maven.plugins.annotations.Parameter;
  * {@link http://www.eclemma.org/jacoco/trunk/doc/agent.html}.
  */
 public class JacocoSettings {
+
+  private static final String ADDRESS = "address";
+
+  private static final String APPEND = "append";
+
+  private static final String DUMP_ON_EXIT = "dumponexit";
+
+  private static final String EXCLUDES = "excludes";
+
+  private static final String INCLUDES = "includes";
+
+  private static final String OUTPUT = "output";
+
+  private static final String PORT = "port";
+
+  public static final String VM_ARG_JACOCO = "javaagentJacoco";
+
+  /**
+   * Returns the environment specific VM argument of the Jacoco java agent or <code>null</code> if
+   * the provided settings is <code>null</code>. This method also creates the report folder
+   * belonging to the environment.
+   */
+  public static String getJacocoAgentVmArgument(final Map<String, String> jacocoSettingsMap,
+      final String environmentId, final String reportFolder,
+      final Artifact jacocoAgentArtifact) {
+
+    // TODO Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
+
+    if (jacocoSettingsMap == null) {
+      return null;
+    }
+
+    JacocoSettings merged = JacocoSettings.valueOf(jacocoSettingsMap);
+
+    File globalReportFolderFile = new File(reportFolder);
+    File jacocoAgentFile = jacocoAgentArtifact.getFile();
+    String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
+
+    StringBuilder sb = new StringBuilder("-javaagent:");
+    sb.append(jacocoAgentAbsPath);
+    sb.append("=append=").append(Boolean.valueOf(merged.isAppend()).toString());
+    sb.append(",dumponexit=").append(Boolean.valueOf(merged.isDumponexit()).toString());
+    if (merged.getIncludes() != null) {
+      sb.append(",includes=").append(merged.getIncludes());
+    }
+    if (merged.getExcludes() != null) {
+      sb.append(",excludes=").append(merged.getExcludes());
+    }
+
+    if (merged.getOutput() != null) {
+      sb.append(",output=").append(merged.getOutput());
+
+    }
+    if (merged.getAddress() != null) {
+      sb.append(",address=").append(merged.getAddress());
+    }
+    if (merged.getPort() != null) {
+      sb.append(",port=").append(merged.getPort());
+    }
+
+    File reportFolderFile = new File(globalReportFolderFile, environmentId);
+    reportFolderFile.mkdirs();
+    File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
+
+    sb.append(",destfile=").append(jacocoExecFile.getAbsolutePath());
+    sb.append(",sessionid=").append(environmentId).append("_").append(new Date().getTime());
+
+    return sb.toString();
+  }
+
+  /**
+   * Converts the key-values pairs map to a {@link JacocoSettings} instance.
+   */
+  public static JacocoSettings valueOf(final Map<String, String> jacocoSettingsMap) {
+    JacocoSettings rval = new JacocoSettings();
+    rval.address = jacocoSettingsMap.get(ADDRESS);
+    rval.append = Boolean.valueOf(jacocoSettingsMap.get(APPEND));
+    rval.dumponexit = Boolean.valueOf(jacocoSettingsMap.get(DUMP_ON_EXIT));
+    rval.excludes = jacocoSettingsMap.get(EXCLUDES);
+    rval.includes = jacocoSettingsMap.get(INCLUDES);
+    rval.output = jacocoSettingsMap.get(OUTPUT);
+    rval.port = Integer.valueOf(jacocoSettingsMap.get(PORT));
+    return rval;
+  }
 
   @Parameter
   private String address;
@@ -72,38 +162,18 @@ public class JacocoSettings {
     return dumponexit;
   }
 
-  public void setAddress(final String address) {
-    this.address = address;
+  /**
+   * Converts the dedicated member variables to a map as key-value pairs.
+   */
+  public Map<String, String> toMap() {
+    Map<String, String> rval = new HashMap<>();
+    rval.put(ADDRESS, address);
+    rval.put(APPEND, String.valueOf(append));
+    rval.put(DUMP_ON_EXIT, String.valueOf(dumponexit));
+    rval.put(EXCLUDES, excludes);
+    rval.put(INCLUDES, includes);
+    rval.put(OUTPUT, output);
+    rval.put(PORT, String.valueOf(port));
+    return rval;
   }
-
-  public void setAppend(final boolean append) {
-    this.append = append;
-  }
-
-  public void setDumponexit(final boolean dumponexit) {
-    this.dumponexit = dumponexit;
-  }
-
-  public void setExcludes(final String excludes) {
-    this.excludes = excludes;
-  }
-
-  public void setIncludes(final String includes) {
-    this.includes = includes;
-  }
-
-  public void setOutput(final String output) {
-    this.output = output;
-  }
-
-  public void setPort(final Integer port) {
-    this.port = port;
-  }
-
-  @Override
-  public String toString() {
-    return "JacocoSettings [append=" + append + ", includes=" + includes + ", excludes=" + excludes
-        + ", dumponexit=" + dumponexit + "]";
-  }
-
 }

@@ -16,17 +16,14 @@
 package org.everit.osgi.dev.maven.configuration;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-import javax.annotation.Generated;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
  * The OSGI environment that is specified in the pom.xml for the plugin.
  */
-public class EnvironmentConfiguration extends EnvironmentOverride {
+public class EnvironmentConfiguration {
 
   private static final int DEFAULT_SHUTDOWN_TIMEOUT = 30000;
 
@@ -64,10 +61,10 @@ public class EnvironmentConfiguration extends EnvironmentOverride {
   private String id;
 
   /**
-   * The overrides applied on this environment.
+   * The configuration of the launched OSGi Container.
    */
   @Parameter
-  private EnvironmentOverride[] overrides;
+  private LaunchConfig launchConfig;
 
   /**
    * The amount of time in milliseconds until the plugin waits for the environment to stop after a
@@ -103,8 +100,8 @@ public class EnvironmentConfiguration extends EnvironmentOverride {
     return id;
   }
 
-  public EnvironmentOverride[] getOverrides() {
-    return overrides;
+  public LaunchConfig getLaunchConfig() {
+    return launchConfig;
   }
 
   public int getShutdownTimeout() {
@@ -115,47 +112,12 @@ public class EnvironmentConfiguration extends EnvironmentOverride {
     return timeout;
   }
 
-  public void setBundleSettings(final List<BundleSettings> bundleSettings) {
-    this.bundleSettings = bundleSettings;
-  }
-
-  public void setBundleStartLevel(final Integer bundleStartLevel) {
-    this.bundleStartLevel = bundleStartLevel;
-  }
-
   public void setFramework(final String framework) {
     this.framework = framework;
   }
 
-  public void setFrameworkStartLevel(final Integer frameworkStartLevel) {
-    this.frameworkStartLevel = frameworkStartLevel;
-  }
-
   public void setId(final String id) {
     this.id = id;
-  }
-
-  public void setOverrides(final EnvironmentOverride[] overrides) {
-    this.overrides = overrides;
-  }
-
-  public void setShutdownTimeout(final int shutdownTimeout) {
-    this.shutdownTimeout = shutdownTimeout;
-  }
-
-  public void setTimeout(final int timeout) {
-    this.timeout = timeout;
-  }
-
-  @Override
-  @Generated("eclipse")
-  public String toString() {
-    return "EnvironmentConfiguration [bundleSettings=" + bundleSettings + ", bundleStartLevel="
-        + bundleStartLevel + ", framework=" + framework + ", frameworkStartLevel="
-        + frameworkStartLevel + ", id=" + id + ", overrides=" + Arrays.toString(overrides)
-        + ", shutdownTimeout=" + shutdownTimeout + ", timeout=" + timeout
-        + ", getSystemProperties()=" + getSystemProperties() + ", getUseBy()=" + getUseBy()
-        + ", getVmOptions()=" + getVmOptions() + "]";
   }
 
 }

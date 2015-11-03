@@ -52,10 +52,12 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentConfigurationType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.LaunchConfigType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ProgramArgumentsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.SystemPropertiesType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.VmOptionsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.VmArgumentsType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
@@ -593,7 +595,8 @@ public class IntegrationTestMojo extends DistMojo {
 
     EnvironmentConfigurationType environmentConfiguration =
         distributedEnvironment.getDistributionPackage().getEnvironmentConfiguration();
-    distSchemaProvider.applyOverride(environmentConfiguration, UseByType.INTEGRATION_TEST);
+    LaunchConfigType environmentLaunchConfig = environmentConfiguration.getLaunchConfig();
+    distSchemaProvider.applyOverride(environmentLaunchConfig, UseByType.INTEGRATION_TEST);
 
     command.add(PluginUtil.getJavaCommand());
 
@@ -603,7 +606,7 @@ public class IntegrationTestMojo extends DistMojo {
       command.add(classPath);
     }
 
-    SystemPropertiesType systemProperties = environmentConfiguration.getSystemProperties();
+    SystemPropertiesType systemProperties = environmentLaunchConfig.getSystemProperties();
     if (systemProperties != null) {
       List<Object> systemPropertyNodes = systemProperties.getAny();
       for (Object systemPropertyNode : systemPropertyNodes) {
@@ -614,14 +617,29 @@ public class IntegrationTestMojo extends DistMojo {
       }
     }
 
-    VmOptionsType vmOptions = environmentConfiguration.getVmOptions();
-    if (vmOptions != null) {
-      command.addAll(vmOptions.getVmOption());
+    VmArgumentsType vmArguments = environmentLaunchConfig.getVmArguments();
+    if (vmArguments != null) {
+      List<Object> vmArgumentNodes = vmArguments.getAny();
+      for (Object vmArgumentNode : vmArgumentNodes) {
+        Node node = (Node) vmArgumentNode;
+        String vmArgumentValue = node.getTextContent();
+        command.add(vmArgumentValue);
+      }
     }
 
     command.add("-jar");
     command.add(environmentConfiguration.getMainJar());
     command.add(environmentConfiguration.getMainClass());
+
+    ProgramArgumentsType programArguments = environmentLaunchConfig.getProgramArguments();
+    if (programArguments != null) {
+      List<Object> programArgumentNodes = programArguments.getAny();
+      for (Object programArgumentNode : programArgumentNodes) {
+        Node node = (Node) programArgumentNode;
+        String programArgumentValue = node.getTextContent();
+        command.add(programArgumentValue);
+      }
+    }
 
     return command.toArray(new String[] {});
   }
@@ -629,6 +647,7 @@ public class IntegrationTestMojo extends DistMojo {
   private void runIntegrationTestsOnEnvironment(final File testReportFolderFile,
       final List<TestResult> testResults, final DistributedEnvironment distributedEnvironment)
           throws MojoFailureException, MojoExecutionException {
+
     printEnvironmentProcessStartToLog(distributedEnvironment);
 
     TestResult testResult = new TestResult();

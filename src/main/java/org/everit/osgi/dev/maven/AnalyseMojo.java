@@ -103,7 +103,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
    * Map of plugin artifacts.
    */
   @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
-  protected Map<String, Artifact> pluginArtifactMap;
+  private Map<String, Artifact> pluginArtifactMap;
 
   private void diagnose(final String[] bundleLocations) throws MojoFailureException {
     Framework osgiContainer = null;

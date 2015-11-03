@@ -31,6 +31,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.configuration.BundleSettings;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
 import org.everit.osgi.dev.maven.util.PluginUtil;
@@ -58,6 +59,12 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   @Parameter(property = "executedProject")
   protected MavenProject executedProject;
+
+  /**
+   * The configuration of the launched OSGi Container.
+   */
+  @Parameter
+  protected LaunchConfig launchConfig;
 
   /**
    * The Maven project.
