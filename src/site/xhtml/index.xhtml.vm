@@ -309,13 +309,20 @@
 
   <h2 id="google_analytics_tracking">Google Analytics tracking</h2>
   <p>
-    The eosgi-maven-plugin collects anonym usage statistics. The collected statistics are used to get budget fo further development.
+    The eosgi-maven-plugin collects anonym usage statistics. The collected statistics are used to get budget for further development.
     Collected data are:
   </p>
   <ul>
     <li>analytics referer:  the eosgi-maven-plugin or other plugin. Example eclipse-e4-plugin, which is under development now.</li>
-    <li>executed goal: the executed goal.</li>
-    <li>mac address hash: the MAC address hash to connect usage to anonym user. SHA-1 algorithm is used to hash the mac address.</li>
+    <li>executed goal: the executed goal. Available values (goals) are: 
+      <ul>
+        <li>analyse</li>
+        <li>dist</li>
+        <li>integration-test</li>
+      </ul>
+    </li>
+    <li>mac address hash: the hashed value of the MAC address of the first network interface controller of the user's computer. 
+    SHA-1 algorithm is used ti create the hash to make the user anonym and unique.</li>
     <li>plugin version: the plugin version.</li>
   </ul>
   <p>

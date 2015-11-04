@@ -98,9 +98,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   public final void execute() throws MojoExecutionException, MojoFailureException {
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
-    long eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
 
+    long eventId = GoogleAnalyticsTrackingService.DEFAULT_EVENT_ID;
     try {
+      eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
       doExecute();
     } finally {
       getGoogleAnalyticsTrackingService().waitForEventSending(eventId);

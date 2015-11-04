@@ -204,12 +204,12 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
   @Override
   public long sendEvent(final String analyticsReferer, final String executedGoalName) {
     if (skipAnalytics || (trackingId == null) || EnvironmentUtil.isCi()) {
-      log.info("\n\nTurned off the Google Analytics tracking.\n\n");
-      return -1;
+      log.info("The eosgi-maven-plugin anonym usage statistics collection is turned off.");
+      return DEFAULT_EVENT_ID;
     }
 
-    log.info("\n\nThe eosgi-maven-plugin collects anonym usage statistics. See more information of "
-        + "http://www.everit.org/eosgi-maven-plugin/#google_analytics_tracking.\n\n");
+    log.info("The eosgi-maven-plugin collects anonym usage statistics. See more information on "
+        + "http://www.everit.org/eosgi-maven-plugin/#google_analytics_tracking.");
 
     EventSender sendingEvent =
         new EventSender(analyticsReferer, executedGoalName, getMacAddressHash());

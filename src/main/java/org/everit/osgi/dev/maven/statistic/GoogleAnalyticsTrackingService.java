@@ -21,6 +21,11 @@ package org.everit.osgi.dev.maven.statistic;
 public interface GoogleAnalyticsTrackingService {
 
   /**
+   * The default event identifier.
+   */
+  long DEFAULT_EVENT_ID = -1;
+
+  /**
    * Send an Event Tracking message to Google Analytics.
    *
    * @param analyticsReferer

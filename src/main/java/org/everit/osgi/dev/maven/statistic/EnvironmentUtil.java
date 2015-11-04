@@ -42,6 +42,14 @@ public final class EnvironmentUtil {
 
   private static final String ENV_TF_BUILD = "TF_BUILD";
 
+  private static boolean isBambooEnvironment() {
+    return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_BAMBOO_PLAN_KEY);
+  }
+
+  private static boolean isBuildkiteEnvironment() {
+    return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_BUILDKITE);
+  }
+
   /**
    * Returns <code>true</code> if the current environment is a Continuous Integration server.
    */
@@ -60,42 +68,34 @@ public final class EnvironmentUtil {
         || EnvironmentUtil.isDefinedEnvironmentVariable(ENV_BUILD_NUMBER);
   }
 
-  private static boolean isSpecificCiEnvironment() {
-    return EnvironmentUtil.isSpecificCiEnvironmentJenkins()
-        || EnvironmentUtil.isSpecificCiEnvironmentBamboo()
-        || EnvironmentUtil.isSpecificCiEnvironmentTeamFoundationServer()
-        || EnvironmentUtil.isSpecificCiEnvironmentTeamCity()
-        || EnvironmentUtil.isSpecificCiEnvironmentBuildkite()
-        || EnvironmentUtil.isSpecificCiEnvironmentHudson()
-        || EnvironmentUtil.isSpecificCiEnvironmentTaskCluster();
-  }
-
-  private static boolean isSpecificCiEnvironmentBamboo() {
-    return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_BAMBOO_PLAN_KEY);
-  }
-
-  private static boolean isSpecificCiEnvironmentBuildkite() {
-    return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_BUILDKITE);
-  }
-
-  private static boolean isSpecificCiEnvironmentHudson() {
+  private static boolean isHudsonEnvironment() {
     return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_HUDSON_URL);
   }
 
-  private static boolean isSpecificCiEnvironmentJenkins() {
+  private static boolean isJenkinsEnvironment() {
     return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_JENKINS_URL);
   }
 
-  private static boolean isSpecificCiEnvironmentTaskCluster() {
+  private static boolean isSpecificCiEnvironment() {
+    return EnvironmentUtil.isJenkinsEnvironment()
+        || EnvironmentUtil.isBambooEnvironment()
+        || EnvironmentUtil.isTeamFoundationServerEnvironment()
+        || EnvironmentUtil.isTeamCityEnvironment()
+        || EnvironmentUtil.isBuildkiteEnvironment()
+        || EnvironmentUtil.isHudsonEnvironment()
+        || EnvironmentUtil.isTaskClusterEnvironment();
+  }
+
+  private static boolean isTaskClusterEnvironment() {
     return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_TASK_ID)
         && EnvironmentUtil.isDefinedEnvironmentVariable(ENV_RUN_ID);
   }
 
-  private static boolean isSpecificCiEnvironmentTeamCity() {
+  private static boolean isTeamCityEnvironment() {
     return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_TEAMCITY_VERSION);
   }
 
-  private static boolean isSpecificCiEnvironmentTeamFoundationServer() {
+  private static boolean isTeamFoundationServerEnvironment() {
     return EnvironmentUtil.isDefinedEnvironmentVariable(ENV_TF_BUILD);
   }
 
