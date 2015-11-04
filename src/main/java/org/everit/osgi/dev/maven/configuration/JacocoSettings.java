@@ -54,9 +54,7 @@ public class JacocoSettings {
       final String environmentId, final String reportFolder,
       final Artifact jacocoAgentArtifact) {
 
-    // TODO Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
-
-    if (jacocoSettingsMap == null) {
+    if ((jacocoSettingsMap == null) || jacocoSettingsMap.isEmpty()) {
       return null;
     }
 
@@ -101,7 +99,7 @@ public class JacocoSettings {
   /**
    * Converts the key-values pairs map to a {@link JacocoSettings} instance.
    */
-  public static JacocoSettings valueOf(final Map<String, String> jacocoSettingsMap) {
+  private static JacocoSettings valueOf(final Map<String, String> jacocoSettingsMap) {
     JacocoSettings rval = new JacocoSettings();
     rval.address = jacocoSettingsMap.get(ADDRESS);
     rval.append = Boolean.valueOf(jacocoSettingsMap.get(APPEND));

@@ -56,6 +56,7 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsableType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
@@ -368,9 +369,18 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
+    Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
+
+    LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
+        environment.getId(), environment.getLaunchConfig(),
+        reportFolder, jacocoAgentArtifact);
+
     Map<String, Object> vars = new HashMap<>();
+    vars.put("environmentId", environment.getId());
+    vars.put("frameworkStartLevel", environment.getFrameworkStartLevel());
+    vars.put("bundleStartLevel", environment.getBundleStartLevel());
     vars.put("distributableArtifacts", distributableArtifacts);
-    vars.put("environment", environment);
+    vars.put("launchConfig", launchConfig);
     vars.put("mainJar", "org.eclipse.osgi_3.10.100.v20150529-1857.jar"); // TODO mainJar
     vars.put("mainClass", "org.eclipse.core.runtime.adaptor.EclipseStarter"); // TODO mainClass
     vars.put("classPath", ""); // TODO classPath

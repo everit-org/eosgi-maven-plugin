@@ -32,8 +32,6 @@ public abstract class AbstractLaunchConfig {
   @Parameter
   private JacocoSettings jacoco;
 
-  private Map<String, String> jacocoSettingsMap;
-
   /**
    * The program arguments that will be applied during starting the OSGI Container.
    */
@@ -59,10 +57,7 @@ public abstract class AbstractLaunchConfig {
     if (jacoco == null) {
       return null;
     }
-    if (jacocoSettingsMap == null) {
-      jacocoSettingsMap = jacoco.toMap();
-    }
-    return jacocoSettingsMap;
+    return jacoco.toMap();
   }
 
   public Map<String, String> getProgramArguments() {
@@ -75,6 +70,18 @@ public abstract class AbstractLaunchConfig {
 
   public Map<String, String> getVmArguments() {
     return vmArguments;
+  }
+
+  public void setProgramArguments(final Map<String, String> programArguments) {
+    this.programArguments = programArguments;
+  }
+
+  public void setSystemProperties(final Map<String, String> systemProperties) {
+    this.systemProperties = systemProperties;
+  }
+
+  public void setVmArguments(final Map<String, String> vmArguments) {
+    this.vmArguments = vmArguments;
   }
 
 }
