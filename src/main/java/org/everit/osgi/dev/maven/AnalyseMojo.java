@@ -137,7 +137,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
   }
 
   @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
+  protected void doExecute() throws MojoExecutionException, MojoFailureException {
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {

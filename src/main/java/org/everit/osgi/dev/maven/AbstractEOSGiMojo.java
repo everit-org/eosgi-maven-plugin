@@ -27,6 +27,10 @@ import java.util.jar.Manifest;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.everit.osgi.dev.maven.configuration.BundleSettings;
@@ -34,6 +38,8 @@ import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
+import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingService;
+import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.osgi.framework.Constants;
 
@@ -41,6 +47,19 @@ import org.osgi.framework.Constants;
  * Mojos that extend this class can use the environment information defined for the plugin.
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
+
+  /**
+   * The name of the referer that means who execute goal (example: eosgi-maven-plugin or
+   * eclipse-e4-plugin, ...). Default value is "eosgi-maven-plugin".
+   */
+  @Parameter(property = "eosgi.analytics.referer", defaultValue = "eosgi-maven-plugin")
+  protected String analyticsReferer;
+
+  /**
+   * The waiting time to send the analytics to Google Analytics server.
+   */
+  @Parameter(property = "eosgi.analytics.waiting.time", defaultValue = "3000")
+  private long analyticsWaitingTimeInMs;
 
   /**
    * Comma separated list of the id of the environments that should be processed. Default is * that
@@ -60,17 +79,45 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   @Parameter(property = "executedProject")
   protected MavenProject executedProject;
 
+  private GoogleAnalyticsTrackingService googleAnalyticsTrackingService;
+
   /**
    * The configuration of the launched OSGi Container.
    */
   @Parameter
   protected LaunchConfig launchConfig;
 
+  @Parameter(defaultValue = "${mojoExecution}", readonly = true)
+  protected MojoExecution mojo;
+
   /**
    * The Maven project.
    */
   @Parameter(property = "project")
   protected MavenProject project;
+
+  /**
+   * Skip analytics tracking or not. That means send event statistics to Google Analytics or not.
+   * Default value is <code>false</code> that means send statistics.
+   */
+  @Parameter(property = "eosgi.analytics.skip", defaultValue = "false")
+  private boolean skipAnalytics;
+
+  protected abstract void doExecute() throws MojoExecutionException, MojoFailureException;
+
+  @Override
+  public final void execute() throws MojoExecutionException, MojoFailureException {
+    MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
+    String goalName = mojoDescriptor.getGoal();
+
+    long eventId = GoogleAnalyticsTrackingService.DEFAULT_EVENT_ID;
+    try {
+      eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
+      doExecute();
+    } finally {
+      getGoogleAnalyticsTrackingService().waitForEventSending(eventId);
+    }
+  }
 
   private BundleSettings findMatchingSettings(final List<BundleSettings> bundleSettingsList,
       final String symbolicName,
@@ -185,6 +232,19 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   }
 
   /**
+   * Gets {@link GoogleAnalyticsTrackingService} instance.
+   */
+  private GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
+    if (googleAnalyticsTrackingService == null) {
+      String pluginVersion = this.getClass().getPackage().getImplementationVersion();
+      googleAnalyticsTrackingService =
+          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs,
+              skipAnalytics, pluginVersion, getLog());
+    }
+    return googleAnalyticsTrackingService;
+  }
+
+  /**
    * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF
    * file inside contains a Bundle-SymbolicName.
    *
@@ -247,4 +307,5 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       return new DistributableArtifact(artifact, null, null);
     }
   }
+
 }

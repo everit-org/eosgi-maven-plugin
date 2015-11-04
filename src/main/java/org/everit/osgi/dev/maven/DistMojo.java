@@ -255,22 +255,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private void downloadArtifactIfNecessary(final Artifact mavenArtifact)
-      throws MojoExecutionException {
-    try {
-      artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
-    } catch (ArtifactResolutionException e) {
-      throw new MojoExecutionException(
-          "Could not resolve artifact for creating distribution package", e);
-    } catch (ArtifactNotFoundException e) {
-      throw new MojoExecutionException(
-          "Could not resolve artifact for creating distribution package", e);
-    }
-  }
-
   @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
-
+  protected void doExecute() throws MojoExecutionException, MojoFailureException {
     defineUpgradePorts();
 
     fileManager = new FileManager();
@@ -283,6 +269,19 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
       executeOnEnvironment(globalDistFolderFile, localAddress, environment);
+    }
+  }
+
+  private void downloadArtifactIfNecessary(final Artifact mavenArtifact)
+      throws MojoExecutionException {
+    try {
+      artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
+    } catch (ArtifactResolutionException e) {
+      throw new MojoExecutionException(
+          "Could not resolve artifact for creating distribution package", e);
+    } catch (ArtifactNotFoundException e) {
+      throw new MojoExecutionException(
+          "Could not resolve artifact for creating distribution package", e);
     }
   }
 

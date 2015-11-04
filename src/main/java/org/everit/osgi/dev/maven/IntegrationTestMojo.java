@@ -371,6 +371,38 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
+  @Override
+  protected void doExecute() throws MojoExecutionException, MojoFailureException {
+
+    if (distOnly) {
+      super.execute();
+      return;
+    }
+
+    if (skipTests) {
+      return;
+    }
+
+    super.execute();
+
+    getLog().info("OSGi Integrations tests running started");
+
+    File testReportFolderFile = initializeReportFolder();
+
+    List<TestResult> testResults = new ArrayList<TestResult>();
+    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
+      runIntegrationTestsOnEnvironment(testReportFolderFile, testResults, distributedEnvironment);
+    }
+
+    TestResult resultSum = calculateTestResultSum(testResults);
+
+    List<TestResult> expectedTestNumFailures = calculateExpectedTestNumFailures(testResults);
+
+    printTestResultSum(resultSum);
+
+    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, resultSum);
+  }
+
   private Closeable doStreamRedirections(final Process process, final File resultFolder)
       throws MojoExecutionException {
 
@@ -454,38 +486,6 @@ public class IntegrationTestMojo extends DistMojo {
       return null;
     }
     return classifier;
-  }
-
-  @Override
-  public void execute() throws MojoExecutionException, MojoFailureException {
-
-    if (distOnly) {
-      super.execute();
-      return;
-    }
-
-    if (skipTests) {
-      return;
-    }
-
-    super.execute();
-
-    getLog().info("OSGi Integrations tests running started");
-
-    File testReportFolderFile = initializeReportFolder();
-
-    List<TestResult> testResults = new ArrayList<TestResult>();
-    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
-      runIntegrationTestsOnEnvironment(testReportFolderFile, testResults, distributedEnvironment);
-    }
-
-    TestResult resultSum = calculateTestResultSum(testResults);
-
-    List<TestResult> expectedTestNumFailures = calculateExpectedTestNumFailures(testResults);
-
-    printTestResultSum(resultSum);
-
-    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, resultSum);
   }
 
   private File initializeReportFolder() {
