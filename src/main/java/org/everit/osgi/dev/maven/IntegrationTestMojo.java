@@ -375,7 +375,7 @@ public class IntegrationTestMojo extends DistMojo {
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
 
     if (distOnly) {
-      super.execute();
+      super.doExecute();
       return;
     }
 
@@ -383,7 +383,7 @@ public class IntegrationTestMojo extends DistMojo {
       return;
     }
 
-    super.execute();
+    super.doExecute();
 
     getLog().info("OSGi Integrations tests running started");
 
