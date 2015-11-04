@@ -1,4 +1,5 @@
 org.everit.osgi.dev.maven
 org.everit.osgi.dev.maven.jaxb.dist.definition
 org.everit.osgi.dev.maven.result
+org.everit.osgi.dev.maven.statistic
 org.everit.osgi.dev.maven.util
