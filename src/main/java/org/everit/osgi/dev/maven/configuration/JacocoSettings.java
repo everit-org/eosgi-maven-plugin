@@ -107,7 +107,9 @@ public class JacocoSettings {
     rval.excludes = jacocoSettingsMap.get(EXCLUDES);
     rval.includes = jacocoSettingsMap.get(INCLUDES);
     rval.output = jacocoSettingsMap.get(OUTPUT);
-    rval.port = Integer.valueOf(jacocoSettingsMap.get(PORT));
+    String stringPort = jacocoSettingsMap.get(PORT);
+    rval.port =
+        ((stringPort == null) || "null".equals(stringPort)) ? null : Integer.valueOf(stringPort);
     return rval;
   }
 
