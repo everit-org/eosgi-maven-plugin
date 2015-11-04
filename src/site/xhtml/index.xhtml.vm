@@ -306,5 +306,27 @@
       In the above example, two environments are running when the incremental update command is called.
     </div>
   </p>
+
+  <h2 id="google_analytics_tracking">Google Analytics tracking</h2>
+  <p>
+    The eosgi-maven-plugin collects anonym usage statistics. The collected statistics are used to get budget for further development.
+    Collected data are:
+  </p>
+  <ul>
+    <li>analytics referer:  the eosgi-maven-plugin or other plugin. Example eclipse-e4-plugin, which is under development now.</li>
+    <li>executed goal: the executed goal. Available values (goals) are: 
+      <ul>
+        <li>analyse</li>
+        <li>dist</li>
+        <li>integration-test</li>
+      </ul>
+    </li>
+    <li>mac address hash: the hashed value of the MAC address of the first network interface controller of the user's computer. 
+    SHA-1 algorithm is used ti create the hash to make the user anonym and unique.</li>
+    <li>plugin version: the plugin version.</li>
+  </ul>
+  <p>
+    To turn off the Google Analytics tracking add the "-Deosgi.analytics.skip=true" property to the build comman or use the "true" plugin parameter.
+  </p>
 </body>
 </html>
