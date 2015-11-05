@@ -72,16 +72,4 @@ public abstract class AbstractLaunchConfig {
     return vmArguments;
   }
 
-  public void setProgramArguments(final Map<String, String> programArguments) {
-    this.programArguments = programArguments;
-  }
-
-  public void setSystemProperties(final Map<String, String> systemProperties) {
-    this.systemProperties = systemProperties;
-  }
-
-  public void setVmArguments(final Map<String, String> vmArguments) {
-    this.vmArguments = vmArguments;
-  }
-
 }

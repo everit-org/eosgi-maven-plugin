@@ -33,8 +33,4 @@ public class LaunchConfigOverride extends AbstractLaunchConfig {
     return useBy;
   }
 
-  public void setUseBy(final UseByType useBy) {
-    this.useBy = useBy;
-  }
-
 }

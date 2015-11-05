@@ -66,24 +66,24 @@ public class JacocoSettings {
 
     StringBuilder sb = new StringBuilder("-javaagent:");
     sb.append(jacocoAgentAbsPath);
-    sb.append("=append=").append(Boolean.valueOf(merged.isAppend()).toString());
-    sb.append(",dumponexit=").append(Boolean.valueOf(merged.isDumponexit()).toString());
-    if (merged.getIncludes() != null) {
-      sb.append(",includes=").append(merged.getIncludes());
+    sb.append("=append=").append(Boolean.valueOf(merged.append).toString());
+    sb.append(",dumponexit=").append(Boolean.valueOf(merged.dumponexit).toString());
+    if (merged.includes != null) {
+      sb.append(",includes=").append(merged.includes);
     }
-    if (merged.getExcludes() != null) {
-      sb.append(",excludes=").append(merged.getExcludes());
+    if (merged.excludes != null) {
+      sb.append(",excludes=").append(merged.excludes);
     }
 
-    if (merged.getOutput() != null) {
-      sb.append(",output=").append(merged.getOutput());
+    if (merged.output != null) {
+      sb.append(",output=").append(merged.output);
 
     }
-    if (merged.getAddress() != null) {
-      sb.append(",address=").append(merged.getAddress());
+    if (merged.address != null) {
+      sb.append(",address=").append(merged.address);
     }
-    if (merged.getPort() != null) {
-      sb.append(",port=").append(merged.getPort());
+    if (merged.port != null) {
+      sb.append(",port=").append(merged.port);
     }
 
     File reportFolderFile = new File(globalReportFolderFile, environmentId);
@@ -133,34 +133,6 @@ public class JacocoSettings {
 
   @Parameter
   private Integer port;
-
-  public String getAddress() {
-    return address;
-  }
-
-  public String getExcludes() {
-    return excludes;
-  }
-
-  public String getIncludes() {
-    return includes;
-  }
-
-  public String getOutput() {
-    return output;
-  }
-
-  public Integer getPort() {
-    return port;
-  }
-
-  public boolean isAppend() {
-    return append;
-  }
-
-  public boolean isDumponexit() {
-    return dumponexit;
-  }
 
   /**
    * Converts the dedicated member variables to a map as key-value pairs.

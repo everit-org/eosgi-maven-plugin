@@ -78,7 +78,8 @@ public class LaunchConfig extends AbstractLaunchConfig {
     String jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
         jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
     if (jacocoAgentVmArgument != null) {
-      rval.vmArguments.put(JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
+      rval.vmArguments.put(
+          JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
     }
 
     checkForDuplicateOverrides(overrides);
@@ -90,7 +91,7 @@ public class LaunchConfig extends AbstractLaunchConfig {
     for (LaunchConfigOverride launchConfigOverride : overrides) {
 
       UseByType useBy = launchConfigOverride.useBy;
-      LaunchConfigOverride other = getPair(useBy, environmentLaunchConfig.overrides);
+      LaunchConfigOverride other = getPairOfUseBy(useBy, environmentLaunchConfig.overrides);
 
       LaunchConfigOverride mergedLaunchConfigOverride = new LaunchConfigOverride();
       mergedLaunchConfigOverride.useBy = useBy;
@@ -114,8 +115,8 @@ public class LaunchConfig extends AbstractLaunchConfig {
       jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
           jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
       if (jacocoAgentVmArgument != null) {
-        rval.vmArguments.put(JacocoSettings.VM_ARG_JACOCO,
-            jacocoAgentVmArgument);
+        mergedLaunchConfigOverride.vmArguments.put(
+            JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
       }
 
       rvalOverrides.add(mergedLaunchConfigOverride);
@@ -151,8 +152,8 @@ public class LaunchConfig extends AbstractLaunchConfig {
         jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
             jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
         if (jacocoAgentVmArgument != null) {
-          rval.vmArguments.put(JacocoSettings.VM_ARG_JACOCO,
-              jacocoAgentVmArgument);
+          mergedLaunchConfigOverride.vmArguments.put(
+              JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
         }
 
         rvalOverrides.add(mergedLaunchConfigOverride);
@@ -169,7 +170,7 @@ public class LaunchConfig extends AbstractLaunchConfig {
     return overrides;
   }
 
-  private LaunchConfigOverride getPair(final UseByType useBy,
+  private LaunchConfigOverride getPairOfUseBy(final UseByType useBy,
       final LaunchConfigOverride[] environmentOverrides) {
 
     for (LaunchConfigOverride launchConfigOverride : environmentOverrides) {
@@ -179,10 +180,6 @@ public class LaunchConfig extends AbstractLaunchConfig {
     }
 
     return null;
-  }
-
-  public void setOverrides(final LaunchConfigOverride[] overrides) {
-    this.overrides = overrides;
   }
 
 }
