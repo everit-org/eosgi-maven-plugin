@@ -41,6 +41,10 @@ public class LaunchConfig extends AbstractLaunchConfig {
   private void checkForDuplicateOverrides(final LaunchConfigOverride[] launchConfigOverrides)
       throws MojoExecutionException {
 
+    if (launchConfigOverrides == null) {
+      return;
+    }
+
     Set<UseByType> useBys = new HashSet<>();
     for (LaunchConfigOverride launchConfigOverride : launchConfigOverrides) {
       UseByType useBy = launchConfigOverride.useBy;
@@ -55,115 +59,99 @@ public class LaunchConfig extends AbstractLaunchConfig {
    * Merges the <code>this</code> {@link LaunchConfig} to the {@link LaunchConfig} of the
    * environment and returns a new {@link LaunchConfig}.
    */
-  public LaunchConfig createLaunchConfigForEnvironment(final String environmentId,
-      final LaunchConfig environmentLaunchConfig, final String reportFolder,
-      final Artifact jacocoAgentArtifact)
+  public LaunchConfig createLaunchConfigForEnvironment(final LaunchConfig environmentLaunchConfig,
+      final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact)
           throws MojoExecutionException {
 
     LaunchConfig rval = new LaunchConfig();
 
-    rval.systemProperties = MergeUtil.mergeDefaults(
-        systemProperties,
-        environmentLaunchConfig.systemProperties);
-    rval.vmArguments = MergeUtil.mergeDefaults(
-        vmArguments,
-        environmentLaunchConfig.vmArguments);
-    rval.programArguments = MergeUtil.mergeDefaults(
-        programArguments,
-        environmentLaunchConfig.programArguments);
+    mergeDefaults(rval, environmentLaunchConfig,
+        environmentId, reportFolder, jacocoAgentArtifact);
 
-    Map<String, String> jacocoSettingsMap = MergeUtil.mergeDefaults(
-        getJacocoSettingsMap(),
-        environmentLaunchConfig.getJacocoSettingsMap());
-    String jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
-        jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
-    if (jacocoAgentVmArgument != null) {
-      rval.vmArguments.put(
-          JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
-    }
-
-    checkForDuplicateOverrides(overrides);
-    checkForDuplicateOverrides(environmentLaunchConfig.overrides);
+    checkForDuplicateOverrides(
+        overrides);
+    checkForDuplicateOverrides(
+        environmentLaunchConfig == null ? null : environmentLaunchConfig.overrides);
 
     Set<UseByType> processedUseBys = new HashSet<>();
     List<LaunchConfigOverride> rvalOverrides = new ArrayList<>();
 
-    for (LaunchConfigOverride launchConfigOverride : overrides) {
+    for (LaunchConfigOverride o1 : overrides) {
 
-      UseByType useBy = launchConfigOverride.useBy;
-      LaunchConfigOverride other = getPairOfUseBy(useBy, environmentLaunchConfig.overrides);
+      UseByType useBy = o1.useBy;
 
-      LaunchConfigOverride mergedLaunchConfigOverride = new LaunchConfigOverride();
-      mergedLaunchConfigOverride.useBy = useBy;
-
-      mergedLaunchConfigOverride.systemProperties = MergeUtil.mergeOverrides(
-          launchConfigOverride.systemProperties,
-          environmentLaunchConfig.systemProperties,
-          other.systemProperties);
-      mergedLaunchConfigOverride.vmArguments = MergeUtil.mergeOverrides(
-          launchConfigOverride.vmArguments,
-          environmentLaunchConfig.vmArguments,
-          other.vmArguments);
-      mergedLaunchConfigOverride.programArguments = MergeUtil.mergeOverrides(
-          launchConfigOverride.programArguments,
-          environmentLaunchConfig.programArguments,
-          other.programArguments);
-
-      jacocoSettingsMap = MergeUtil.mergeDefaults(
-          launchConfigOverride.getJacocoSettingsMap(),
-          other.getJacocoSettingsMap());
-      jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
-          jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
-      if (jacocoAgentVmArgument != null) {
-        mergedLaunchConfigOverride.vmArguments.put(
-            JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
+      LaunchConfigOverride o2 = null;
+      if (environmentLaunchConfig != null) {
+        o2 = getPairOfUseBy(useBy, environmentLaunchConfig.overrides);
       }
+
+      LaunchConfigOverride mergedLaunchConfigOverride =
+          createMergedLaunchConfigOverride(o1, environmentLaunchConfig, o2,
+              environmentId, reportFolder, jacocoAgentArtifact, useBy);
 
       rvalOverrides.add(mergedLaunchConfigOverride);
 
       processedUseBys.add(useBy);
     }
 
-    for (LaunchConfigOverride other : environmentLaunchConfig.overrides) {
+    if (environmentLaunchConfig != null) {
 
-      UseByType useBy = other.useBy;
+      for (LaunchConfigOverride o2 : environmentLaunchConfig.overrides) {
 
-      if (!processedUseBys.contains(useBy)) {
+        UseByType useBy = o2.useBy;
 
-        LaunchConfigOverride mergedLaunchConfigOverride = new LaunchConfigOverride();
-        mergedLaunchConfigOverride.useBy = useBy;
+        if (!processedUseBys.contains(useBy)) {
 
-        mergedLaunchConfigOverride.systemProperties = MergeUtil.mergeOverrides(
-            null,
-            environmentLaunchConfig.systemProperties,
-            other.systemProperties);
-        mergedLaunchConfigOverride.vmArguments = MergeUtil.mergeOverrides(
-            null,
-            environmentLaunchConfig.vmArguments,
-            other.vmArguments);
-        mergedLaunchConfigOverride.programArguments = MergeUtil.mergeOverrides(
-            null,
-            environmentLaunchConfig.programArguments,
-            other.programArguments);
+          LaunchConfigOverride mergedLaunchConfigOverride =
+              createMergedLaunchConfigOverride(null, environmentLaunchConfig,
+                  o2, environmentId, reportFolder, jacocoAgentArtifact, useBy);
 
-        jacocoSettingsMap = MergeUtil.mergeDefaults(
-            null,
-            other.getJacocoSettingsMap());
-        jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
-            jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
-        if (jacocoAgentVmArgument != null) {
-          mergedLaunchConfigOverride.vmArguments.put(
-              JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
+          rvalOverrides.add(mergedLaunchConfigOverride);
+
         }
-
-        rvalOverrides.add(mergedLaunchConfigOverride);
-
       }
     }
 
     rval.overrides = rvalOverrides.toArray(new LaunchConfigOverride[] {});
 
     return rval;
+  }
+
+  private LaunchConfigOverride createMergedLaunchConfigOverride(
+      final LaunchConfigOverride o1,
+      final LaunchConfig d2,
+      final LaunchConfigOverride o2,
+      final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact,
+      final UseByType useBy) {
+
+    LaunchConfigOverride mergedLaunchConfigOverride = new LaunchConfigOverride();
+    mergedLaunchConfigOverride.useBy = useBy;
+
+    mergedLaunchConfigOverride.systemProperties = MergeUtil.mergeOverrides(
+        getSystemPropertiesIfAvailable(o1),
+        getSystemPropertiesIfAvailable(d2),
+        getSystemPropertiesIfAvailable(o2));
+    mergedLaunchConfigOverride.vmArguments = MergeUtil.mergeOverrides(
+        getVmArgumentsIfAvailable(o1),
+        getVmArgumentsIfAvailable(d2),
+        getVmArgumentsIfAvailable(o2));
+    mergedLaunchConfigOverride.programArguments = MergeUtil.mergeOverrides(
+        getProgramArgumentsIfAvailable(o1),
+        getProgramArgumentsIfAvailable(d2),
+        getProgramArgumentsIfAvailable(o2));
+
+    Map<String, String> jacocoSettingsMap = MergeUtil.mergeDefaults(
+        o1 == null ? null : o1.getJacocoSettingsMap(),
+        o2 == null ? null : o2.getJacocoSettingsMap());
+
+    String jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
+        jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
+    if (jacocoAgentVmArgument != null) {
+      mergedLaunchConfigOverride.vmArguments.put(
+          JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
+    }
+
+    return mergedLaunchConfigOverride;
   }
 
   public LaunchConfigOverride[] getOverrides() {
@@ -180,6 +168,56 @@ public class LaunchConfig extends AbstractLaunchConfig {
     }
 
     return null;
+  }
+
+  private Map<String, String> getProgramArgumentsIfAvailable(
+      final AbstractLaunchConfig abstractLaunchConfig) {
+    if (abstractLaunchConfig == null) {
+      return null;
+    }
+    return abstractLaunchConfig.programArguments;
+  }
+
+  private Map<String, String> getSystemPropertiesIfAvailable(
+      final AbstractLaunchConfig abstractLaunchConfig) {
+    if (abstractLaunchConfig == null) {
+      return null;
+    }
+    return abstractLaunchConfig.systemProperties;
+  }
+
+  private Map<String, String> getVmArgumentsIfAvailable(
+      final AbstractLaunchConfig abstractLaunchConfig) {
+    if (abstractLaunchConfig == null) {
+      return null;
+    }
+    return abstractLaunchConfig.vmArguments;
+  }
+
+  private void mergeDefaults(final LaunchConfig rval, final LaunchConfig environmentLaunchConfig,
+      final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact) {
+
+    rval.systemProperties = MergeUtil.mergeDefaults(
+        systemProperties,
+        environmentLaunchConfig == null ? null : environmentLaunchConfig.systemProperties);
+    rval.vmArguments = MergeUtil.mergeDefaults(
+        vmArguments,
+        environmentLaunchConfig == null ? null : environmentLaunchConfig.vmArguments);
+    rval.programArguments = MergeUtil.mergeDefaults(
+        programArguments,
+        environmentLaunchConfig == null ? null : environmentLaunchConfig.programArguments);
+
+    Map<String, String> jacocoSettingsMap = MergeUtil.mergeDefaults(
+        getJacocoSettingsMap(),
+        environmentLaunchConfig == null ? null : environmentLaunchConfig.getJacocoSettingsMap());
+
+    String jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
+        jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
+    if (jacocoAgentVmArgument != null) {
+      rval.vmArguments.put(
+          JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
+    }
+
   }
 
 }

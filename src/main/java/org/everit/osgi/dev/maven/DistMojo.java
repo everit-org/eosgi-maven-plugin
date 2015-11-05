@@ -371,7 +371,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
 
     LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
-        environment.getId(), environment.getLaunchConfig(),
+        environment.getLaunchConfig(), environment.getId(),
         reportFolder, jacocoAgentArtifact);
 
     Map<String, Object> vars = new HashMap<>();
