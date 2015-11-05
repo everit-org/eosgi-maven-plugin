@@ -357,18 +357,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private String getClasspath() {
-    return ""; // TODO classPath
-  }
-
-  private String getMainClassOfJar(final String mainJar) {
-    return "org.eclipse.core.runtime.adaptor.EclipseStarter"; // TODO mainClass
-  }
-
-  private String getMainJar() {
-    return "org.eclipse.osgi_3.10.100.v20150529-1857.jar"; // TODO main jar
-  }
-
   /**
    * Parses the configuration of a distribution package.
    */
@@ -392,10 +380,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     vars.put("bundleStartLevel", environment.getBundleStartLevel());
     vars.put("distributableArtifacts", distributableArtifacts);
     vars.put("launchConfig", launchConfig);
-    String mainJar = getMainJar();
-    vars.put("mainJar", mainJar);
-    vars.put("mainClass", getMainClassOfJar(mainJar));
-    vars.put("classPath", getClasspath());
     vars.put("distUtil", new DistUtil());
     try {
       fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
