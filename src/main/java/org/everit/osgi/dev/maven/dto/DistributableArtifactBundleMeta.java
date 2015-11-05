@@ -72,12 +72,4 @@ public class DistributableArtifactBundleMeta {
     return version;
   }
 
-  public boolean hasFragmentHost() {
-    return (fragmentHost != null) && !fragmentHost.trim().isEmpty();
-  }
-
-  public boolean hasStartLevel() {
-    return startLevel != null;
-  }
-
 }

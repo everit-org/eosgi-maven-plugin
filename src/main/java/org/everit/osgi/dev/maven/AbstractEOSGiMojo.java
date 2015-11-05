@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -107,6 +106,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   @Override
   public final void execute() throws MojoExecutionException, MojoFailureException {
+
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
 
@@ -120,18 +120,17 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   }
 
   private BundleSettings findMatchingSettings(final List<BundleSettings> bundleSettingsList,
-      final String symbolicName,
-      final String bundleVersion) {
-    Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
-    BundleSettings matchedSettings = null;
-    while (iterator.hasNext() && (matchedSettings == null)) {
-      BundleSettings settings = iterator.next();
+      final String symbolicName, final String bundleVersion) {
+
+    for (BundleSettings settings : bundleSettingsList) {
+
       if (settings.getSymbolicName().equals(symbolicName)
           && ((settings.getVersion() == null) || settings.getVersion().equals(bundleVersion))) {
-        matchedSettings = settings;
+
+        return settings;
       }
     }
-    return matchedSettings;
+    return null;
   }
 
   /**
@@ -147,8 +146,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   protected List<DistributableArtifact> generateDistributableArtifacts(
       final List<BundleSettings> bundleSettingsList) throws MalformedURLException {
+
     @SuppressWarnings("unchecked")
     List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+
     if (executedProject != null) {
       availableArtifacts.add(executedProject.getArtifact());
     } else {
@@ -172,9 +173,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * @return The default environment.
    */
   protected EnvironmentConfiguration getDefaultEnvironment() {
-    getLog()
-        .info("There is no environment specified in the project. Creating felix environment with"
-            + " default settings");
+
+    getLog().info("There is no environment specified in the project. "
+        + "Creating felix environment with default settings");
+
     EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
     defaultEnvironment.setId("equinox");
     defaultEnvironment.setFramework("equinox");
