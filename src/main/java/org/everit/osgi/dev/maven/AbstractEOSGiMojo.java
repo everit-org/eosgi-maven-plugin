@@ -65,8 +65,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Comma separated list of the id of the environments that should be processed. Default is * that
    * means all environments.
    */
-  @Parameter(property = "eosgi.environmentId", defaultValue = "*")
-  protected String environmentId = "*";
+  @Parameter(name = "environmentId", property = "eosgi.environmentId", defaultValue = "*")
+  protected String environmentIdsToProcess = "*";
 
   /**
    * The environments on which the tests should run.
@@ -196,8 +196,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   /**
    * Getting an array of the environment configurations that should be processed based on the value
-   * of the {@link #environmentId} parameter. The value, that is returned, is calculated the first
-   * time the function is called.
+   * of the {@link #environmentIdsToProcess} parameter. The value, that is returned, is calculated
+   * the first time the function is called.
    *
    * @return The array of environment ids that should be processed.
    */
@@ -206,10 +206,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       return environmentsToProcess;
     }
 
-    if ("*".equals(environmentId)) {
+    if ("*".equals(environmentIdsToProcess)) {
       environmentsToProcess = getEnvironments();
     } else {
-      String[] environmentIdArray = environmentId.trim().split(",");
+      String[] environmentIdArray = environmentIdsToProcess.trim().split(",");
 
       EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
 
@@ -306,6 +306,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     } catch (IOException e) {
       return new DistributableArtifact(artifact, null, null);
     }
+  }
+
+  public void setEnvironmentId(final String environmentId) {
+    environmentIdsToProcess = environmentId;
   }
 
 }

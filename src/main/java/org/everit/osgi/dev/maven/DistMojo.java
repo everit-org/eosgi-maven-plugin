@@ -357,6 +357,18 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
+  private String getClasspath() {
+    return ""; // TODO classPath
+  }
+
+  private String getMainClassOfJar(final String mainJar) {
+    return "org.eclipse.core.runtime.adaptor.EclipseStarter"; // TODO mainClass
+  }
+
+  private String getMainJar() {
+    return "org.eclipse.osgi_3.10.100.v20150529-1857.jar"; // TODO main jar
+  }
+
   /**
    * Parses the configuration of a distribution package.
    */
@@ -380,9 +392,10 @@ public class DistMojo extends AbstractEOSGiMojo {
     vars.put("bundleStartLevel", environment.getBundleStartLevel());
     vars.put("distributableArtifacts", distributableArtifacts);
     vars.put("launchConfig", launchConfig);
-    vars.put("mainJar", "org.eclipse.osgi_3.10.100.v20150529-1857.jar"); // TODO mainJar
-    vars.put("mainClass", "org.eclipse.core.runtime.adaptor.EclipseStarter"); // TODO mainClass
-    vars.put("classPath", ""); // TODO classPath
+    String mainJar = getMainJar();
+    vars.put("mainJar", mainJar);
+    vars.put("mainClass", getMainClassOfJar(mainJar));
+    vars.put("classPath", getClasspath());
     vars.put("distUtil", new DistUtil());
     try {
       fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
@@ -399,7 +412,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       throws MojoExecutionException {
 
     DistributionPackageType distributionPackage =
-        distSchemaProvider.geOverridedDistributionPackage(distFolderFile, UseByType.PARSABLES);
+        distSchemaProvider.getOverridedDistributionPackage(distFolderFile, UseByType.PARSABLES);
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributionPackage", distributionPackage);
