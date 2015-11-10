@@ -60,7 +60,6 @@ public class JacocoSettings {
 
     JacocoSettings merged = JacocoSettings.valueOf(jacocoSettingsMap);
 
-    File globalReportFolderFile = new File(reportFolder);
     File jacocoAgentFile = jacocoAgentArtifact.getFile();
     String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
 
@@ -86,7 +85,7 @@ public class JacocoSettings {
       sb.append(",port=").append(merged.port);
     }
 
-    File reportFolderFile = new File(globalReportFolderFile, environmentId);
+    File reportFolderFile = new File(reportFolder, environmentId);
     reportFolderFile.mkdirs();
     File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
 
@@ -133,6 +132,27 @@ public class JacocoSettings {
 
   @Parameter
   private Integer port;
+
+  /**
+   * Default constructor.
+   */
+  public JacocoSettings() {
+  }
+
+  /**
+   * Constructor.
+   */
+  JacocoSettings(final String address, final boolean append, final boolean dumponexit,
+      final String excludes, final String includes, final String output, final Integer port) {
+    super();
+    this.address = address;
+    this.append = append;
+    this.dumponexit = dumponexit;
+    this.excludes = excludes;
+    this.includes = includes;
+    this.output = output;
+    this.port = port;
+  }
 
   /**
    * Converts the dedicated member variables to a map as key-value pairs.

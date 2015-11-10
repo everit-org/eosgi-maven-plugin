@@ -15,6 +15,8 @@
  */
 package org.everit.osgi.dev.maven.configuration;
 
+import java.util.Map;
+
 import org.apache.maven.plugins.annotations.Parameter;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 
@@ -28,6 +30,17 @@ public class LaunchConfigOverride extends AbstractLaunchConfig {
    */
   @Parameter(required = true)
   protected UseByType useBy;
+
+  public LaunchConfigOverride() {
+    super();
+  }
+
+  LaunchConfigOverride(final UseByType useBy, final JacocoSettings jacoco,
+      final Map<String, String> programArguments,
+      final Map<String, String> systemProperties, final Map<String, String> vmArguments) {
+    super(jacoco, programArguments, systemProperties, vmArguments);
+    this.useBy = useBy;
+  }
 
   public UseByType getUseBy() {
     return useBy;

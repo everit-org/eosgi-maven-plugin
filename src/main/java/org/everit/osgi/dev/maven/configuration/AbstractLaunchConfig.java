@@ -51,9 +51,28 @@ public abstract class AbstractLaunchConfig {
   protected Map<String, String> vmArguments = new HashMap<>();
 
   /**
+   * Default constructor.
+   */
+  public AbstractLaunchConfig() {
+    super();
+  }
+
+  /**
+   * Constructor.
+   */
+  AbstractLaunchConfig(final JacocoSettings jacoco, final Map<String, String> programArguments,
+      final Map<String, String> systemProperties, final Map<String, String> vmArguments) {
+    super();
+    this.jacoco = jacoco;
+    this.programArguments = programArguments;
+    this.systemProperties = systemProperties;
+    this.vmArguments = vmArguments;
+  }
+
+  /**
    * Returns the configured jacoco settings as a map.
    */
-  public Map<String, String> getJacocoSettingsMap() {
+  protected Map<String, String> getJacocoSettingsMap() {
     if (jacoco == null) {
       return null;
     }

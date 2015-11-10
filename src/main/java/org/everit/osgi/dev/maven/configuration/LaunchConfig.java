@@ -38,6 +38,17 @@ public class LaunchConfig extends AbstractLaunchConfig {
   @Parameter
   private LaunchConfigOverride[] overrides;
 
+  public LaunchConfig() {
+    super();
+  }
+
+  LaunchConfig(final JacocoSettings jacoco, final Map<String, String> programArguments,
+      final Map<String, String> systemProperties, final Map<String, String> vmArguments,
+      final LaunchConfigOverride[] overrides) {
+    super(jacoco, programArguments, systemProperties, vmArguments);
+    this.overrides = overrides;
+  }
+
   private void checkForDuplicateOverrides(final LaunchConfigOverride[] launchConfigOverrides)
       throws MojoExecutionException {
 
@@ -76,25 +87,27 @@ public class LaunchConfig extends AbstractLaunchConfig {
     Set<UseByType> processedUseBys = new HashSet<>();
     List<LaunchConfigOverride> rvalOverrides = new ArrayList<>();
 
-    for (LaunchConfigOverride o1 : overrides) {
+    if (overrides != null) {
+      for (LaunchConfigOverride o1 : overrides) {
 
-      UseByType useBy = o1.useBy;
+        UseByType useBy = o1.useBy;
 
-      LaunchConfigOverride o2 = null;
-      if (environmentLaunchConfig != null) {
-        o2 = getPairOfUseBy(useBy, environmentLaunchConfig.overrides);
+        LaunchConfigOverride o2 = null;
+        if (environmentLaunchConfig != null) {
+          o2 = getPairOfUseBy(useBy, environmentLaunchConfig.overrides);
+        }
+
+        LaunchConfigOverride mergedLaunchConfigOverride =
+            createMergedLaunchConfigOverride(o1, environmentLaunchConfig, o2,
+                environmentId, reportFolder, jacocoAgentArtifact, useBy);
+
+        rvalOverrides.add(mergedLaunchConfigOverride);
+
+        processedUseBys.add(useBy);
       }
-
-      LaunchConfigOverride mergedLaunchConfigOverride =
-          createMergedLaunchConfigOverride(o1, environmentLaunchConfig, o2,
-              environmentId, reportFolder, jacocoAgentArtifact, useBy);
-
-      rvalOverrides.add(mergedLaunchConfigOverride);
-
-      processedUseBys.add(useBy);
     }
 
-    if (environmentLaunchConfig != null) {
+    if ((environmentLaunchConfig != null) && (environmentLaunchConfig.overrides != null)) {
 
       for (LaunchConfigOverride o2 : environmentLaunchConfig.overrides) {
 
