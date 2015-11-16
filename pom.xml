@@ -190,6 +190,12 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.enterprise</artifactId>
+      <version>4.2.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
       <version>1.7</version>
@@ -209,11 +215,6 @@
       <groupId>org.rzo.yajsw</groupId>
       <artifactId>wrapper</artifactId>
       <version>11.11</version>
-    </dependency>
-    <dependency>
-      <groupId>org.everit.osgi.dev</groupId>
-      <artifactId>org.everit.osgi.dev.richconsole</artifactId>
-      <version>1.2.2</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.tycho</groupId>
