@@ -20,22 +20,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
-import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.zip.ZipFile;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
@@ -52,22 +45,25 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.tools.generic.EscapeTool;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.CopyModeType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ObjectFactory;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseableType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ParseablesType;
+import org.everit.osgi.dev.eosgi.dist.schema.util.DistSchemaProvider;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.LaunchConfigType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsableType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.configuration.LaunchConfig;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
+import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
+import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
 import org.everit.osgi.dev.maven.util.ArtifactKey;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
 import org.everit.osgi.dev.maven.util.PluginUtil;
-import org.everit.osgi.dev.richconsole.RichConsoleConstants;
 
 /**
  * Creates a distribution package for the project. Distribution packages may be provided as
@@ -91,18 +87,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   protected ArtifactResolver artifactResolver;
 
   /**
-   * If link than the generated files in the dist folder will be links instead of real copied files.
-   * Two possible values: symbolicLink, file. In case this is an incrementel update, the default
-   * mode is the same as the mode of the previous build. In case this is a clean build, the default
-   * mode is 'file'.
-   */
-  @Parameter(property = "eosgi.copyMode")
-  @Deprecated
-  protected String copyMode;
-
-  protected final JAXBContext distConfigJAXBContext;
-
-  /**
    * Path to folder where the distribution will be generated. The content of this folder will be
    * overridden if the files with same name already exist.
    *
@@ -112,14 +96,9 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   protected List<DistributedEnvironment> distributedEnvironments;
 
-  private FileManager fileManager = null;
+  protected DistSchemaProvider distSchemaProvider = new DistSchemaProvider();
 
-  /**
-   * The jacoco code coverage generation settings. To see the possible settings see
-   * {@link JacocoSettings}.
-   */
-  @Parameter
-  protected JacocoSettings jacoco;
+  private FileManager fileManager = null;
 
   @Parameter(defaultValue = "${localRepository}")
   protected ArtifactRepository localRepository;
@@ -156,94 +135,18 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.sourceDistPath", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistPath;
 
-  protected Map<String, Integer> upgradePortByEnvironmentId = null;
-
-  /**
-   * Constructor that initializes JAXB.
-   */
-  public DistMojo() {
-    try {
-      distConfigJAXBContext =
-          JAXBContext.newInstance(ObjectFactory.class.getPackage().getName(),
-              ObjectFactory.class.getClassLoader());
-    } catch (JAXBException e) {
-      throw new RuntimeException(
-          "Could not create JAXB Context for distribution configuration file", e);
+  private RemoteOSGiManager createRemoteOSGiManager(final LaunchConfigType launchConfig) {
+    Integer port = getRemoteUpgradePort(launchConfig);
+    if (port == null) {
+      return null;
     }
+    return new JMXOSGiManager(port, getLog());
   }
 
-  /**
-   * Adds the default settings (e.g.: system properties) that are necessary for every environment
-   * generated by this plugin.
-   *
-   * @param environment
-   *          The environment that should be appended with the default settings.
-   * @throws MojoExecutionException
-   *           if error occurs.
-   */
-  protected void addDefaultSettingsToEnvironment(final EnvironmentConfiguration environment)
-      throws MojoExecutionException {
-    String environmentId = environment.getId();
-    if (environmentId == null) {
-      throw new MojoExecutionException("Environment id must not be null");
-    }
-    Map<String, String> systemProperties = environment.getSystemProperties();
-    String currentValue = systemProperties.get(RichConsoleConstants.SYSPROP_ENVIRONMENT_ID);
-    if ((currentValue != null) && !currentValue.equals(environmentId)) {
-      throw new MojoExecutionException("If defined, the system property "
-          + RichConsoleConstants.SYSPROP_ENVIRONMENT_ID
-          + " must be the same as environment id: " + environment.getId());
-    }
-    if (currentValue == null) {
-      systemProperties.put(RichConsoleConstants.SYSPROP_ENVIRONMENT_ID, environmentId);
-    }
-  }
-
-  private void checkIfEveryPortCanBeUpdated(final EnvironmentConfiguration[] environments)
-      throws MojoExecutionException {
-    Map<String, Integer> tmpUpgradePortByEnvironmentId = new HashMap<>(upgradePortByEnvironmentId);
-    for (EnvironmentConfiguration environment : environments) {
-      tmpUpgradePortByEnvironmentId.remove(environment.getId());
-    }
-    if (tmpUpgradePortByEnvironmentId.size() > 0) {
-      throw new MojoExecutionException(
-          "Could not find environment configuration for service ports: "
-              + tmpUpgradePortByEnvironmentId.toString());
-    }
-  }
-
-  /**
-   * Defines the ports for each environment where upgrade should be executed.
-   *
-   * @throws MojoExecutionException
-   *           in case the environment cannot be determined based on the port number.
-   */
-  protected void defineUpgradePorts() throws MojoExecutionException {
-    upgradePortByEnvironmentId = new HashMap<String, Integer>();
-    if (servicePort != null) {
-      String[] servicePortArray = servicePort.split(",");
-      InetAddress localAddress;
-      try {
-        localAddress = InetAddress.getLocalHost();
-      } catch (UnknownHostException e) {
-        throw new MojoExecutionException("Could not determine local address");
-      }
-      for (String servicePortString : servicePortArray) {
-        Integer servicePort = Integer.valueOf(servicePortString);
-        String environmentId = queryEnvironmentIdFromPort(localAddress, servicePort);
-        if (environmentId == null) {
-          throw new MojoExecutionException("Could not determine environment id for service port "
-              + servicePort);
-        }
-        getLog().info("Assigning '" + environmentId + "' to service port " + servicePort);
-        upgradePortByEnvironmentId.put(environmentId, servicePort);
-      }
-    }
-  }
-
-  private void distributeArtifact(final File envDistFolderFile, final Socket environmentSocket,
-      final CopyModeType environmentCopyMode, final ArtifactType artifact)
+  private void distributeArtifact(final RemoteOSGiManager remoteOSGiManager,
+      final File envDistFolderFile, final ArtifactType artifact)
           throws MojoExecutionException, IOException {
+
     Artifact mavenArtifact = resolveMavenArtifactByArtifactType(artifact);
     downloadArtifactIfNecessary(mavenArtifact);
 
@@ -259,75 +162,43 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
     File targetFile = new File(targetFileFolder, targetFileName);
 
-    CopyModeType artifactCopyMode = resolveArtifactCopyMode(environmentCopyMode, artifact);
+    boolean fileChanged = fileManager.overCopyFile(mavenArtifact.getFile(), targetFile);
 
-    boolean fileChanged =
-        fileManager.copyFile(mavenArtifact.getFile(), targetFile, artifactCopyMode);
-    if (fileChanged && (environmentSocket != null)) {
-      BundleDataType bundle = artifact.getBundle();
-      if (bundle != null) {
-        OSGiActionType osgiAction = bundle.getAction();
-        if (!OSGiActionType.NONE.equals(osgiAction)) {
-          String bundleLocation = bundle.getLocation();
-          Integer startLevel = bundle.getStartLevel();
-          StringBuilder sb = new StringBuilder(RichConsoleConstants.TCPCOMMAND_DEPLOY_BUNDLE);
-          sb.append(" ").append(bundleLocation).append("@");
-          if (startLevel != null) {
-            sb.append(startLevel).append(":");
-          }
-          sb.append("start");
-          String response = PluginUtil.sendCommandToSocket(sb.toString(), environmentSocket,
-              "environment", getLog());
-          if (!RichConsoleConstants.TCPRESPONSE_OK.equals(response)) {
-            throw new MojoExecutionException(
-                "Environment server did not answer ok after bundle deployment");
-          }
-        }
-      }
-    }
-  }
-
-  private void distributeArtifacts(final DistributionPackageType distributionPackage,
-      final File envDistFolderFile,
-      final Socket environmentSocket)
-          throws MojoExecutionException, IOException {
-
-    ArtifactsType artifactsJaxbObj = distributionPackage.getArtifacts();
-    if (artifactsJaxbObj == null) {
+    if (!fileChanged || (remoteOSGiManager == null)) {
       return;
     }
-    List<ArtifactType> artifacts = artifactsJaxbObj
-        .getArtifact();
 
-    CopyModeType environmentCopyMode = distributionPackage.getCopyMode();
+    BundleDataType bundleDataType = artifact.getBundle();
+    remoteOSGiManager.installBundle(bundleDataType);
+  }
+
+  private void distributeArtifacts(final RemoteOSGiManager remoteOSGiManager,
+      final ArtifactsType artifactsType, final File envDistFolderFile)
+          throws MojoExecutionException, IOException {
+
+    if (artifactsType == null) {
+      return;
+    }
+
+    List<ArtifactType> artifacts = artifactsType.getArtifact();
+
     for (ArtifactType artifact : artifacts) {
-      distributeArtifact(envDistFolderFile, environmentSocket, environmentCopyMode, artifact);
+      distributeArtifact(remoteOSGiManager, envDistFolderFile, artifact);
     }
   }
 
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
-    processJacocoSettings();
-    defineUpgradePorts();
 
-    fileManager = new FileManager(getLog());
-    try {
-      File globalDistFolderFile = new File(getDistFolder());
+    fileManager = new FileManager();
+    File globalDistFolderFile = new File(distFolder);
 
-      distributedEnvironments = new ArrayList<DistributedEnvironment>();
-      EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
-      checkIfEveryPortCanBeUpdated(environmentsToProcess);
-      InetAddress localAddress = resolveLocalInetAddress();
+    distributedEnvironments = new ArrayList<DistributedEnvironment>();
+    EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
+    InetAddress localAddress = resolveLocalInetAddress();
 
-      for (EnvironmentConfiguration environment : environmentsToProcess) {
-        executeOnEnvironment(globalDistFolderFile, localAddress, environment);
-      }
-    } finally {
-      try {
-        fileManager.close();
-      } catch (IOException e) {
-        getLog().error("Could not close file manager", e);
-      }
+    for (EnvironmentConfiguration environment : environmentsToProcess) {
+      executeOnEnvironment(globalDistFolderFile, localAddress, environment);
     }
   }
 
@@ -350,212 +221,144 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     List<DistributableArtifact> processedArtifacts;
     try {
-      processedArtifacts = generateDistributableArtifacts(environment);
+      processedArtifacts = generateDistributableArtifacts(environment.getBundleSettings());
     } catch (MalformedURLException e) {
       throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
     }
 
-    addDefaultSettingsToEnvironment(environment);
-    Artifact distPackageArtifact = resolveDistPackage(environment);
+    Artifact distPackageArtifact = resolveDistPackage(environment.getFramework());
     File distPackageFile = distPackageArtifact.getFile();
     File distFolderFile = new File(globalDistFolderFile, environment.getId());
 
-    DistributionPackageType existingDistConfig = readDistConfig(distFolderFile);
+    DistributionPackageType existingDistConfig =
+        distSchemaProvider.readDistConfig(distFolderFile);
 
-    CopyModeType environmentCopyMode = resolveEnvironmentCopyMode(existingDistConfig);
+    RemoteOSGiManager remoteOSGiManager = null;
 
-    Socket environmentSocket = null;
     try (ZipFile distPackageZipFile = new ZipFile(distPackageFile)) {
-      Integer environmentServicePort = upgradePortByEnvironmentId.get(environment.getId());
-      if (environmentServicePort != null) {
-        environmentSocket = new Socket(localAddress, environmentServicePort);
-      }
+
       fileManager.unpackZipFile(distPackageFile, distFolderFile);
 
       if (sourceDistPath != null) {
         File sourceDistPathFile = new File(sourceDistPath);
         if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
-          fileManager.copyDirectory(sourceDistPathFile, distFolderFile, environmentCopyMode);
+          fileManager.copyDirectory(sourceDistPathFile, distFolderFile);
         }
       }
 
+      parseConfiguration(distFolderFile, processedArtifacts, environment);
+
       DistributionPackageType distributionPackage =
-          parseConfiguration(distFolderFile, processedArtifacts, environment,
-              environmentCopyMode);
+          distSchemaProvider.readDistConfig(distFolderFile);
+      ArtifactsType artifacts = distributionPackage.getArtifacts();
 
-      Map<ArtifactKey, ArtifactType> artifactMap =
+      Map<ArtifactKey, ArtifactType> existingArtifactMap =
           PluginUtil.createArtifactMap(existingDistConfig);
-      List<ArtifactType> artifactsToRemove = PluginUtil.getArtifactsToRemove(artifactMap,
-          distributionPackage);
+      List<ArtifactType> artifactsToRemove =
+          PluginUtil.getArtifactsToRemove(existingArtifactMap, artifacts);
 
-      if (environmentSocket != null) {
-        removeArtifactsRemotely(environmentSocket, artifactsToRemove);
+      remoteOSGiManager = createRemoteOSGiManager(
+          distributionPackage.getEnvironmentConfiguration().getLaunchConfig());
+
+      if (remoteOSGiManager != null) {
+        remoteOSGiManager.uninstallBundles(toBundles(artifactsToRemove));
       }
 
       removeArtifactsFromDistributedEnvironment(distFolderFile, artifactsToRemove);
 
-      distributeArtifacts(distributionPackage, distFolderFile, environmentSocket);
+      distributeArtifacts(remoteOSGiManager, artifacts, distFolderFile);
 
-      parseParseables(distributionPackage, distFolderFile, processedArtifacts, environment);
-      distributedEnvironments.add(new DistributedEnvironment(environment, distributionPackage,
-          distFolderFile, processedArtifacts));
+      parseParsables(distFolderFile);
+      distributedEnvironments.add(
+          new DistributedEnvironment(environment, distributionPackage,
+              distFolderFile, processedArtifacts));
 
     } catch (IOException e) {
+
       throw new MojoExecutionException("Could not uncompress distribution package file: "
           + distPackageFile.toString(), e);
+
     } finally {
-      if (environmentSocket != null) {
-        try {
-          environmentSocket.close();
-        } catch (IOException e) {
-          throw new MojoExecutionException("Error during closing socket for environment "
-              + environment.getId(), e);
-        }
+
+      if (remoteOSGiManager != null) {
+        remoteOSGiManager.disconnect();
       }
+
     }
   }
 
-  public String getCopyMode() {
-    return copyMode;
-  }
-
-  public String getDistFolder() {
-    return distFolder;
-  }
-
-  public List<DistributedEnvironment> getDistributedEnvironments() {
-    return distributedEnvironments;
-  }
-
-  public JacocoSettings getJacoco() {
-    return jacoco;
+  private Integer getRemoteUpgradePort(final LaunchConfigType launchConfig) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
   /**
    * Parses the configuration of a distribution package.
    */
-  protected DistributionPackageType parseConfiguration(final File distFolderFile,
+  private void parseConfiguration(
+      final File distFolderFile,
       final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment,
-      final CopyModeType environmentCopyMode)
+      final EnvironmentConfiguration environment)
           throws MojoExecutionException {
+
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
-    VelocityContext context = new VelocityContext();
-    context.put("distributableArtifacts", distributableArtifacts);
-    context.put("environment", environment);
-    context.put("copyMode", environmentCopyMode.value());
-    context.put("escapeTool", new EscapeTool());
-    context.put("distUtil", new DistUtil());
+    Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
+
+    LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
+        environment.getLaunchConfig(), environment.getId(),
+        reportFolder, jacocoAgentArtifact);
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("environmentId", environment.getId());
+    vars.put("frameworkStartLevel", environment.getFrameworkStartLevel());
+    vars.put("bundleStartLevel", environment.getBundleStartLevel());
+    vars.put("distributableArtifacts", distributableArtifacts);
+    vars.put("launchConfig", launchConfig);
+    vars.put("distUtil", new DistUtil());
     try {
-      fileManager.replaceFileWithParsed(configFile, context, "UTF8");
+      fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
     } catch (IOException e) {
       throw new MojoExecutionException(
           "Could not run velocity on configuration file: " + configFile.getName(), e);
     }
-    return readDistConfig(distFolderFile);
   }
 
   /**
    * Parses and processes the files that are templates.
    */
-  protected void parseParseables(final DistributionPackageType distributionPackage,
-      final File distFolderFile,
-      final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment)
-          throws MojoExecutionException {
-    VelocityContext context = new VelocityContext();
-    context.put("distributableArtifacts", distributableArtifacts);
-    context.put("distributionPackage", distributionPackage);
-    context.put("environment", environment);
-    context.put("escapeTool", new EscapeTool());
-    context.put("distUtil", new DistUtil());
-    ParseablesType parseables = distributionPackage.getParseables();
-    if (parseables != null) {
-      List<ParseableType> parseable = parseables.getParseable();
-      for (ParseableType p : parseable) {
+  private void parseParsables(final File distFolderFile)
+      throws MojoExecutionException {
+
+    DistributionPackageType distributionPackage =
+        distSchemaProvider.getOverridedDistributionPackage(distFolderFile, UseByType.PARSABLES);
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("distributionPackage", distributionPackage);
+    vars.put("distUtil", new DistUtil());
+
+    ParsablesType parsables = distributionPackage.getParsables();
+    if (parsables != null) {
+
+      List<ParsableType> parsable = parsables.getParsable();
+
+      for (ParsableType p : parsable) {
+
         String path = p.getPath();
-        File parseableFile = new File(distFolderFile, path);
-        if (!parseableFile.exists()) {
+        File parsableFile = new File(distFolderFile, path);
+
+        if (!parsableFile.exists()) {
           throw new MojoExecutionException("File that should be parsed does not exist: "
-              + parseableFile.getAbsolutePath());
+              + parsableFile.getAbsolutePath());
         }
+
         try {
-          fileManager.replaceFileWithParsed(parseableFile, context, p.getEncoding());
+          fileManager.replaceFileWithParsed(parsableFile, vars, p.getEncoding());
         } catch (IOException e) {
           throw new MojoExecutionException(
-              "Could not replace parseable with parsed content: " + p.getPath(),
-              e);
+              "Could not replace parsable with parsed content: " + p.getPath(), e);
         }
       }
-    }
-  }
-
-  private void processJacocoSettings() {
-    if (jacoco != null) {
-      File globalReportFolderFile = new File(reportFolder);
-      Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
-      File jacocoAgentFile = jacocoAgentArtifact.getFile();
-      String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
-
-      StringBuilder sb = new StringBuilder("-javaagent:");
-      sb.append(jacocoAgentAbsPath);
-      sb.append("=append=").append(Boolean.valueOf(jacoco.isAppend()).toString());
-      sb.append(",dumponexit=").append(Boolean.valueOf(jacoco.isDumponexit()).toString());
-      if (jacoco.getIncludes() != null) {
-        sb.append(",includes=").append(jacoco.getIncludes());
-      }
-      if (jacoco.getExcludes() != null) {
-        sb.append(",excludes=").append(jacoco.getExcludes());
-      }
-
-      if (jacoco.getOutput() != null) {
-        sb.append(",output=").append(jacoco.getOutput());
-
-      }
-      if (jacoco.getAddress() != null) {
-        sb.append(",address=").append(jacoco.getAddress());
-      }
-      if (jacoco.getPort() != null) {
-        sb.append(",port=").append(jacoco.getPort());
-      }
-
-      String jacocoAgentParam = sb.toString();
-      for (EnvironmentConfiguration environment : getEnvironmentsToProcess()) {
-        File reportFolderFile = new File(globalReportFolderFile, environment.getId());
-        reportFolderFile.mkdirs();
-        File jacocoExecFile = new File(reportFolderFile, "jacoco.exec");
-        StringBuilder envSb = new StringBuilder(jacocoAgentParam);
-        envSb.append(",destfile=").append(jacocoExecFile.getAbsolutePath());
-        envSb.append(",sessionid=").append(environment.getId()).append("_")
-            .append(new Date().getTime());
-
-        List<String> vmOptions = environment.getVmOptions();
-        if (vmOptions == null) {
-          vmOptions = new ArrayList<String>();
-          environment.setVmOptions(vmOptions);
-        }
-        vmOptions.add(envSb.toString());
-      }
-    }
-  }
-
-  private String queryEnvironmentIdFromPort(final InetAddress address, final int port)
-      throws MojoExecutionException {
-    try (Socket socket = new Socket(address, port)) {
-      String response =
-          PluginUtil.sendCommandToSocket(RichConsoleConstants.TCPCOMMAND_GET_ENVIRONMENT_ID,
-              socket, "environment", getLog());
-
-      if ((response == null) || "".equals(response.trim())) {
-        return null;
-      }
-      return response;
-
-    } catch (IOException e) {
-      throw new MojoExecutionException(
-          "Could not connect to service port of environment: " + address.toString()
-              + ":" + port);
     }
   }
 
@@ -567,7 +370,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws IOException
    *           if a read error occurs.
    */
-  protected Properties readDefaultFrameworkPops() throws IOException {
+  private Properties readDefaultFrameworkPops() throws IOException {
     Enumeration<URL> resources =
         this.getClass().getClassLoader().getResources("META-INF/eosgi-frameworks.properties");
     Properties result = new Properties();
@@ -585,38 +388,6 @@ public class DistMojo extends AbstractEOSGiMojo {
       result.putAll(tmpProps);
     }
     return result;
-  }
-
-  private DistributionPackageType readDistConfig(final File distFolderFile)
-      throws MojoExecutionException {
-    File distConfigFile = new File(distFolderFile, "/.eosgi.dist.xml");
-    if (distConfigFile.exists()) {
-      try {
-        Unmarshaller unmarshaller = distConfigJAXBContext.createUnmarshaller();
-        Object distributionPackage = unmarshaller.unmarshal(distConfigFile);
-        if (distributionPackage instanceof JAXBElement) {
-
-          @SuppressWarnings("unchecked")
-          JAXBElement<DistributionPackageType> jaxbDistPack =
-              (JAXBElement<DistributionPackageType>) distributionPackage;
-          distributionPackage = jaxbDistPack.getValue();
-        }
-        if (distributionPackage instanceof DistributionPackageType) {
-          return (DistributionPackageType) distributionPackage;
-        } else {
-          throw new MojoExecutionException(
-              "The root element in the provided distribution configuration file "
-                  + "is not the expected DistributionPackage element");
-        }
-      } catch (JAXBException e) {
-        throw new MojoExecutionException(
-            "Failed to process already existing distribution configuration file: "
-                + distConfigFile.getAbsolutePath(),
-            e);
-      }
-    } else {
-      return null;
-    }
   }
 
   private void removeArtifactsFromDistributedEnvironment(final File distFolderFile,
@@ -641,38 +412,11 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private void removeArtifactsRemotely(final Socket environmentSocket,
-      final List<ArtifactType> artifactsToRemove)
-          throws IOException, MojoExecutionException {
-    for (ArtifactType artifactType : artifactsToRemove) {
-      BundleDataType bundle = artifactType.getBundle();
-      if (bundle != null) {
-        String command = RichConsoleConstants.TCPCOMMAND_UNINSTALL + " "
-            + bundle.getSymbolicName() + ":" + bundle.getVersion();
-        String response = PluginUtil.sendCommandToSocket(command, environmentSocket,
-            "environment", getLog());
-        if (!RichConsoleConstants.TCPRESPONSE_OK.equals(response)) {
-          throw new MojoExecutionException(
-              "Environment server did not answer ok after bundle deployment");
-        }
-      }
-    }
-  }
-
-  private CopyModeType resolveArtifactCopyMode(final CopyModeType environmentCopyMode,
-      final ArtifactType artifact) {
-    CopyModeType artifactCopyMode = environmentCopyMode;
-    if (artifact.getCopyMode() != null) {
-      artifactCopyMode = artifact.getCopyMode();
-    }
-    return artifactCopyMode;
-  }
-
-  private Artifact resolveDistPackage(final EnvironmentConfiguration environment)
+  private Artifact resolveDistPackage(final String frameworkArtifact)
       throws MojoExecutionException {
     String[] distPackageIdParts;
     try {
-      distPackageIdParts = resolveDistPackageId(environment);
+      distPackageIdParts = resolveDistPackageId(frameworkArtifact);
     } catch (IOException e) {
       throw new MojoExecutionException("Could not get distribution package", e);
     }
@@ -703,10 +447,9 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoExecutionException
    *           if the distPackage expression configured for this plugin has wrong format.
    */
-  protected String[] resolveDistPackageId(final EnvironmentConfiguration environment)
+  private String[] resolveDistPackageId(final String frameworkArtifact)
       throws IOException,
       MojoExecutionException {
-    String frameworkArtifact = environment.getFramework();
     String[] distPackageParts = frameworkArtifact.split("\\:");
     if (distPackageParts.length == 1) {
       Properties defaultFrameworkPops = readDefaultFrameworkPops();
@@ -730,25 +473,6 @@ public class DistMojo extends AbstractEOSGiMojo {
           "Invalid distribution package id format: " + frameworkArtifact);
     }
     return distPackageParts;
-  }
-
-  private CopyModeType resolveEnvironmentCopyMode(final DistributionPackageType distConfig)
-      throws MojoExecutionException {
-    CopyModeType environmentCopyMode =
-        (getCopyMode() != null) ? CopyModeType.fromValue(getCopyMode()) : null;
-
-    if (distConfig != null) {
-      environmentCopyMode = distConfig.getCopyMode();
-    }
-    if (environmentCopyMode == null) {
-      environmentCopyMode = CopyModeType.FILE;
-    }
-    if (CopyModeType.SYMBOLIC_LINK.equals(environmentCopyMode)
-        && !fileManager.isSystemSymbolicLinkCapable()) {
-      throw new MojoExecutionException(
-          "It seems that the operating system does not support symbolic links");
-    }
-    return environmentCopyMode;
   }
 
   private InetAddress resolveLocalInetAddress() throws MojoExecutionException {
@@ -781,8 +505,23 @@ public class DistMojo extends AbstractEOSGiMojo {
     return mavenArtifact;
   }
 
-  public void setJacoco(final JacocoSettings jacoco) {
-    this.jacoco = jacoco;
+  private BundleDataType[] toBundles(final List<ArtifactType> artifactTypes) {
+
+    if (artifactTypes == null) {
+      return new BundleDataType[] {};
+    }
+
+    List<BundleDataType> bundleDataTypes = new ArrayList<>();
+    for (ArtifactType artifactType : artifactTypes) {
+
+      BundleDataType bundleDataType = artifactType.getBundle();
+
+      if (bundleDataType != null) {
+        bundleDataTypes.add(bundleDataType);
+      }
+    }
+
+    return bundleDataTypes.toArray(new BundleDataType[] {});
   }
 
 }

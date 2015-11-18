@@ -32,9 +32,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.maven.plugin.logging.Log;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 
 /**
  * Util functions for every plugin in this library.
@@ -120,15 +120,14 @@ public final class PluginUtil {
    *
    * @param currentArtifactMap
    *          The artifact map that is currently installed.
-   * @param newDistributionPackage
-   *          The new distribution package that will be installed.
+   * @param artifacts
+   *          The artifacts of the new distribution package that will be installed.
    * @return The artifact list that should be deleted.
    */
   public static List<ArtifactType> getArtifactsToRemove(
       final Map<ArtifactKey, ArtifactType> currentArtifactMap,
-      final DistributionPackageType newDistributionPackage) {
+      final ArtifactsType artifacts) {
     Map<ArtifactKey, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
-    ArtifactsType artifacts = newDistributionPackage.getArtifacts();
     if (artifacts == null) {
       return new ArrayList<>(currentArtifactMap.values());
     }
@@ -138,6 +137,16 @@ public final class PluginUtil {
       tmpArtifactMap.remove(artifactKey);
     }
     return new ArrayList<>(tmpArtifactMap.values());
+  }
+
+  /**
+   * Returns the java command to execute other java processes.
+   */
+  public static String getJavaCommand() {
+    String javaHome = System.getProperty("java.home");
+    String os = PluginUtil.getOS();
+    String extension = OS_WINDOWS.equals(os) ? ".exe" : ".sh";
+    return javaHome + "/bin/java" + extension;
   }
 
   /**

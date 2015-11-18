@@ -118,7 +118,6 @@
               <goal>helpmojo</goal>
             </goals>
           </execution>
-
         </executions>
         <configuration>
           <goalPrefix>eosgi</goalPrefix>
@@ -191,9 +190,10 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.velocity</groupId>
-      <artifactId>velocity</artifactId>
-      <version>1.7</version>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.enterprise</artifactId>
+      <version>4.2.0</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -203,28 +203,18 @@
     <dependency>
       <groupId>org.jacoco</groupId>
       <artifactId>org.jacoco.agent</artifactId>
-      <version>0.7.4.201502262128</version>
+      <version>0.7.5.201505241946</version>
       <classifier>runtime</classifier>
     </dependency>
     <dependency>
       <groupId>org.everit.osgi.dev</groupId>
       <artifactId>org.everit.osgi.dev.testrunner</artifactId>
-      <version>4.0.0</version>
+      <version>4.0.3</version>
     </dependency>
     <dependency>
       <groupId>org.rzo.yajsw</groupId>
       <artifactId>wrapper</artifactId>
       <version>11.11</version>
-    </dependency>
-    <dependency>
-      <groupId>org.everit.osgi.dev</groupId>
-      <artifactId>org.everit.osgi.dev.richconsole</artifactId>
-      <version>1.2.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.velocity</groupId>
-      <artifactId>velocity-tools</artifactId>
-      <version>2.0</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.tycho</groupId>
@@ -235,6 +225,32 @@
       <groupId>org.eclipse.tycho</groupId>
       <artifactId>org.eclipse.osgi.compatibility.state</artifactId>
       <version>1.0.100.v20150402-1551</version>
+    </dependency>
+    <dependency>
+      <groupId>org.everit.templating</groupId>
+      <artifactId>org.everit.templating.text</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.everit.expression</groupId>
+      <artifactId>org.everit.expression.mvel</artifactId>
+      <version>1.0.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.unbescape</groupId>
+      <artifactId>unbescape</artifactId>
+      <version>1.1.1.RELEASE</version>
+    </dependency>
+    <dependency>
+      <groupId>org.everit.osgi.dev</groupId>
+      <artifactId>org.everit.osgi.dev.eosgi.dist.schema</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -250,4 +266,5 @@
       </plugin>
     </plugins>
   </reporting>
+
 </project>

@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.everit.osgi.dev.maven;
+package org.everit.osgi.dev.maven.dto;
 
 import java.io.File;
 import java.util.List;
 
-import org.everit.osgi.dev.maven.jaxb.dist.definition.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 
 /**
  * Metadata of a distributed environment.

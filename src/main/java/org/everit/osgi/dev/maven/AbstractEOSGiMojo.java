@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -33,6 +32,11 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.everit.osgi.dev.maven.configuration.BundleSettings;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.configuration.LaunchConfig;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
+import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
 import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingService;
 import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.util.PluginUtil;
@@ -60,8 +64,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Comma separated list of the id of the environments that should be processed. Default is * that
    * means all environments.
    */
-  @Parameter(property = "eosgi.environmentId", defaultValue = "*")
-  protected String environmentId = "*";
+  @Parameter(name = "environmentId", property = "eosgi.environmentId", defaultValue = "*")
+  protected String environmentIdsToProcess = "*";
 
   /**
    * The environments on which the tests should run.
@@ -75,6 +79,12 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   protected MavenProject executedProject;
 
   private GoogleAnalyticsTrackingService googleAnalyticsTrackingService;
+
+  /**
+   * The configuration of the launched OSGi Container.
+   */
+  @Parameter
+  protected LaunchConfig launchConfig;
 
   @Parameter(defaultValue = "${mojoExecution}", readonly = true)
   protected MojoExecution mojo;
@@ -96,6 +106,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   @Override
   public final void execute() throws MojoExecutionException, MojoFailureException {
+
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
 
@@ -108,38 +119,37 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     }
   }
 
-  private BundleSettings findMatchingSettings(final EnvironmentConfiguration environment,
-      final String symbolicName,
-      final String bundleVersion) {
-    // Getting the start level
-    List<BundleSettings> bundleSettingsList = environment.getBundleSettings();
-    Iterator<BundleSettings> iterator = bundleSettingsList.iterator();
-    BundleSettings matchedSettings = null;
-    while (iterator.hasNext() && (matchedSettings == null)) {
-      BundleSettings settings = iterator.next();
+  private BundleSettings findMatchingSettings(final List<BundleSettings> bundleSettingsList,
+      final String symbolicName, final String bundleVersion) {
+
+    for (BundleSettings settings : bundleSettingsList) {
+
       if (settings.getSymbolicName().equals(symbolicName)
           && ((settings.getVersion() == null) || settings.getVersion().equals(bundleVersion))) {
-        matchedSettings = settings;
+
+        return settings;
       }
     }
-    return matchedSettings;
+    return null;
   }
 
   /**
    * Getting the processed artifacts of the project. The artifact list is calculated each time when
    * the function is called therefore the developer should not call it inside an iteration.
    *
-   * @param environment
-   *          Configuration of the environment that the distributable artifacts will be generated
-   *          for.
+   * @param bundleSettingsList
+   *          The bundle settings list of the environment that the distributable artifacts will be
+   *          generated for.
    * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
    * @throws MalformedURLException
    *           if the URL for the artifact is broken.
    */
   protected List<DistributableArtifact> generateDistributableArtifacts(
-      final EnvironmentConfiguration environment) throws MalformedURLException {
+      final List<BundleSettings> bundleSettingsList) throws MalformedURLException {
+
     @SuppressWarnings("unchecked")
     List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+
     if (executedProject != null) {
       availableArtifacts.add(executedProject.getArtifact());
     } else {
@@ -149,7 +159,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
     for (Artifact artifact : availableArtifacts) {
       if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
-        DistributableArtifact processedArtifact = processArtifact(environment, artifact);
+        DistributableArtifact processedArtifact = processArtifact(bundleSettingsList, artifact);
         result.add(processedArtifact);
       }
     }
@@ -163,9 +173,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * @return The default environment.
    */
   protected EnvironmentConfiguration getDefaultEnvironment() {
-    getLog()
-        .info("There is no environment specified in the project. Creating felix environment with"
-            + " default settings");
+
+    getLog().info("There is no environment specified in the project. "
+        + "Creating felix environment with default settings");
+
     EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
     defaultEnvironment.setId("equinox");
     defaultEnvironment.setFramework("equinox");
@@ -187,8 +198,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   /**
    * Getting an array of the environment configurations that should be processed based on the value
-   * of the {@link #environmentId} parameter. The value, that is returned, is calculated the first
-   * time the function is called.
+   * of the {@link #environmentIdsToProcess} parameter. The value, that is returned, is calculated
+   * the first time the function is called.
    *
    * @return The array of environment ids that should be processed.
    */
@@ -197,10 +208,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       return environmentsToProcess;
     }
 
-    if ("*".equals(environmentId)) {
+    if ("*".equals(environmentIdsToProcess)) {
       environmentsToProcess = getEnvironments();
     } else {
-      String[] environmentIdArray = environmentId.trim().split(",");
+      String[] environmentIdArray = environmentIdsToProcess.trim().split(",");
 
       EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
 
@@ -239,15 +250,15 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Checking if an artifact is an OSGI bundle. An artifact is an OSGI bundle if the MANIFEST.MF
    * file inside contains a Bundle-SymbolicName.
    *
-   * @param environment
-   *          The environment that uses the artifact.
+   * @param bundleSettingsList
+   *          The bundle settings list of the environment that uses the artifact.
    * @param artifact
    *          The artifact that is checked.
    * @return A {@link DistributableArtifact} with the Bundle-SymbolicName and a Bundle-Version.
    *         Bundle-Version comes from MANIFEST.MF but if Bundle-Version is not available there the
    *         default 0.0.0 version is provided.
    */
-  public DistributableArtifact processArtifact(final EnvironmentConfiguration environment,
+  public DistributableArtifact processArtifact(final List<BundleSettings> bundleSettingsList,
       final Artifact artifact) {
 
     if ("pom".equals(artifact.getType())) {
@@ -281,7 +292,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
         String fragmentHost = mainAttributes.getValue(Constants.FRAGMENT_HOST);
         String importPackage = mainAttributes.getValue(Constants.IMPORT_PACKAGE);
         String exportPackage = mainAttributes.getValue(Constants.EXPORT_PACKAGE);
-        BundleSettings bundleSettings = findMatchingSettings(environment, symbolicName, version);
+        BundleSettings bundleSettings =
+            findMatchingSettings(bundleSettingsList, symbolicName, version);
         Integer startLevel = null;
         if (bundleSettings != null) {
           startLevel = bundleSettings.getStartLevel();
@@ -296,6 +308,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     } catch (IOException e) {
       return new DistributableArtifact(artifact, null, null);
     }
+  }
+
+  public void setEnvironmentId(final String environmentId) {
+    environmentIdsToProcess = environmentId;
   }
 
 }

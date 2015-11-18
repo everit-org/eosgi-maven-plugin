@@ -26,9 +26,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -43,18 +43,21 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.ArtifactsType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.BundleDataType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.CommandType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.LauncherType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.LaunchersType;
-import org.everit.osgi.dev.maven.jaxb.dist.definition.OSGiActionType;
+import org.everit.osgi.dev.eosgi.dist.schema.util.EnvironmentConfigurationDTO;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
+import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
+import org.everit.osgi.dev.maven.util.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
 import org.rzo.yajsw.os.OperatingSystem;
@@ -72,8 +75,7 @@ import org.xml.sax.SAXException;
  * make this goal work.
  */
 @Mojo(name = "integration-test", defaultPhase = LifecyclePhase.INTEGRATION_TEST,
-    requiresProject = true,
-    requiresDependencyResolution = ResolutionScope.TEST)
+    requiresProject = true, requiresDependencyResolution = ResolutionScope.TEST)
 public class IntegrationTestMojo extends DistMojo {
 
   /**
@@ -122,23 +124,39 @@ public class IntegrationTestMojo extends DistMojo {
    */
   private static class TestResult {
 
-    public String environmentId;
+    private final String environmentId;
 
-    public int error;
+    private int error;
 
-    public int expectedTestNum;
+    private int expectedTestNum;
 
-    public int failure;
+    private int failure;
 
-    public int skipped;
+    private int skipped;
 
-    public int tests;
+    private int tests;
+
+    TestResult(final String environmentId) {
+      super();
+      this.environmentId = environmentId;
+    }
+
+    private void addToSum(final TestResult testResult) {
+      tests += testResult.tests;
+      error += testResult.error;
+      failure += testResult.failure;
+      skipped += testResult.skipped;
+      expectedTestNum += testResult.expectedTestNum;
+    }
+
   }
 
   /**
    * Constant of the MANIFEST header key to count the {@link #expectedNumberOfIntegrationTests}.
    */
   private static final String EXPECTED_NUMBER_OF_INTEGRATION_TESTS = "EOSGi-TestNum";
+
+  private static final long LOGGING_INTERVAL = 5000;
 
   private static final int MILLISECOND_NUM_IN_SECOND = 1000;
 
@@ -170,54 +188,62 @@ public class IntegrationTestMojo extends DistMojo {
   protected boolean consoleLog = true;
 
   /**
+   * Skipping the integration tests, only execute the dist goal.
+   */
+  @Parameter(property = "eosgi.distOnly", defaultValue = "false")
+  protected boolean distOnly = false;
+
+  /**
    * Skipping this plugin.
    */
-  @Parameter(property = "maven.test.skip", defaultValue = "false")
+  @Parameter(property = "eosgi.test.skip", defaultValue = "false")
   protected boolean skipTests = false;
 
-  private int calculateExpectedTestNum(final DistributedEnvironment distributedEnvironment) {
-    int result = 0;
-    ArtifactsType artifacts = distributedEnvironment.getDistributionPackage().getArtifacts();
+  private int calculateExpectedTestNum(final ArtifactsType artifacts,
+      final List<DistributableArtifact> distributableArtifacts) {
+
     if (artifacts == null) {
       return 0;
     }
-    List<ArtifactType> artifactList = artifacts.getArtifact();
-    Set<String> artifactsKeys = new HashSet<>();
-    for (ArtifactType artifactType : artifactList) {
-      BundleDataType bundleDataType = artifactType.getBundle();
-      if ((bundleDataType != null) && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
-        String artifactKey = artifactType.getGroupId() + ":" + artifactType.getArtifactId() + ":"
-            + artifactType.getVersion() + ":" + evaluateArtifactType(artifactType.getType()) + ":"
-            + evaluateClassifier(artifactType.getClassifier());
 
+    Set<String> artifactsKeys = new HashSet<>();
+
+    for (ArtifactType artifactType : artifacts.getArtifact()) {
+
+      BundleDataType bundleDataType = artifactType.getBundle();
+
+      if ((bundleDataType != null) && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
+
+        String artifactKey = getArtifactKey(artifactType);
         artifactsKeys.add(artifactKey);
       }
     }
 
-    for (DistributableArtifact distributableArtifact : distributedEnvironment
-        .getDistributableArtifacts()) {
-      DistributableArtifactBundleMeta bundle = distributableArtifact.getBundle();
-      if (bundle != null) {
-        Artifact artifact = distributableArtifact.getArtifact();
+    int eosgiTestNum = 0;
 
-        String artifactKey = artifact.getGroupId() + ":" + artifact.getArtifactId() + ":"
-            + artifact.getVersion() + ":" + evaluateArtifactType(artifact.getType()) + ":"
-            + evaluateClassifier(artifact.getClassifier());
+    for (DistributableArtifact distributableArtifact : distributableArtifacts) {
+
+      DistributableArtifactBundleMeta bundle = distributableArtifact.getBundle();
+
+      if (bundle != null) {
+
+        Artifact artifact = distributableArtifact.getArtifact();
+        String artifactKey = getArtifactKey(artifact);
 
         if (artifactsKeys.contains(artifactKey)) {
+
           Attributes mainAttributes = distributableArtifact.getManifest().getMainAttributes();
 
           String currentExpectedNumberString =
               mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
           if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
-            long currentExpectedNumber = Long.valueOf(currentExpectedNumberString);
-            result += currentExpectedNumber;
+            eosgiTestNum += Long.valueOf(currentExpectedNumberString);
           }
         }
       }
 
     }
-    return result;
+    return eosgiTestNum;
   }
 
   private List<TestResult> calculateExpectedTestNumFailures(final List<TestResult> testResults) {
@@ -228,46 +254,6 @@ public class IntegrationTestMojo extends DistMojo {
       }
     }
     return expecationTestNumFailures;
-  }
-
-  private LauncherType calculateLauncherForCurrentOS(
-      final DistributedEnvironment distributedEnvironment) {
-
-    LaunchersType launchers = distributedEnvironment.getDistributionPackage().getLaunchers();
-    if (launchers == null) {
-      return null;
-    }
-
-    List<LauncherType> launcherList = launchers.getLauncher();
-
-    if (launcherList.size() == 0) {
-      return null;
-    }
-
-    String os = PluginUtil.getOS();
-
-    LauncherType selectedLauncher = null;
-    Iterator<LauncherType> iterator = launcherList.iterator();
-    while ((selectedLauncher == null) && iterator.hasNext()) {
-      LauncherType launcher = iterator.next();
-      if (os.equals(launcher.getOs())) {
-        selectedLauncher = launcher;
-      }
-    }
-    return selectedLauncher;
-  }
-
-  private TestResult calculateTestResultSum(final List<TestResult> testResults) {
-    TestResult resultSum = new TestResult();
-
-    for (TestResult testResult : testResults) {
-      resultSum.tests += testResult.tests;
-      resultSum.error += testResult.error;
-      resultSum.failure += testResult.failure;
-      resultSum.skipped += testResult.skipped;
-      resultSum.expectedTestNum += testResult.expectedTestNum;
-    }
-    return resultSum;
   }
 
   private void checkExitCode(final Process process, final String environmentId)
@@ -312,18 +298,20 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private File createTempFolder() throws IOException {
-    File tmpPath = File.createTempFile("eosgi-", "-tmp");
+  private File createTempFolder(final String environmentId) throws IOException {
+    File tmpPath = File.createTempFile("eosgi-" + environmentId, "-tmp");
     tmpPath.delete();
     tmpPath.mkdir();
     return tmpPath;
   }
 
-  private Process createTestProcess(final DistributedEnvironment distributedEnvironment,
-      final CommandType startCommand, final File resultFolder, final File tmpPath) {
-    OperatingSystem operatingSystem = OperatingSystem.instance();
+  private Process createTestProcess(final String environmentId, final File workingDirFile,
+      final String[] command, final File resultFolder, final File tmpPathFile) {
+    String title = "EOSGi TestProcess - " + environmentId;
 
-    getLog().info("Operating system is " + operatingSystem.getOperatingSystemName());
+    OperatingSystem operatingSystem = OperatingSystem.instance();
+    getLog().info("[" + title + "] Operating system is "
+        + operatingSystem.getOperatingSystemName());
 
     String lowerCaseOperatingSystemName =
         operatingSystem.getOperatingSystemName().toLowerCase(Locale.getDefault());
@@ -331,31 +319,39 @@ public class IntegrationTestMojo extends DistMojo {
     Process process;
     if (lowerCaseOperatingSystemName.contains("linux")
         || lowerCaseOperatingSystemName.startsWith("mac os x")) {
-      getLog().info("Starting BSD process");
+      getLog().info("[" + title + "] Starting BSD process");
       process = new BSDProcess();
     } else {
       ProcessManager processManager = operatingSystem.processManagerInstance();
       process = processManager.createProcess();
     }
-    process.setTitle("EOSGi TestProcess - " + distributedEnvironment.getEnvironment().getId());
+    process.setTitle(title);
 
-    process.setCommand(startCommand.getValue().split(" "));
-    getLog().info("Setting tmp path: " + tmpPath.getAbsolutePath());
-    process.setTmpPath(tmpPath.getAbsolutePath());
+    process.setCommand(command);
+    getLog().info("[" + title + "] Command: " + Arrays.deepToString(command));
+
+    String tmpPath = tmpPathFile.getAbsolutePath();
+    process.setTmpPath(tmpPath);
+    getLog().info("[" + title + "] Tmp path: " + tmpPath);
+
     process.setVisible(false);
     process.setTeeName(null);
     process.setPipeStreams(true, false);
     process.setLogger(Logger.getLogger("eosgi"));
+
+    String workingDir = workingDirFile.getAbsolutePath();
+    process.setWorkingDir(workingDir);
+    getLog().info("[" + title + "] Working dir: " + workingDir);
 
     Map<String, String> envMap = new HashMap<String, String>(System.getenv());
     envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
     envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
 
     List<String[]> env = PluginUtil.convertMapToList(envMap);
-
     process.setEnvironment(env);
-    File commandFolder = resolveCommandFolder(distributedEnvironment, startCommand);
-    process.setWorkingDir(commandFolder.getAbsolutePath());
+    getLog().info("[" + title + "] Environment: "
+        + Arrays.deepToString(env.toArray(new String[][] {})));
+
     return process;
   }
 
@@ -376,6 +372,12 @@ public class IntegrationTestMojo extends DistMojo {
 
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
+
+    if (distOnly) {
+      super.doExecute();
+      return;
+    }
+
     if (skipTests) {
       return;
     }
@@ -386,18 +388,37 @@ public class IntegrationTestMojo extends DistMojo {
 
     File testReportFolderFile = initializeReportFolder();
 
-    List<TestResult> testResults = new ArrayList<TestResult>();
-    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
-      runIntegrationTestsOnEnvironment(testReportFolderFile, testResults, distributedEnvironment);
-    }
+    TestResult testResultSum = new TestResult(null);
+    List<TestResult> testResults = new ArrayList<>();
 
-    TestResult resultSum = calculateTestResultSum(testResults);
+    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
+
+      EnvironmentConfiguration environment = distributedEnvironment.getEnvironment();
+
+      String environmentId = environment.getId();
+      File distFolderFile = distributedEnvironment.getDistributionFolder();
+      int shutdownTimeout = environment.getShutdownTimeout();
+      int timeout = environment.getTimeout();
+
+      ArtifactsType artifacts =
+          distributedEnvironment.getDistributionPackage().getArtifacts();
+      List<DistributableArtifact> distributableArtifacts =
+          distributedEnvironment.getDistributableArtifacts();
+      int expectedTestNum = calculateExpectedTestNum(artifacts, distributableArtifacts);
+
+      TestResult testResult = runIntegrationTestsOnEnvironment(
+          environmentId, distFolderFile, testReportFolderFile,
+          expectedTestNum, shutdownTimeout, timeout);
+
+      testResults.add(testResult);
+      testResultSum.addToSum(testResult);
+    }
 
     List<TestResult> expectedTestNumFailures = calculateExpectedTestNumFailures(testResults);
 
-    printTestResultSum(resultSum);
+    printTestResultSum(testResultSum);
 
-    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, resultSum);
+    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, testResultSum);
   }
 
   private Closeable doStreamRedirections(final Process process, final File resultFolder)
@@ -485,6 +506,22 @@ public class IntegrationTestMojo extends DistMojo {
     return classifier;
   }
 
+  private String getArtifactKey(final Artifact artifact) {
+    return artifact.getGroupId() + ":"
+        + artifact.getArtifactId() + ":"
+        + artifact.getVersion() + ":"
+        + evaluateArtifactType(artifact.getType()) + ":"
+        + evaluateClassifier(artifact.getClassifier());
+  }
+
+  private String getArtifactKey(final ArtifactType artifactType) {
+    return artifactType.getGroupId() + ":"
+        + artifactType.getArtifactId() + ":"
+        + artifactType.getVersion() + ":"
+        + evaluateArtifactType(artifactType.getType()) + ":"
+        + evaluateClassifier(artifactType.getClassifier());
+  }
+
   private File initializeReportFolder() {
     File testReportFolderFile = new File(reportFolder);
     getLog().info("Integration test output directory: " + testReportFolderFile.getAbsolutePath());
@@ -496,45 +533,41 @@ public class IntegrationTestMojo extends DistMojo {
     return testReportFolderFile;
   }
 
-  private void printEnvironmentProcessStartToLog(
-      final DistributedEnvironment distributedEnvironment) {
-    StringBuilder startEnvLogTextSB = new StringBuilder(
-        "\n-------------------------------------------------------\n");
-    startEnvLogTextSB.append("Starting test environment: ")
-        .append(distributedEnvironment.getEnvironment().getId())
-        .append("\n")
-        .append("-------------------------------------------------------\n\n");
-    getLog().info(startEnvLogTextSB.toString());
+  private void printEnvironmentProcessStartToLog(final String environemntId) {
+    StringBuilder sb = new StringBuilder("\n");
+    sb.append("-------------------------------------------------------\n");
+    sb.append("Starting test environment: ").append(environemntId).append("\n");
+    sb.append("-------------------------------------------------------\n\n");
+    getLog().info(sb.toString());
   }
 
-  private void printTestResultsOfEnvironment(final DistributedEnvironment distributedEnvironment,
+  private void printTestResultsOfEnvironment(final String environmentId,
       final TestResult testResult) {
-    StringBuilder stopEnvLogTextSB = new StringBuilder(
-        "\n-------------------------------------------------------\n");
-    stopEnvLogTextSB.append("Test environment finished: ")
-        .append(distributedEnvironment.getEnvironment().getId())
-        .append("\n")
-        .append("-------------------------------------------------------\n\n")
-        .append("Tests run: ")
-        .append(testResult.tests).append(", Failures: ").append(testResult.failure)
-        .append(", Errors: ").append(testResult.error).append(", Skipped: ")
-        .append(testResult.skipped)
-        .append("\n");
-    getLog().info(stopEnvLogTextSB.toString());
+    StringBuilder sb = new StringBuilder("\n");
+    sb.append("-------------------------------------------------------\n");
+    sb.append("Test environment finished: ").append(environmentId).append("\n");
+    sb.append("-------------------------------------------------------\n\n");
+    sb.append("Results:\n\n");
+    sb.append("Tests run: ").append(testResult.tests);
+    sb.append(", Failures: ").append(testResult.failure);
+    sb.append(", Errors: ").append(testResult.error);
+    sb.append(", Skipped: ").append(testResult.skipped);
+    getLog().info(sb.toString());
   }
 
-  private void printTestResultSum(final TestResult resultSum) {
-    StringBuilder testLogTextSB =
-        new StringBuilder("\n-------------------------------------------------------\n");
-    testLogTextSB.append("I N T E G R A T I O N   T E S T S   ( O S G I)\n")
-        .append("-------------------------------------------------------\n\n")
-        .append("Results:\n\n")
-        .append("Tests run: ").append(resultSum.tests).append(", Failures: ")
-        .append(resultSum.failure)
-        .append(", Errors: ").append(resultSum.error).append(", Skipped: ")
-        .append(resultSum.skipped)
-        .append("\n");
-    getLog().info(testLogTextSB.toString());
+  private void printTestResultSum(final TestResult testResultSum) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("\n");
+    sb.append("-------------------------------------------------------\n");
+    sb.append("I N T E G R A T I O N   T E S T S   ( O S G i)\n");
+    sb.append("-------------------------------------------------------\n\n");
+    sb.append("Results:\n\n");
+    sb.append("Tests run: ").append(testResultSum.tests);
+    sb.append(", Failures: ").append(testResultSum.failure);
+    sb.append(", Errors: ").append(testResultSum.error);
+    sb.append(", Skipped: ").append(testResultSum.skipped);
+    sb.append("\n");
+    getLog().info(sb.toString());
   }
 
   private void processResults(final File resultFolder, final TestResult results)
@@ -584,58 +617,58 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private File resolveCommandFolder(final DistributedEnvironment distributedEnvironment,
-      final CommandType command) {
-    File commandFolder = distributedEnvironment.getDistributionFolder();
+  private String[] resolveCommandForEnvironment(final File distFolderFile)
+      throws MojoFailureException {
 
-    String folder = command.getFolder();
-    if (folder != null) {
-      commandFolder = new File(commandFolder, folder);
-    }
-    return commandFolder;
-  }
+    EnvironmentConfigurationDTO environmentConfigurationDTO =
+        distSchemaProvider.getEnvironmentConfiguration(distFolderFile, UseByType.INTEGRATION_TEST);
 
-  private CommandType resolveStartCommandForEnvironment(
-      final DistributedEnvironment distributedEnvironment)
-          throws MojoFailureException {
-    LauncherType launcher = calculateLauncherForCurrentOS(distributedEnvironment);
+    List<String> command = new ArrayList<>();
 
-    if (launcher == null) {
-      throw new MojoFailureException(
-          "No start command specified for tests in the distribution package of "
-              + distributedEnvironment.getEnvironment().getId());
+    command.add(PluginUtil.getJavaCommand());
+
+    String classPath = environmentConfigurationDTO.classpath;
+    if ((classPath != null) && !classPath.trim().isEmpty()) {
+      command.add("-classpath");
+      command.add(classPath);
     }
 
-    CommandType startCommand = launcher.getStartCommand();
-    return startCommand;
+    command.addAll(environmentConfigurationDTO.systemProperties);
+    command.addAll(environmentConfigurationDTO.vmArguments);
+
+    command.add("-jar");
+    command.add(environmentConfigurationDTO.mainJar);
+    command.add(environmentConfigurationDTO.mainClass);
+
+    command.addAll(environmentConfigurationDTO.programArguments);
+
+    return command.toArray(new String[] {});
   }
 
-  private void runIntegrationTestsOnEnvironment(final File testReportFolderFile,
-      final List<TestResult> testResults, final DistributedEnvironment distributedEnvironment)
+  private TestResult runIntegrationTestsOnEnvironment(final String environmentId,
+      final File distFolderFile, final File testReportFolderFile,
+      final int expectedTestNum, final int shutdownTimeout, final int timeout)
           throws MojoFailureException, MojoExecutionException {
-    printEnvironmentProcessStartToLog(distributedEnvironment);
 
-    TestResult testResult = new TestResult();
-    testResult.environmentId = distributedEnvironment.getEnvironment().getId();
-    testResult.expectedTestNum = calculateExpectedTestNum(distributedEnvironment);
-    testResults.add(testResult);
+    printEnvironmentProcessStartToLog(environmentId);
 
-    CommandType startCommand = resolveStartCommandForEnvironment(distributedEnvironment);
+    TestResult testResult = new TestResult(environmentId);
+    testResult.expectedTestNum = expectedTestNum;
+
+    String[] command = resolveCommandForEnvironment(distFolderFile);
 
     try {
 
-      File resultFolder =
-          new File(testReportFolderFile, distributedEnvironment.getEnvironment().getId());
+      File resultFolder = new File(testReportFolderFile, environmentId);
       resultFolder.mkdirs();
-      File tmpPath = createTempFolder();
+      File tmpPath = createTempFolder(environmentId);
 
-      Process process =
-          createTestProcess(distributedEnvironment, startCommand, resultFolder, tmpPath);
+      Process process = createTestProcess(
+          environmentId, distFolderFile, command, resultFolder, tmpPath);
 
       boolean timeoutHappened = false;
-      ShutdownHook shutdownHook =
-          new ShutdownHook(process, distributedEnvironment.getEnvironment()
-              .getShutdownTimeout());
+
+      ShutdownHook shutdownHook = new ShutdownHook(process, shutdownTimeout);
       Runtime.getRuntime().addShutdownHook(shutdownHook);
 
       boolean started = process.start();
@@ -647,13 +680,12 @@ public class IntegrationTestMojo extends DistMojo {
 
       AutoCloseable redirectionCloseable = doStreamRedirections(process, resultFolder);
       try {
-        waitForProcessWithTimeoutAndLogging(process, distributedEnvironment.getEnvironment());
+        waitForProcess(process, timeout);
 
         if (process.isRunning()) {
           getLog().warn("Test running process did not stop until timeout. Forcing to stop it...");
           timeoutHappened = true;
-          shutdownProcess(process, distributedEnvironment.getEnvironment().getShutdownTimeout(),
-              -1);
+          shutdownProcess(process, shutdownTimeout, -1);
         }
       } finally {
         try {
@@ -665,11 +697,9 @@ public class IntegrationTestMojo extends DistMojo {
 
       PluginUtil.deleteFolderRecurse(tmpPath);
 
-      String environmentId = distributedEnvironment.getEnvironment().getId();
-
       if (timeoutHappened) {
-        throw new MojoExecutionException("Test process of environment " + environmentId
-            + " did not finish within timeout");
+        throw new MojoExecutionException("Test process of environment "
+            + "[" + environmentId + "] did not finish within timeout");
       }
 
       checkExitError(resultFolder, environmentId);
@@ -679,34 +709,37 @@ public class IntegrationTestMojo extends DistMojo {
 
       processResults(resultFolder, testResult);
 
-      printTestResultsOfEnvironment(distributedEnvironment, testResult);
+      printTestResultsOfEnvironment(environmentId, testResult);
     } catch (IOException e) {
       throw new MojoExecutionException("Error during running integration tests", e);
     }
+
+    return testResult;
   }
 
   private void shutdownProcess(final Process process, final int shutdownTimeout, final int code) {
-    getLog().warn("Stopping test process: " + process.getPid());
-    if (process.isRunning()) {
-      if (process instanceof WindowsXPProcess) {
-        // In case of windows xp process we must kill the process with a command as there is no
-        // visible
-        // window and kill tree command of YAJSW does not work. Hopefully this is a temporary
-        // solution.
-        Log log = getLog();
 
-        OperatingSystem operatingSystem = OperatingSystem.instance();
-        ProcessManager processManagerInstance = operatingSystem.processManagerInstance();
-        Process killProcess = processManagerInstance.createProcess();
-        String killCommand = "taskkill /F /T /PID " + process.getPid();
-        log.warn("Killing windows process with command: " + killCommand + "");
-        killProcess.setCommand(killCommand);
-        killProcess.setVisible(false);
-        killProcess.start();
-        process.waitFor(shutdownTimeout);
-      } else {
-        process.stop(shutdownTimeout, code);
-      }
+    getLog().warn("Stopping test process: " + process.getPid());
+
+    if (!process.isRunning()) {
+      return;
+    }
+
+    if (process instanceof WindowsXPProcess) {
+      // In case of windows xp process we must kill the process with a command as there is no
+      // visible window and kill tree command of YAJSW does not work. Hopefully this is a temporary
+      // solution.
+      OperatingSystem operatingSystem = OperatingSystem.instance();
+      ProcessManager processManagerInstance = operatingSystem.processManagerInstance();
+      Process killProcess = processManagerInstance.createProcess();
+      String killCommand = "taskkill /F /T /PID " + process.getPid();
+      getLog().warn("Killing windows process with command: " + killCommand + "");
+      killProcess.setCommand(killCommand);
+      killProcess.setVisible(false);
+      killProcess.start();
+      process.waitFor(shutdownTimeout);
+    } else {
+      process.stop(shutdownTimeout, code);
     }
   }
 
@@ -730,16 +763,13 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private void waitForProcessWithTimeoutAndLogging(final Process process,
-      final EnvironmentConfiguration environment) {
-    final long loggingInterval = 5000;
-    final long timeout = environment.getTimeout();
-    final long startTime = System.currentTimeMillis();
+  private void waitForProcess(final Process process, final long timeout) {
 
-    long nextExpectedLogging = startTime + loggingInterval;
-
-    final long latestEndTime = startTime + timeout;
+    long startTime = System.currentTimeMillis();
+    long nextExpectedLogging = startTime + LOGGING_INTERVAL;
+    long latestEndTime = startTime + timeout;
     long currentTime = startTime;
+
     while (process.isRunning() && (currentTime < latestEndTime)) {
       try {
         Thread.sleep(TIMEOUT_CHECK_INTERVAL);
@@ -751,7 +781,7 @@ public class IntegrationTestMojo extends DistMojo {
       if (!consoleLog && (currentTime > nextExpectedLogging)) {
         long secondsSinceStart = (nextExpectedLogging - startTime) / MILLISECOND_NUM_IN_SECOND;
         getLog().info("Waiting for test results since " + secondsSinceStart + "s");
-        nextExpectedLogging = nextExpectedLogging + loggingInterval;
+        nextExpectedLogging = nextExpectedLogging + LOGGING_INTERVAL;
       }
       currentTime = System.currentTimeMillis();
     }

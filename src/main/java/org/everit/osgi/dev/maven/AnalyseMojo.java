@@ -41,6 +41,8 @@ import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
 import org.eclipse.osgi.service.resolver.PlatformAdmin;
 import org.eclipse.osgi.service.resolver.State;
+import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -101,7 +103,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
    * Map of plugin artifacts.
    */
   @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
-  protected Map<String, Artifact> pluginArtifactMap;
+  private Map<String, Artifact> pluginArtifactMap;
 
   private void diagnose(final String[] bundleLocations) throws MojoFailureException {
     Framework osgiContainer = null;
@@ -141,7 +143,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
     for (EnvironmentConfiguration environment : environmentsToProcess) {
       List<DistributableArtifact> distributableArtifacts;
       try {
-        distributableArtifacts = generateDistributableArtifacts(environment);
+        distributableArtifacts = generateDistributableArtifacts(environment.getBundleSettings());
       } catch (MalformedURLException e) {
         throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
       }
