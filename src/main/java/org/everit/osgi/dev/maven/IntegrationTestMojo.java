@@ -51,6 +51,7 @@ import org.everit.osgi.dev.eosgi.dist.schema.util.EnvironmentConfigurationDTO;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
@@ -620,8 +621,12 @@ public class IntegrationTestMojo extends DistMojo {
   private String[] resolveCommandForEnvironment(final File distFolderFile)
       throws MojoFailureException {
 
+    DistributionPackageType distributionPackage =
+        distSchemaProvider.getOverridedDistributionPackage(distFolderFile,
+            UseByType.INTEGRATION_TEST);
+
     EnvironmentConfigurationDTO environmentConfigurationDTO =
-        distSchemaProvider.getEnvironmentConfiguration(distFolderFile, UseByType.INTEGRATION_TEST);
+        distSchemaProvider.getEnvironmentConfiguration(distributionPackage);
 
     List<String> command = new ArrayList<>();
 

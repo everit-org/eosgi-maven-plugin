@@ -185,15 +185,8 @@
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>4.3.1</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.enterprise</artifactId>
-      <version>4.2.0</version>
-      <scope>provided</scope>
+      <artifactId>org.osgi.jmx</artifactId>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>

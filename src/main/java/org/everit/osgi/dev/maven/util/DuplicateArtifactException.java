@@ -20,16 +20,13 @@ package org.everit.osgi.dev.maven.util;
  */
 public class DuplicateArtifactException extends RuntimeException {
 
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1435912027715305152L;
 
-  private final ArtifactKey artifactKey;
+  public final String location;
 
-  public DuplicateArtifactException(final ArtifactKey artifactKey) {
-    super("The artifact is listed more than once: " + artifactKey.toString());
-    this.artifactKey = artifactKey;
+  public DuplicateArtifactException(final String location) {
+    super("The artifact is listed more than once with its location: " + location);
+    this.location = location;
   }
 
-  public ArtifactKey getArtifactKey() {
-    return artifactKey;
-  }
 }

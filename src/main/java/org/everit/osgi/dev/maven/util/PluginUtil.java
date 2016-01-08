@@ -34,6 +34,7 @@ import java.util.Map.Entry;
 import org.apache.maven.plugin.logging.Log;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 
 /**
@@ -74,24 +75,34 @@ public final class PluginUtil {
    *          The distribution package.
    * @return The artifact map.
    */
-  public static Map<ArtifactKey, ArtifactType> createArtifactMap(
+  public static Map<String, ArtifactType> createArtifactMap(
       final DistributionPackageType distributionPackage) {
+
     if (distributionPackage == null) {
       return Collections.emptyMap();
     }
+
     ArtifactsType artifacts = distributionPackage.getArtifacts();
     if (artifacts == null) {
       return Collections.emptyMap();
     }
-    Map<ArtifactKey, ArtifactType> result = new HashMap<>();
+
+    Map<String, ArtifactType> result = new HashMap<>();
     List<ArtifactType> artifactList = artifacts.getArtifact();
+
     for (ArtifactType artifact : artifactList) {
-      ArtifactKey artifactKey = new ArtifactKey(artifact);
-      if (result.containsKey(artifactKey)) {
-        throw new DuplicateArtifactException(artifactKey);
+
+      BundleDataType bundleDataType = artifact.getBundle();
+      if (bundleDataType != null) {
+
+        String location = bundleDataType.getLocation();
+        if (result.containsKey(location)) {
+          throw new DuplicateArtifactException(location);
+        }
+        result.put(location, artifact);
       }
-      result.put(artifactKey, artifact);
     }
+
     return result;
   }
 
@@ -125,17 +136,26 @@ public final class PluginUtil {
    * @return The artifact list that should be deleted.
    */
   public static List<ArtifactType> getArtifactsToRemove(
-      final Map<ArtifactKey, ArtifactType> currentArtifactMap,
+      final Map<String, ArtifactType> currentArtifactMap,
       final ArtifactsType artifacts) {
-    Map<ArtifactKey, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
+
+    Map<String, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
     if (artifacts == null) {
       return new ArrayList<>(currentArtifactMap.values());
     }
+
     List<ArtifactType> artifactList = artifacts.getArtifact();
+
     for (ArtifactType artifact : artifactList) {
-      ArtifactKey artifactKey = new ArtifactKey(artifact);
-      tmpArtifactMap.remove(artifactKey);
+
+      BundleDataType bundleDataType = artifact.getBundle();
+
+      if (bundleDataType != null) {
+        String location = bundleDataType.getLocation();
+        tmpArtifactMap.remove(location);
+      }
     }
+
     return new ArrayList<>(tmpArtifactMap.values());
   }
 
