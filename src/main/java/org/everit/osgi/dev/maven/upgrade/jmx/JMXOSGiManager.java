@@ -50,6 +50,8 @@ public class JMXOSGiManager implements RemoteOSGiManager {
 
   private static final ObjectName FRAMEWORK_MBEAN_MBEAN_FILTER;
 
+  private static final String REFERENCE = "reference:";
+
   static {
     try {
       FRAMEWORK_MBEAN_MBEAN_FILTER = new ObjectName(FrameworkMBean.OBJECTNAME + ",*");
@@ -251,7 +253,11 @@ public class JMXOSGiManager implements RemoteOSGiManager {
           String uniqueIdentifier = createUniqueIdentifier(bundleDataType);
           long bundleIdentifier = bundleIdentifiers.get(uniqueIdentifier);
 
-          frameworkMBean.updateBundleFromURL(bundleIdentifier, bundleDataType.getLocation());
+          String location = bundleDataType.getLocation();
+          // TODO if (location.startsWith(REFERENCE)) {
+          // location = location.substring(REFERENCE.length());
+          // }
+          frameworkMBean.updateBundleFromURL(bundleIdentifier, location);
 
         }
       }

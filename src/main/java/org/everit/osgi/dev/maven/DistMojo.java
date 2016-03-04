@@ -81,6 +81,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private static final int MAVEN_ARTIFACT_ID_PART_NUM = 3;
 
+  private static final String VAR_DIST_UTIL = "distUtil";
+
   @Component
   protected ArtifactFactory artifactFactory;
 
@@ -139,7 +141,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.sourceDistPath", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistPath;
 
-  private RemoteOSGiManager createRemoteOSGiManager(
+  private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
       final EnvironmentConfigurationDTO environmentConfigurationDTO) {
 
     Integer port = getRemoteUpgradePort(environmentConfigurationDTO);
@@ -151,7 +153,8 @@ public class DistMojo extends AbstractEOSGiMojo {
       return new JMXOSGiManager(port, getLog());
     } catch (IOException | InstanceNotFoundException | IntrospectionException
         | ReflectionException e) {
-      getLog().info("Incremental OSGi bundle update is not available. "
+      getLog().info("Incremental OSGi bundle update is not available for environment ["
+          + environmentId + "]. "
           + "Caused by: " + e.getClass().getName() + " " + e.getMessage());
       getLog().debug(e);
     }
@@ -159,7 +162,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     return null;
   }
 
-  private void distributeArtifacts(final RemoteOSGiManager remoteOSGiManager,
+  private void distributeArtifacts(final String environmentId,
+      final RemoteOSGiManager remoteOSGiManager,
       final File envDistFolderFile, final Map<String, ArtifactType> existingArtifactMap,
       final ArtifactsType artifactsType)
           throws MojoExecutionException {
@@ -213,6 +217,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     remoteOSGiManager.installBundles(bundlesToInstall.toArray(new BundleDataType[] {}));
     remoteOSGiManager.updateBundles(bundlesToUpdate.toArray(new BundleDataType[] {}));
+    getLog()
+        .info("Incremental update of environment [" + environmentId + "] finished successfully.");
   }
 
   @Override
@@ -253,9 +259,11 @@ public class DistMojo extends AbstractEOSGiMojo {
       throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
     }
 
+    String environmentId = environment.getId();
+
     Artifact distPackageArtifact = resolveDistPackage(environment.getFramework());
     File distPackageFile = distPackageArtifact.getFile();
-    File distFolderFile = new File(globalDistFolderFile, environment.getId());
+    File distFolderFile = new File(globalDistFolderFile, environmentId);
 
     DistributionPackageType existingDistributionPackage =
         distSchemaProvider.getOverridedDistributionPackage(distFolderFile, UseByType.PARSABLES);
@@ -290,13 +298,13 @@ public class DistMojo extends AbstractEOSGiMojo {
           PluginUtil.getArtifactsToRemove(existingArtifactMap, artifacts);
 
       if (existingDistributionPackage != null) {
-        remoteOSGiManager = createRemoteOSGiManager(envConfig);
+        remoteOSGiManager = createRemoteOSGiManager(environmentId, envConfig);
       }
 
-      removeArtifactsFromDistributedEnvironment(
+      removeArtifactsFromDistributedEnvironment(environmentId,
           remoteOSGiManager, distFolderFile, artifactsToRemove);
 
-      distributeArtifacts(
+      distributeArtifacts(environmentId,
           remoteOSGiManager, distFolderFile, existingArtifactMap, artifacts);
 
       parseParsables(distFolderFile, distributionPackage);
@@ -307,7 +315,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       if (envConfig.isChanged(existingEnvConfig)) {
         getLog().warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         getLog().warn("!!! The environment configuration has been changed. "
-            + "[" + environment.getId() + "] should be restarted.");
+            + "[" + environmentId + "] should be restarted.");
         getLog().warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       }
 
@@ -368,7 +376,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     vars.put("bundleStartLevel", environment.getBundleStartLevel());
     vars.put("distributableArtifacts", distributableArtifacts);
     vars.put("launchConfig", launchConfig);
-    vars.put("distUtil", new DistUtil());
+    vars.put(VAR_DIST_UTIL, new DistUtil());
     try {
       fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
     } catch (IOException e) {
@@ -386,7 +394,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributionPackage", distributionPackage);
-    vars.put("distUtil", new DistUtil());
+    vars.put(VAR_DIST_UTIL, new DistUtil());
 
     ParsablesType parsables = distributionPackage.getParsables();
     if (parsables != null) {
@@ -441,8 +449,9 @@ public class DistMojo extends AbstractEOSGiMojo {
     return result;
   }
 
-  private void removeArtifactsFromDistributedEnvironment(final RemoteOSGiManager remoteOSGiManager,
-      final File distFolderFile, final List<ArtifactType> artifactsToRemove) {
+  private void removeArtifactsFromDistributedEnvironment(final String environmentId,
+      final RemoteOSGiManager remoteOSGiManager, final File distFolderFile,
+      final List<ArtifactType> artifactsToRemove) {
 
     if (remoteOSGiManager != null) {
       remoteOSGiManager.uninstallBundles(toBundles(artifactsToRemove));
@@ -468,7 +477,8 @@ public class DistMojo extends AbstractEOSGiMojo {
       File artifactFile = new File(targetFolderFile, targetFile);
       if (!artifactFile.delete()) {
         getLog().warn("Failed to remove artifact [" + artifactFile.getAbsolutePath()
-            + "] from the file system. Incremental updating will not work properly.");
+            + "] from the file system. Incremental updating will not work properly on environment ["
+            + environmentId + "].");
       }
     }
 
