@@ -32,6 +32,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.settings.Settings;
 import org.everit.osgi.dev.maven.configuration.BundleSettings;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
@@ -46,6 +47,8 @@ import org.osgi.framework.Constants;
  * Mojos that extend this class can use the environment information defined for the plugin.
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
+
+  private static final String DEFAULT_ENVIRONMENT = "equinox";
 
   /**
    * The name of the referer that means who execute goal (example: eosgi-maven-plugin or
@@ -78,8 +81,6 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   @Parameter(property = "executedProject")
   protected MavenProject executedProject;
 
-  private GoogleAnalyticsTrackingService googleAnalyticsTrackingService;
-
   /**
    * The configuration of the launched OSGi Container.
    */
@@ -94,6 +95,9 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   @Parameter(property = "project")
   protected MavenProject project;
+
+  @Parameter(defaultValue = "${settings}", readonly = true)
+  private Settings settings;
 
   /**
    * Skip analytics tracking or not. That means send event statistics to Google Analytics or not.
@@ -111,11 +115,17 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     String goalName = mojoDescriptor.getGoal();
 
     long eventId = GoogleAnalyticsTrackingService.DEFAULT_EVENT_ID;
+
+    String pluginVersion = this.getClass().getPackage().getImplementationVersion();
+    GoogleAnalyticsTrackingService googleAnalyticsTrackingService =
+        new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs,
+            skipAnalytics(), pluginVersion, getLog());
+
     try {
-      eventId = getGoogleAnalyticsTrackingService().sendEvent(analyticsReferer, goalName);
+      eventId = googleAnalyticsTrackingService.sendEvent(analyticsReferer, goalName);
       doExecute();
     } finally {
-      getGoogleAnalyticsTrackingService().waitForEventSending(eventId);
+      googleAnalyticsTrackingService.waitForEventSending(eventId);
     }
   }
 
@@ -175,11 +185,11 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   protected EnvironmentConfiguration getDefaultEnvironment() {
 
     getLog().info("There is no environment specified in the project. "
-        + "Creating felix environment with default settings");
+        + "Creating " + DEFAULT_ENVIRONMENT + " environment with default settings");
 
     EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
-    defaultEnvironment.setId("equinox");
-    defaultEnvironment.setFramework("equinox");
+    defaultEnvironment.setId(DEFAULT_ENVIRONMENT);
+    defaultEnvironment.setFramework(DEFAULT_ENVIRONMENT);
     return defaultEnvironment;
   }
 
@@ -231,19 +241,6 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       environmentsToProcess = result.toArray(new EnvironmentConfiguration[result.size()]);
     }
     return environmentsToProcess;
-  }
-
-  /**
-   * Gets {@link GoogleAnalyticsTrackingService} instance.
-   */
-  private GoogleAnalyticsTrackingService getGoogleAnalyticsTrackingService() {
-    if (googleAnalyticsTrackingService == null) {
-      String pluginVersion = this.getClass().getPackage().getImplementationVersion();
-      googleAnalyticsTrackingService =
-          new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs,
-              skipAnalytics, pluginVersion, getLog());
-    }
-    return googleAnalyticsTrackingService;
   }
 
   /**
@@ -312,6 +309,10 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   public void setEnvironmentId(final String environmentId) {
     environmentIdsToProcess = environmentId;
+  }
+
+  private boolean skipAnalytics() {
+    return skipAnalytics || settings.isOffline();
   }
 
 }

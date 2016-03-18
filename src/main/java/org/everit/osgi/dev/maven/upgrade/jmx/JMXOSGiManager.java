@@ -254,11 +254,20 @@ public class JMXOSGiManager implements RemoteOSGiManager {
           long bundleIdentifier = bundleIdentifiers.get(uniqueIdentifier);
 
           String location = bundleDataType.getLocation();
-          // TODO if (location.startsWith(REFERENCE)) {
-          // location = location.substring(REFERENCE.length());
-          // }
-          frameworkMBean.updateBundleFromURL(bundleIdentifier, location);
+          try {
+            frameworkMBean.updateBundleFromURL(bundleIdentifier, location);
+          } catch (IOException e) {
 
+            if (!e.getMessage().contains("Unknown protocol: reference")) {
+              throw e;
+            }
+
+            if (location.startsWith(REFERENCE)) {
+              location = location.substring(REFERENCE.length());
+            }
+            frameworkMBean.updateBundleFromURL(bundleIdentifier, location);
+
+          }
         }
       }
     } catch (IOException e) {
