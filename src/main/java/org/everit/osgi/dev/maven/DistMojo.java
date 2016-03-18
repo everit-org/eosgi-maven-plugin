@@ -404,18 +404,18 @@ public class DistMojo extends AbstractEOSGiMojo {
       for (ParsableType p : parsable) {
 
         String path = p.getPath();
-        File parsableFile = new File(distFolderFile, path);
+        File parsableFile = new File(distFolderFile, path).getAbsoluteFile();
 
         if (!parsableFile.exists()) {
           throw new MojoExecutionException("File that should be parsed does not exist: "
-              + parsableFile.getAbsolutePath());
+              + "[" + parsableFile.getAbsolutePath() + "]");
         }
 
         try {
           fileManager.replaceFileWithParsed(parsableFile, vars, p.getEncoding());
         } catch (IOException e) {
           throw new MojoExecutionException(
-              "Could not replace parsable with parsed content: " + p.getPath(), e);
+              "Could not replace parsable with parsed content: [" + p.getPath() + "]", e);
         }
       }
     }
