@@ -33,7 +33,11 @@ public final class DistUtil {
     if (value == null) {
       return null;
     }
-    return value.replace(",", "\\,").replace("=", "\\=").replace(" ", "\\ ");
+    return value
+        .replace(",", "\\,")
+        .replace("=", "\\=")
+        .replace(" ", "\\ ");
+    // TODO mac command line escape.replace(";", "\\;")
   }
 
   /**
