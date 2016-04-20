@@ -653,7 +653,7 @@ public class IntegrationTestMojo extends DistMojo {
   private TestResult runIntegrationTestsOnEnvironment(final String environmentId,
       final File distFolderFile, final File testReportFolderFile,
       final int expectedTestNum, final int shutdownTimeout, final int timeout)
-          throws MojoFailureException, MojoExecutionException {
+      throws MojoFailureException, MojoExecutionException {
 
     printEnvironmentProcessStartToLog(environmentId);
 
@@ -750,7 +750,7 @@ public class IntegrationTestMojo extends DistMojo {
 
   private void throwExceptionsBasedOnTestResultsIfNecesssary(
       final List<TestResult> expecationErroredResults, final TestResult resultSum)
-          throws MojoFailureException {
+      throws MojoFailureException {
     if ((resultSum.error > 0) || (resultSum.failure > 0)) {
       throw new MojoFailureException("Error during running OSGi integration tests");
     }

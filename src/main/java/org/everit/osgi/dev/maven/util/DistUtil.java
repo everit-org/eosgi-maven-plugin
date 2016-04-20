@@ -36,8 +36,8 @@ public final class DistUtil {
     return value
         .replace(",", "\\,")
         .replace("=", "\\=")
-        .replace(" ", "\\ ");
-    // TODO mac command line escape.replace(";", "\\;")
+        .replace(" ", "\\ ")
+        .replace(";", "\\;"); // mac osx command line escaping
   }
 
   /**
