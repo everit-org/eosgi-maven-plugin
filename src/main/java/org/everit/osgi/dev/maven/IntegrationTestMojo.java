@@ -641,8 +641,6 @@ public class IntegrationTestMojo extends DistMojo {
     command.addAll(environmentConfigurationDTO.systemProperties);
     command.addAll(environmentConfigurationDTO.vmArguments);
 
-    command.add("-jar");
-    command.add(environmentConfigurationDTO.mainJar);
     command.add(environmentConfigurationDTO.mainClass);
 
     command.addAll(environmentConfigurationDTO.programArguments);

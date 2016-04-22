@@ -40,6 +40,7 @@
     <projectpath>eosgi-dist-schema</projectpath>
     <maven.compiler.source>1.7</maven.compiler.source>
     <maven.compiler.target>1.7</maven.compiler.target>
+    <findbugs.failOnError>false</findbugs.failOnError>
   </properties>
 
   <scm>
@@ -47,7 +48,6 @@
     <developerConnection>scm:git:https://github.com/everit-org/eosgi-maven-plugin.git</developerConnection>
     <url>https://github.com/everit-org/eosgi-maven-plugin</url>
   </scm>
-
   <url>http://everit.org</url>
 
   <issueManagement>
@@ -238,7 +238,7 @@
     <dependency>
       <groupId>org.everit.osgi.dev</groupId>
       <artifactId>org.everit.osgi.dev.eosgi.dist.schema</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
