@@ -15,39 +15,24 @@
  */
 package org.everit.osgi.dev.maven.util;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.plugin.MojoFailureException;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 
 /**
  * Util functions for every plugin in this library.
  */
 public final class PluginUtil {
-
-  public static final String OS_LINUX_UNIX = "linux";
-
-  public static final String OS_MACINTOSH = "mac";
-
-  public static final String OS_SUNOS = "sunos";
-
-  public static final String OS_WINDOWS = "windows";
 
   /**
    * Converts a Map to a list where the entry of the list contains an array with the key and the
@@ -74,24 +59,34 @@ public final class PluginUtil {
    *          The distribution package.
    * @return The artifact map.
    */
-  public static Map<ArtifactKey, ArtifactType> createArtifactMap(
+  public static Map<String, ArtifactType> createArtifactMap(
       final DistributionPackageType distributionPackage) {
+
     if (distributionPackage == null) {
       return Collections.emptyMap();
     }
+
     ArtifactsType artifacts = distributionPackage.getArtifacts();
     if (artifacts == null) {
       return Collections.emptyMap();
     }
-    Map<ArtifactKey, ArtifactType> result = new HashMap<>();
+
+    Map<String, ArtifactType> result = new HashMap<>();
     List<ArtifactType> artifactList = artifacts.getArtifact();
+
     for (ArtifactType artifact : artifactList) {
-      ArtifactKey artifactKey = new ArtifactKey(artifact);
-      if (result.containsKey(artifactKey)) {
-        throw new DuplicateArtifactException(artifactKey);
+
+      BundleDataType bundleDataType = artifact.getBundle();
+      if (bundleDataType != null) {
+
+        String location = bundleDataType.getLocation();
+        if (result.containsKey(location)) {
+          throw new DuplicateArtifactException(location);
+        }
+        result.put(location, artifact);
       }
-      result.put(artifactKey, artifact);
     }
+
     return result;
   }
 
@@ -125,50 +120,36 @@ public final class PluginUtil {
    * @return The artifact list that should be deleted.
    */
   public static List<ArtifactType> getArtifactsToRemove(
-      final Map<ArtifactKey, ArtifactType> currentArtifactMap,
+      final Map<String, ArtifactType> currentArtifactMap,
       final ArtifactsType artifacts) {
-    Map<ArtifactKey, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
+
+    Map<String, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
     if (artifacts == null) {
       return new ArrayList<>(currentArtifactMap.values());
     }
+
     List<ArtifactType> artifactList = artifacts.getArtifact();
+
     for (ArtifactType artifact : artifactList) {
-      ArtifactKey artifactKey = new ArtifactKey(artifact);
-      tmpArtifactMap.remove(artifactKey);
+
+      BundleDataType bundleDataType = artifact.getBundle();
+
+      if (bundleDataType != null) {
+        String location = bundleDataType.getLocation();
+        tmpArtifactMap.remove(location);
+      }
     }
+
     return new ArrayList<>(tmpArtifactMap.values());
   }
 
   /**
-   * Returns the java command to execute other java processes.
+   * Returns the java command to execute other java processes using the same Java as the current
+   * process.
    */
-  public static String getJavaCommand() {
+  public static String getJavaCommand() throws MojoFailureException {
     String javaHome = System.getProperty("java.home");
-    String os = PluginUtil.getOS();
-    String extension = OS_WINDOWS.equals(os) ? ".exe" : ".sh";
-    return javaHome + "/bin/java" + extension;
-  }
-
-  /**
-   * Returns the OS type.
-   *
-   * @return The operating system type.
-   */
-  public static String getOS() {
-    String os = System.getProperty("os.name").toLowerCase(Locale.getDefault());
-    if (os.indexOf("win") >= 0) {
-      return OS_WINDOWS;
-    }
-    if (os.indexOf("mac") >= 0) {
-      return OS_MACINTOSH;
-    }
-    if (((os.indexOf("nix") >= 0) || (os.indexOf("nux") >= 0))) {
-      return OS_LINUX_UNIX;
-    }
-    if (os.indexOf("sunos") >= 0) {
-      return OS_SUNOS;
-    }
-    return null;
+    return javaHome + "/bin/java";
   }
 
   /**
@@ -221,37 +202,6 @@ public final class PluginUtil {
       result.append(".0");
     }
     return result.toString();
-  }
-
-  /**
-   * Sends a command to a socket and returns a response. This function works based on line breaks.
-   *
-   * @param command
-   *          The command to send.
-   * @param socket
-   *          The socket to send the command to.
-   * @param serverName
-   *          The name of the server.
-   * @param log
-   *          The logger where debug information will be written.
-   * @return The response from the server.
-   * @throws IOException
-   *           if there is a problem in the connection.
-   */
-  public static String sendCommandToSocket(final String command, final Socket socket,
-      final String serverName,
-      final Log log)
-          throws IOException {
-    log.debug("Sending command to " + serverName + ": " + command);
-    InputStream inputStream = socket.getInputStream();
-    BufferedReader reader =
-        new BufferedReader(new InputStreamReader(inputStream, Charset.defaultCharset()));
-    OutputStream outputStream = socket.getOutputStream();
-    outputStream.write((command + "\n").getBytes(Charset.defaultCharset()));
-    outputStream.flush();
-    String response = reader.readLine();
-    log.debug("Got response from " + serverName + ": " + response);
-    return response;
   }
 
   private PluginUtil() {

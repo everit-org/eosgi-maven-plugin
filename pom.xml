@@ -24,7 +24,7 @@
   <parent>
     <groupId>org.everit.config</groupId>
     <artifactId>org.everit.config.oss</artifactId>
-    <version>7.2.0</version>
+    <version>7.3.0</version>
   </parent>
 
   <groupId>org.everit.osgi.dev</groupId>
@@ -35,6 +35,13 @@
 
   <name>Everit - Maven OSGi plugin</name>
   <description>A Maven plugin that runs Integration Tests inside OSGi containers and collects OSGi Bundle dependencies to be able to use them inside any IDE.</description>
+
+  <properties>
+    <projectpath>eosgi-dist-schema</projectpath>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
+    <findbugs.failOnError>false</findbugs.failOnError>
+  </properties>
 
   <scm>
     <connection>scm:git:git://github.com/everit-org/eosgi-maven-plugin.git</connection>
@@ -47,12 +54,6 @@
     <system>GitHub</system>
     <url>https://github.com/everit-org/eosgi-maven-plugin/issues</url>
   </issueManagement>
-
-  <properties>
-    <maven.compiler.source>1.7</maven.compiler.source>
-    <maven.compiler.target>1.7</maven.compiler.target>
-    <findbugs.failOnError>false</findbugs.failOnError>
-  </properties>
 
   <licenses>
     <license>
@@ -185,15 +186,8 @@
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.core</artifactId>
-      <version>4.3.1</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.enterprise</artifactId>
-      <version>4.2.0</version>
-      <scope>provided</scope>
+      <artifactId>org.osgi.jmx</artifactId>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -244,7 +238,7 @@
     <dependency>
       <groupId>org.everit.osgi.dev</groupId>
       <artifactId>org.everit.osgi.dev.eosgi.dist.schema</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>

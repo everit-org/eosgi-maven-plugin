@@ -51,6 +51,7 @@ import org.everit.osgi.dev.eosgi.dist.schema.util.EnvironmentConfigurationDTO;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
@@ -620,8 +621,12 @@ public class IntegrationTestMojo extends DistMojo {
   private String[] resolveCommandForEnvironment(final File distFolderFile)
       throws MojoFailureException {
 
+    DistributionPackageType distributionPackage =
+        distSchemaProvider.getOverridedDistributionPackage(distFolderFile,
+            UseByType.INTEGRATION_TEST);
+
     EnvironmentConfigurationDTO environmentConfigurationDTO =
-        distSchemaProvider.getEnvironmentConfiguration(distFolderFile, UseByType.INTEGRATION_TEST);
+        distSchemaProvider.getEnvironmentConfiguration(distributionPackage);
 
     List<String> command = new ArrayList<>();
 
@@ -636,8 +641,6 @@ public class IntegrationTestMojo extends DistMojo {
     command.addAll(environmentConfigurationDTO.systemProperties);
     command.addAll(environmentConfigurationDTO.vmArguments);
 
-    command.add("-jar");
-    command.add(environmentConfigurationDTO.mainJar);
     command.add(environmentConfigurationDTO.mainClass);
 
     command.addAll(environmentConfigurationDTO.programArguments);
@@ -648,7 +651,7 @@ public class IntegrationTestMojo extends DistMojo {
   private TestResult runIntegrationTestsOnEnvironment(final String environmentId,
       final File distFolderFile, final File testReportFolderFile,
       final int expectedTestNum, final int shutdownTimeout, final int timeout)
-          throws MojoFailureException, MojoExecutionException {
+      throws MojoFailureException, MojoExecutionException {
 
     printEnvironmentProcessStartToLog(environmentId);
 
@@ -745,7 +748,7 @@ public class IntegrationTestMojo extends DistMojo {
 
   private void throwExceptionsBasedOnTestResultsIfNecesssary(
       final List<TestResult> expecationErroredResults, final TestResult resultSum)
-          throws MojoFailureException {
+      throws MojoFailureException {
     if ((resultSum.error > 0) || (resultSum.failure > 0)) {
       throw new MojoFailureException("Error during running OSGi integration tests");
     }
