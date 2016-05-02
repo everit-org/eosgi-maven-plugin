@@ -119,7 +119,7 @@ public final class PluginUtil {
    *          The artifacts of the new distribution package that will be installed.
    * @return The artifact list that should be deleted.
    */
-  public static List<ArtifactType> getArtifactsToRemove(
+  public static List<ArtifactType> getBundlesToRemove(
       final Map<String, ArtifactType> currentArtifactMap,
       final ArtifactsType artifacts) {
 

@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2011 Everit Kft. (http://everit.org)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.everit.osgi.dev.maven.upgrade.jmx;
 
 import java.io.File;
@@ -13,6 +28,7 @@ import javax.annotation.Generated;
 
 import org.apache.maven.plugin.logging.Log;
 import org.everit.osgi.dev.maven.DistMojo;
+import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 
 import com.sun.tools.attach.AgentInitializationException;
 import com.sun.tools.attach.AgentLoadException;
@@ -20,8 +36,15 @@ import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
 
+/**
+ * Provides {@link RemoteOSGiManager}s for environments by attching all JVMs on the localhost and
+ * querying its agent and system properties.
+ */
 public class JMXOSGiManagerProvider {
 
+  /**
+   * The runtime info of an OSGi environment.
+   */
   private static class EnvironmentRuntimeInfo {
     String jmxServiceURL;
 
@@ -30,23 +53,30 @@ public class JMXOSGiManagerProvider {
     @Override
     @Generated("eclipse")
     public boolean equals(final Object obj) {
-      if (this == obj)
+      if (this == obj) {
         return true;
-      if (obj == null)
+      }
+      if (obj == null) {
         return false;
-      if (getClass() != obj.getClass())
+      }
+      if (getClass() != obj.getClass()) {
         return false;
+      }
       EnvironmentRuntimeInfo other = (EnvironmentRuntimeInfo) obj;
       if (jmxServiceURL == null) {
-        if (other.jmxServiceURL != null)
+        if (other.jmxServiceURL != null) {
           return false;
-      } else if (!jmxServiceURL.equals(other.jmxServiceURL))
+        }
+      } else if (!jmxServiceURL.equals(other.jmxServiceURL)) {
         return false;
+      }
       if (userDir == null) {
-        if (other.userDir != null)
+        if (other.userDir != null) {
           return false;
-      } else if (!userDir.equals(other.userDir))
+        }
+      } else if (!userDir.equals(other.userDir)) {
         return false;
+      }
       return true;
     }
 
@@ -63,6 +93,13 @@ public class JMXOSGiManagerProvider {
 
   private final Map<String, Set<EnvironmentRuntimeInfo>> environments;
 
+  /**
+   * Instantiates a new provider.
+   *
+   * @param log
+   *          If an error happens during querying the JVMs on the localhost, it is logged by the
+   *          logger.
+   */
   public JMXOSGiManagerProvider(final Log log) {
     environments = new HashMap<>();
 
@@ -86,6 +123,15 @@ public class JMXOSGiManagerProvider {
     }
   }
 
+  /**
+   * Returns the JMX service url for the environment if found.
+   *
+   * @param environmentId
+   *          The id of the environment.
+   * @param environmentRootDir
+   *          The root dir of the environment.
+   * @return The JMX url or <code>null</code> if no JVM found.
+   */
   public String getJmxURLForEnvironment(final String environmentId, final File environmentRootDir) {
     Set<EnvironmentRuntimeInfo> environmentInfos = environments.get(environmentId);
     if (environmentInfos == null) {

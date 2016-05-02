@@ -47,7 +47,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.everit.osgi.dev.eosgi.dist.schema.util.EnvironmentConfigurationDTO;
+import org.everit.osgi.dev.eosgi.dist.schema.util.LaunchConfigurationDTO;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
@@ -622,11 +622,11 @@ public class IntegrationTestMojo extends DistMojo {
       throws MojoFailureException {
 
     DistributionPackageType distributionPackage =
-        distSchemaProvider.getOverridedDistributionPackage(distFolderFile,
+        distSchemaProvider.getOverriddenDistributionPackage(distFolderFile,
             UseByType.INTEGRATION_TEST);
 
-    EnvironmentConfigurationDTO environmentConfigurationDTO =
-        distSchemaProvider.getEnvironmentConfiguration(distributionPackage);
+    LaunchConfigurationDTO environmentConfigurationDTO =
+        distSchemaProvider.getLaunchConfiguration(distributionPackage);
 
     List<String> command = new ArrayList<>();
 

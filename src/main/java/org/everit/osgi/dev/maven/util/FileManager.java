@@ -84,7 +84,6 @@ public class FileManager {
     OTHERS_READ_BITMASK = readOctal;
     GROUP_READ_BITMASK = OTHERS_READ_BITMASK << octalDigitNum;
     OWNER_READ_BITMASK = GROUP_READ_BITMASK << octalDigitNum;
-
   }
 
   private static Set<PosixFilePermission> getGroupPermissions(final int unixPermissions) {
@@ -169,8 +168,9 @@ public class FileManager {
     if (perms.contains(PosixFilePermission.OWNER_WRITE)) {
       file.setWritable(true, !perms.contains(PosixFilePermission.OTHERS_WRITE));
     }
-
   }
+
+  private final HashSet<File> touchedFiles = new HashSet<>();
 
   /**
    * Copies a directory recursively or a file from the source to the target.
@@ -179,6 +179,7 @@ public class FileManager {
       throws MojoExecutionException {
 
     if (sourceLocation.isDirectory()) {
+      touchedFiles.add(targetLocation);
       if (!targetLocation.exists()) {
         targetLocation.mkdir();
       }
@@ -190,6 +191,18 @@ public class FileManager {
     } else {
       overCopyFile(sourceLocation, targetLocation);
     }
+  }
+
+  /**
+   * Returns the files that were created, modified or just touched (as their content did not change)
+   * but they were not deleted afterwards.
+   *
+   * @return Set of touched files.
+   */
+  public Set<File> getTouchedFiles() {
+    @SuppressWarnings("unchecked")
+    Set<File> result = (Set<File>) touchedFiles.clone();
+    return result;
   }
 
   /**
@@ -218,6 +231,7 @@ public class FileManager {
    *           if there is an error during copying the file.
    */
   public boolean overCopyFile(final InputStream is, final File targetFile) throws IOException {
+    touchedFiles.add(targetFile);
     boolean fileChanged = false;
     long sum = 0;
     byte[] buffer = new byte[FILE_COPY_BUFFER_SIZE];
@@ -245,7 +259,7 @@ public class FileManager {
   /**
    * Replaces the original template file with parsed and processed file.
    */
-  public final void replaceFileWithParsed(final File parseableFile, final Map<String, Object> vars,
+  public void replaceFileWithParsed(final File parseableFile, final Map<String, Object> vars,
       final String encoding) throws IOException, MojoExecutionException {
 
     File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
@@ -286,8 +300,9 @@ public class FileManager {
    * Unpacks a ZIP file to the destination directory.
    *
    * @throws MojoExecutionException
+   *           if something goes wrong during unpacking the files.
    */
-  public final void unpackZipFile(final File file, final File destinationDirectory)
+  public void unpackZipFile(final File file, final File destinationDirectory)
       throws MojoExecutionException {
 
     destinationDirectory.mkdirs();
