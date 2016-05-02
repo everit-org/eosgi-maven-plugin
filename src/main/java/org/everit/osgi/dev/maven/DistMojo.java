@@ -18,7 +18,6 @@ package org.everit.osgi.dev.maven;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -26,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.zip.ZipFile;
 
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -62,6 +60,7 @@ import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
+import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManagerProvider;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.FileManager;
 import org.everit.osgi.dev.maven.util.PluginUtil;
@@ -76,10 +75,12 @@ import org.everit.osgi.dev.maven.util.PluginUtil;
 @Execute(phase = LifecyclePhase.PACKAGE)
 public class DistMojo extends AbstractEOSGiMojo {
 
-  private static final String DCOM_SUN_MANAGEMENT_JMXREMOTE_PORT =
-      "-Dcom.sun.management.jmxremote.port=";
-
   private static final int MAVEN_ARTIFACT_ID_PART_NUM = 3;
+
+  /**
+   * Additional system property that is applied to each environment automatically.
+   */
+  public static final String SYSPROP_ENVIRONMENT_ID = "org.everit.osgi.dev.environmentId";
 
   private static final String VAR_DIST_UTIL = "distUtil";
 
@@ -105,6 +106,8 @@ public class DistMojo extends AbstractEOSGiMojo {
   protected DistSchemaProvider distSchemaProvider = new DistSchemaProvider();
 
   private FileManager fileManager = null;
+
+  private JMXOSGiManagerProvider jMXOSGiManagerProvider;
 
   @Parameter(defaultValue = "${localRepository}")
   protected ArtifactRepository localRepository;
@@ -141,22 +144,37 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.sourceDistPath", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistPath;
 
-  private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
-      final EnvironmentConfigurationDTO environmentConfigurationDTO) {
+  private void copyDistFolderToTargetIfExists(final File environmentRootFolder)
+      throws MojoExecutionException {
+    if (sourceDistPath != null) {
+      File sourceDistPathFile = new File(sourceDistPath);
+      if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
+        fileManager.copyDirectory(sourceDistPathFile, environmentRootFolder);
+      }
+    }
+  }
 
-    Integer port = getRemoteUpgradePort(environmentConfigurationDTO);
-    if (port == null) {
+  private RemoteOSGiManager createJMXRemoteOSGiManager(final String environmentId,
+      final File distFolderFile) {
+
+    String jmxLocalURL =
+        jMXOSGiManagerProvider.getJmxURLForEnvironment(environmentId, distFolderFile);
+
+    if (jmxLocalURL == null) {
       return null;
     }
 
     try {
-      return new JMXOSGiManager(port, getLog());
+      return new JMXOSGiManager(jmxLocalURL, getLog());
     } catch (IOException | InstanceNotFoundException | IntrospectionException
         | ReflectionException e) {
-      getLog().info("Incremental OSGi bundle update is not available for environment ["
-          + environmentId + "]. "
-          + "Caused by: " + e.getClass().getName() + " " + e.getMessage());
-      getLog().debug(e);
+
+      getLog().warn(
+          "Could not connect to the running JVM of the environment ot apply the changes."
+              + " Either install the OSGi JMX Bundle or stop the environment before each"
+              + " upgrade! If the JMX Bundle is installed, try solving the cause of this exception!"
+              + " EnvironmentId: " + environmentId,
+          e);
     }
 
     return null;
@@ -166,7 +184,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       final RemoteOSGiManager remoteOSGiManager,
       final File envDistFolderFile, final Map<String, ArtifactType> existingArtifactMap,
       final ArtifactsType artifactsType)
-          throws MojoExecutionException {
+      throws MojoExecutionException {
 
     if (artifactsType == null) {
       return;
@@ -224,6 +242,8 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
 
+    jMXOSGiManagerProvider = new JMXOSGiManagerProvider(getLog());
+
     fileManager = new FileManager();
     File globalDistFolderFile = new File(distFolder);
 
@@ -250,67 +270,61 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private void executeOnEnvironment(final File globalDistFolderFile,
       final EnvironmentConfiguration environment)
-          throws MojoExecutionException {
+      throws MojoExecutionException {
 
-    List<DistributableArtifact> processedArtifacts;
-    try {
-      processedArtifacts = generateDistributableArtifacts(environment.getBundleSettings());
-    } catch (MalformedURLException e) {
-      throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
-    }
+    List<DistributableArtifact> processedArtifacts =
+        generateDistributableArtifacts(environment.getBundleSettings());
 
     String environmentId = environment.getId();
 
     Artifact distPackageArtifact = resolveDistPackage(environment.getFramework());
     File distPackageFile = distPackageArtifact.getFile();
-    File distFolderFile = new File(globalDistFolderFile, environmentId);
+    File environmentRootFolder = new File(globalDistFolderFile, environmentId);
 
     DistributionPackageType existingDistributionPackage =
-        distSchemaProvider.getOverridedDistributionPackage(distFolderFile, UseByType.PARSABLES);
+        distSchemaProvider.getOverridedDistributionPackage(environmentRootFolder,
+            UseByType.PARSABLES);
+
     EnvironmentConfigurationDTO existingEnvConfig = distSchemaProvider.getEnvironmentConfiguration(
         existingDistributionPackage);
 
+    fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
+    copyDistFolderToTargetIfExists(environmentRootFolder);
+
+    parseConfiguration(environmentRootFolder, processedArtifacts, environment);
+
+    DistributionPackageType distributionPackage =
+        distSchemaProvider.getOverridedDistributionPackage(environmentRootFolder,
+            UseByType.PARSABLES);
+
+    EnvironmentConfigurationDTO envConfig = distSchemaProvider.getEnvironmentConfiguration(
+        distributionPackage);
+
+    ArtifactsType artifacts = distributionPackage.getArtifacts();
+
+    Map<String, ArtifactType> existingArtifactMap =
+        PluginUtil.createArtifactMap(existingDistributionPackage);
+    List<ArtifactType> artifactsToRemove =
+        PluginUtil.getArtifactsToRemove(existingArtifactMap, artifacts);
+
     RemoteOSGiManager remoteOSGiManager = null;
 
-    try (ZipFile distPackageZipFile = new ZipFile(distPackageFile)) {
-
-      fileManager.unpackZipFile(distPackageFile, distFolderFile);
-
-      if (sourceDistPath != null) {
-        File sourceDistPathFile = new File(sourceDistPath);
-        if (sourceDistPathFile.exists() && sourceDistPathFile.isDirectory()) {
-          fileManager.copyDirectory(sourceDistPathFile, distFolderFile);
-        }
-      }
-
-      parseConfiguration(distFolderFile, processedArtifacts, environment);
-
-      DistributionPackageType distributionPackage =
-          distSchemaProvider.getOverridedDistributionPackage(distFolderFile, UseByType.PARSABLES);
-      EnvironmentConfigurationDTO envConfig = distSchemaProvider.getEnvironmentConfiguration(
-          distributionPackage);
-
-      ArtifactsType artifacts = distributionPackage.getArtifacts();
-
-      Map<String, ArtifactType> existingArtifactMap =
-          PluginUtil.createArtifactMap(existingDistributionPackage);
-      List<ArtifactType> artifactsToRemove =
-          PluginUtil.getArtifactsToRemove(existingArtifactMap, artifacts);
+    try {
 
       if (existingDistributionPackage != null) {
-        remoteOSGiManager = createRemoteOSGiManager(environmentId, envConfig);
+        remoteOSGiManager = createJMXRemoteOSGiManager(environmentId, environmentRootFolder);
       }
 
       removeArtifactsFromDistributedEnvironment(environmentId,
-          remoteOSGiManager, distFolderFile, artifactsToRemove);
+          remoteOSGiManager, environmentRootFolder, artifactsToRemove);
 
       distributeArtifacts(environmentId,
-          remoteOSGiManager, distFolderFile, existingArtifactMap, artifacts);
+          remoteOSGiManager, environmentRootFolder, existingArtifactMap, artifacts);
 
-      parseParsables(distFolderFile, distributionPackage);
+      parseParsables(environmentRootFolder, distributionPackage);
       distributedEnvironments.add(
           new DistributedEnvironment(environment, distributionPackage,
-              distFolderFile, processedArtifacts));
+              environmentRootFolder, processedArtifacts));
 
       if (envConfig.isChanged(existingEnvConfig)) {
         getLog().warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -323,34 +337,13 @@ public class DistMojo extends AbstractEOSGiMojo {
         remoteOSGiManager.refresh();
       }
 
-    } catch (IOException e) {
-
-      throw new MojoExecutionException("Could not uncompress distribution package file: "
-          + distPackageFile.toString(), e);
-
     } finally {
 
       if (remoteOSGiManager != null) {
-        remoteOSGiManager.disconnect();
+        remoteOSGiManager.close();
       }
 
     }
-  }
-
-  private Integer getRemoteUpgradePort(
-      final EnvironmentConfigurationDTO environmentConfigurationDTO) {
-
-    for (String vmArgument : environmentConfigurationDTO.vmArguments) {
-      if (vmArgument.startsWith(DCOM_SUN_MANAGEMENT_JMXREMOTE_PORT)) {
-        return Integer.valueOf(vmArgument.substring(DCOM_SUN_MANAGEMENT_JMXREMOTE_PORT.length()));
-      }
-    }
-
-    getLog().warn(
-        "JMX remote port is not defined in <vmArguments> section of PARSABLES <useByType>. "
-            + "Incremental OSGi bundle updates cannot be performed.");
-
-    return null;
   }
 
   /**
@@ -360,7 +353,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       final File distFolderFile,
       final List<DistributableArtifact> distributableArtifacts,
       final EnvironmentConfiguration environment)
-          throws MojoExecutionException {
+      throws MojoExecutionException {
 
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
@@ -390,7 +383,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    */
   private void parseParsables(final File distFolderFile,
       final DistributionPackageType distributionPackage)
-          throws MojoExecutionException {
+      throws MojoExecutionException {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributionPackage", distributionPackage);

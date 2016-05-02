@@ -284,13 +284,15 @@ public class FileManager {
 
   /**
    * Unpacks a ZIP file to the destination directory.
+   *
+   * @throws MojoExecutionException
    */
   public final void unpackZipFile(final File file, final File destinationDirectory)
-      throws IOException {
-    destinationDirectory.mkdirs();
-    ZipFile zipFile = new ZipFile(file);
+      throws MojoExecutionException {
 
-    try {
+    destinationDirectory.mkdirs();
+
+    try (ZipFile zipFile = new ZipFile(file)) {
       Enumeration<? extends ZipArchiveEntry> entries = zipFile.getEntries();
       while (entries.hasMoreElements()) {
         ZipArchiveEntry entry = entries.nextElement();
@@ -305,10 +307,11 @@ public class FileManager {
           overCopyFile(inputStream, destFile);
           FileManager.setPermissionsOnFile(destFile, entry);
         }
-
       }
-    } finally {
-      zipFile.close();
+    } catch (IOException e) {
+      throw new MojoExecutionException("Could not uncompress distribution package file "
+          + file.getAbsolutePath() + " to target folder " + destinationDirectory.getAbsolutePath(),
+          e);
     }
   }
 }

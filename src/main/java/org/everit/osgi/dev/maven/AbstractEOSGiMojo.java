@@ -33,13 +33,13 @@ import org.apache.maven.plugin.descriptor.MojoDescriptor;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
+import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingService;
+import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.configuration.BundleSettings;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
-import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingService;
-import org.everit.osgi.dev.maven.statistic.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.osgi.framework.Constants;
 
@@ -155,7 +155,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    *           if the URL for the artifact is broken.
    */
   protected List<DistributableArtifact> generateDistributableArtifacts(
-      final List<BundleSettings> bundleSettingsList) throws MalformedURLException {
+      final List<BundleSettings> bundleSettingsList) {
 
     @SuppressWarnings("unchecked")
     List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());

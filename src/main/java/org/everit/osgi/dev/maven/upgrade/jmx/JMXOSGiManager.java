@@ -50,8 +50,6 @@ public class JMXOSGiManager implements RemoteOSGiManager {
 
   private static final ObjectName FRAMEWORK_MBEAN_MBEAN_FILTER;
 
-  private static final String REFERENCE = "reference:";
-
   static {
     try {
       FRAMEWORK_MBEAN_MBEAN_FILTER = new ObjectName(FrameworkMBean.OBJECTNAME + ",*");
@@ -72,13 +70,12 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   /**
    * Constructor.
    */
-  public JMXOSGiManager(final int port, final Log log)
+  public JMXOSGiManager(final String jmxServiceURL, final Log log)
       throws IOException, InstanceNotFoundException, IntrospectionException, ReflectionException {
 
     this.log = log;
 
-    JMXServiceURL url = new JMXServiceURL(
-        "service:jmx:rmi:///jndi/rmi://:" + port + "/jmxrmi");
+    JMXServiceURL url = new JMXServiceURL(jmxServiceURL);
     jmxConnector = JMXConnectorFactory.connect(url, null);
     MBeanServerConnection mbsc = jmxConnector.getMBeanServerConnection();
 
@@ -117,7 +114,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void disconnect() {
+  public void close() {
     try {
       jmxConnector.close();
     } catch (IOException e) {
@@ -164,11 +161,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
 
       for (BundleDataType bundleDataType : bundleDataTypes) {
 
-        if (OSGiActionType.NONE.equals(bundleDataType.getAction())) {
-
-          uninstallBundles(bundleDataType);
-
-        } else {
+        if (OSGiActionType.NONE != bundleDataType.getAction()) {
 
           String bundleLocation = bundleDataType.getLocation();
           long bundleIdentifier = frameworkMBean.installBundle(bundleLocation);
@@ -244,30 +237,10 @@ public class JMXOSGiManager implements RemoteOSGiManager {
 
       for (BundleDataType bundleDataType : bundleDataTypes) {
 
-        if (OSGiActionType.NONE.equals(bundleDataType.getAction())) {
-
-          uninstallBundles(bundleDataType);
-
-        } else {
-
+        if (OSGiActionType.NONE != bundleDataType.getAction()) {
           String uniqueIdentifier = createUniqueIdentifier(bundleDataType);
           long bundleIdentifier = bundleIdentifiers.get(uniqueIdentifier);
-
-          String location = bundleDataType.getLocation();
-          try {
-            frameworkMBean.updateBundleFromURL(bundleIdentifier, location);
-          } catch (IOException e) {
-
-            if (!e.getMessage().contains("Unknown protocol: reference")) {
-              throw e;
-            }
-
-            if (location.startsWith(REFERENCE)) {
-              location = location.substring(REFERENCE.length());
-            }
-            frameworkMBean.updateBundleFromURL(bundleIdentifier, location);
-
-          }
+          frameworkMBean.updateBundle(bundleIdentifier);
         }
       }
     } catch (IOException e) {

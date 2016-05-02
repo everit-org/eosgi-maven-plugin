@@ -15,14 +15,17 @@
  */
 package org.everit.osgi.dev.maven.upgrade;
 
+import java.io.Closeable;
+
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 
 /**
  * Interface to manage an OSGi Framework remotely.
  */
-public interface RemoteOSGiManager {
+public interface RemoteOSGiManager extends Closeable {
 
-  void disconnect();
+  @Override
+  void close();
 
   void installBundles(BundleDataType... bundleDataTypes);
 

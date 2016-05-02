@@ -142,11 +142,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
       List<DistributableArtifact> distributableArtifacts;
-      try {
-        distributableArtifacts = generateDistributableArtifacts(environment.getBundleSettings());
-      } catch (MalformedURLException e) {
-        throw new MojoExecutionException("Could not resolve dependent artifacts of project", e);
-      }
+      distributableArtifacts = generateDistributableArtifacts(environment.getBundleSettings());
 
       List<String> bundleLocations = new ArrayList<>();
       for (DistributableArtifact distributableArtifact : distributableArtifacts) {
