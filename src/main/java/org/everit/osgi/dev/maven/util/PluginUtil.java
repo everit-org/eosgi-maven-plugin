@@ -28,6 +28,7 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 
 /**
  * Util functions for every plugin in this library.
@@ -53,13 +54,13 @@ public final class PluginUtil {
   }
 
   /**
-   * Creates the artifact map for the distribution package.
+   * Creates the bundle map for the distribution package.
    *
    * @param distributionPackage
    *          The distribution package.
    * @return The artifact map.
    */
-  public static Map<String, ArtifactType> createArtifactMap(
+  public static Map<String, ArtifactType> createBundleMap(
       final DistributionPackageType distributionPackage) {
 
     if (distributionPackage == null) {
@@ -77,7 +78,7 @@ public final class PluginUtil {
     for (ArtifactType artifact : artifactList) {
 
       BundleDataType bundleDataType = artifact.getBundle();
-      if (bundleDataType != null) {
+      if (bundleDataType != null && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
 
         String location = bundleDataType.getLocation();
         if (result.containsKey(location)) {

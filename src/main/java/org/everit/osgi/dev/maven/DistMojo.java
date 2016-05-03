@@ -108,8 +108,6 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   protected DistSchemaProvider distSchemaProvider = new DistSchemaProvider();
 
-  private FileManager fileManager = null;
-
   private JMXOSGiManagerProvider jMXOSGiManagerProvider;
 
   @Parameter(defaultValue = "${localRepository}")
@@ -147,7 +145,9 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.sourceDistFolder", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistFolder;
 
-  private void copyDistFolderToTargetIfExists(final File environmentRootFolder)
+  private void copyDistFolderToTargetIfExists(final File environmentRootFolder,
+      final FileManager fileManager)
+
       throws MojoExecutionException {
     if (sourceDistFolder != null) {
       File sourceDistPathFile = new File(sourceDistFolder);
@@ -272,7 +272,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       final EnvironmentConfiguration environment)
       throws MojoExecutionException {
 
-    fileManager = new FileManager();
+    FileManager fileManager = new FileManager();
 
     List<DistributableArtifact> processedArtifacts =
         generateDistributableArtifacts(environment.getBundleSettings());
@@ -291,9 +291,9 @@ public class DistMojo extends AbstractEOSGiMojo {
         existingDistributionPackage);
 
     fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
-    copyDistFolderToTargetIfExists(environmentRootFolder);
+    copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
 
-    parseConfiguration(environmentRootFolder, processedArtifacts, environment);
+    parseConfiguration(environmentRootFolder, processedArtifacts, environment, fileManager);
 
     DistributionPackageType distributionPackage =
         distSchemaProvider.getOverriddenDistributionPackage(environmentRootFolder,
@@ -304,10 +304,10 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     ArtifactsType artifacts = distributionPackage.getArtifacts();
 
-    Map<String, ArtifactType> existingArtifactMap =
-        PluginUtil.createArtifactMap(existingDistributionPackage);
+    Map<String, ArtifactType> existingBundleMap =
+        PluginUtil.createBundleMap(existingDistributionPackage);
     List<ArtifactType> bundlesToRemove =
-        PluginUtil.getBundlesToRemove(existingArtifactMap, artifacts);
+        PluginUtil.getBundlesToRemove(existingBundleMap, artifacts);
 
     try (RemoteOSGiManager remoteOSGiManager =
         createRemoteOSGiManager(environmentId, environmentRootFolder,
@@ -316,9 +316,9 @@ public class DistMojo extends AbstractEOSGiMojo {
       remoteOSGiManager.uninstallBundles(resolveBundlesToUninstall(bundlesToRemove));
 
       distributeArtifacts(environmentId,
-          remoteOSGiManager, environmentRootFolder, existingArtifactMap, artifacts);
+          remoteOSGiManager, environmentRootFolder, existingBundleMap, artifacts);
 
-      parseParsables(environmentRootFolder, distributionPackage);
+      parseParsables(environmentRootFolder, distributionPackage, fileManager);
       distributedEnvironments.add(
           new DistributedEnvironment(environment, distributionPackage,
               environmentRootFolder, processedArtifacts));
@@ -345,7 +345,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   private void parseConfiguration(
       final File distFolderFile,
       final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment)
+      final EnvironmentConfiguration environment, final FileManager fileManager)
       throws MojoExecutionException {
 
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
@@ -375,7 +375,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * Parses and processes the files that are templates.
    */
   private void parseParsables(final File distFolderFile,
-      final DistributionPackageType distributionPackage)
+      final DistributionPackageType distributionPackage, final FileManager fileManager)
       throws MojoExecutionException {
 
     Map<String, Object> vars = new HashMap<>();
