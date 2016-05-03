@@ -128,7 +128,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   @Override
   public final void execute() throws MojoExecutionException, MojoFailureException {
-    artifactResolver = new PredefinedRepoArtifactResolver(repoSystem, repoSession, getLog());
+    artifactResolver = new PredefinedRepoArtifactResolver(repoSystem, repoSession,
+        project.getRemoteProjectRepositories(), getLog());
 
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();

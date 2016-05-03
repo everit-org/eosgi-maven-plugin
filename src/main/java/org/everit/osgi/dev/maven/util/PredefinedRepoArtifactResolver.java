@@ -23,6 +23,7 @@ import org.apache.maven.plugin.logging.Log;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
 import org.eclipse.aether.resolution.ArtifactResult;
@@ -33,6 +34,8 @@ import org.eclipse.aether.resolution.ArtifactResult;
 public class PredefinedRepoArtifactResolver {
 
   private final Log log;
+
+  private final List<RemoteRepository> remoteRepositories;
 
   private final RepositorySystem repositorySystem;
 
@@ -49,22 +52,26 @@ public class PredefinedRepoArtifactResolver {
    *          The maven log.
    */
   public PredefinedRepoArtifactResolver(final RepositorySystem repositorySystem,
-      final RepositorySystemSession repositorySystemSession, final Log log) {
+      final RepositorySystemSession repositorySystemSession,
+      final List<RemoteRepository> remoteRepositories, final Log log) {
     this.repositorySystem = repositorySystem;
     this.repositorySystemSession = repositorySystemSession;
+    this.remoteRepositories = remoteRepositories;
     this.log = log;
   }
 
   /**
    * Resolves an artifact and returns its resolved instance.
    *
-   * @param artifactRequest
+   * @param pArtifactRequest
    *          The request of the artifact.
    * @return The resolved artifact.
    * @throws MojoExecutionException
    *           if anything happens.
    */
-  public Artifact resolve(final ArtifactRequest artifactRequest) throws MojoExecutionException {
+  public Artifact resolve(final ArtifactRequest pArtifactRequest) throws MojoExecutionException {
+    ArtifactRequest artifactRequest =
+        new ArtifactRequest(pArtifactRequest.getArtifact(), remoteRepositories, null);
     ArtifactResult artifactResult;
     try {
       artifactResult = repositorySystem.resolveArtifact(repositorySystemSession, artifactRequest);

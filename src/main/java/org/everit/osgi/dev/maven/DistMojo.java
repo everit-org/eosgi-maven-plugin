@@ -53,6 +53,7 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
+import org.everit.osgi.dev.maven.configuration.LaunchConfigOverride;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
 import org.everit.osgi.dev.maven.upgrade.NoopRemoteOSGiManager;
@@ -106,9 +107,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
   protected Map<String, Artifact> pluginArtifactMap;
 
-  @Parameter(defaultValue = "${project.remoteArtifactRepositories}")
-  protected List<ArtifactRepository> remoteRepositories;
-
   /**
    * The folder where the integration test reports will be placed. Please note that the content of
    * this folder will be deleted before running the tests.
@@ -131,6 +129,27 @@ public class DistMojo extends AbstractEOSGiMojo {
    */
   @Parameter(property = "eosgi.sourceDistFolder", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistFolder;
+
+  private void checkAndAddReservedLaunchConfigurationProperties(
+      final EnvironmentConfiguration environment, final LaunchConfig launchConfig)
+      throws MojoFailureException {
+
+    checkReservedSystemPropertyInSystemProperties(launchConfig.getSystemProperties());
+    LaunchConfigOverride[] overrides = launchConfig.getOverrides();
+    for (LaunchConfigOverride launchConfigOverride : overrides) {
+      checkReservedSystemPropertyInSystemProperties(launchConfigOverride.getSystemProperties());
+    }
+
+    launchConfig.getSystemProperties().put(SYSPROP_ENVIRONMENT_ID, environment.getId());
+  }
+
+  private void checkReservedSystemPropertyInSystemProperties(
+      final Map<String, String> systemProperties) throws MojoFailureException {
+    if (systemProperties != null && systemProperties.containsKey(SYSPROP_ENVIRONMENT_ID)) {
+      throw new MojoFailureException("Reserved system property '" + SYSPROP_ENVIRONMENT_ID
+          + "' cannot be specified in launchConfig manually");
+    }
+  }
 
   private void copyDistFolderToTargetIfExists(final File environmentRootFolder,
       final FileManager fileManager)
@@ -243,7 +262,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private void executeOnEnvironment(final File globalDistFolderFile,
       final EnvironmentConfiguration environment)
-      throws MojoExecutionException {
+      throws MojoExecutionException, MojoFailureException {
 
     FileManager fileManager = new FileManager();
 
@@ -314,12 +333,15 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   /**
    * Parses the configuration of a distribution package.
+   *
+   * @throws MojoFailureException
+   *           if anything wrong happen.
    */
   private void parseConfiguration(
       final File distFolderFile,
       final List<DistributableArtifact> distributableArtifacts,
       final EnvironmentConfiguration environment, final FileManager fileManager)
-      throws MojoExecutionException {
+      throws MojoExecutionException, MojoFailureException {
 
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
@@ -328,6 +350,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
         environment.getLaunchConfig(), environment.getId(),
         reportFolder, jacocoAgentArtifact);
+
+    checkAndAddReservedLaunchConfigurationProperties(environment, launchConfig);
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("environmentId", environment.getId());
