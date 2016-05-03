@@ -30,9 +30,12 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
 import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingService;
 import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.configuration.BundleSettings;
@@ -41,6 +44,7 @@ import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
 import org.everit.osgi.dev.maven.util.PluginUtil;
+import org.everit.osgi.dev.maven.util.PredefinedRepoArtifactResolver;
 import org.osgi.framework.Constants;
 
 /**
@@ -62,6 +66,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   @Parameter(property = "eosgi.analytics.waiting.time", defaultValue = "3000")
   private long analyticsWaitingTimeInMs;
+
+  protected PredefinedRepoArtifactResolver artifactResolver;
 
   /**
    * Comma separated list of the id of the environments that should be processed. Default is * that
@@ -96,6 +102,18 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   @Parameter(property = "project")
   protected MavenProject project;
 
+  /**
+   * The current repository/network configuration of Maven.
+   */
+  @Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
+  private RepositorySystemSession repoSession;
+
+  /**
+   * The entry point to Aether, i.e. the component doing all the work.
+   */
+  @Component
+  private RepositorySystem repoSystem;
+
   @Parameter(defaultValue = "${settings}", readonly = true)
   private Settings settings;
 
@@ -110,6 +128,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   @Override
   public final void execute() throws MojoExecutionException, MojoFailureException {
+    artifactResolver = new PredefinedRepoArtifactResolver(repoSystem, repoSession, getLog());
 
     MojoDescriptor mojoDescriptor = mojo.getMojoDescriptor();
     String goalName = mojoDescriptor.getGoal();
@@ -157,7 +176,6 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   protected List<DistributableArtifact> generateDistributableArtifacts(
       final List<BundleSettings> bundleSettingsList) {
 
-    @SuppressWarnings("unchecked")
     List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
 
     if (executedProject != null) {

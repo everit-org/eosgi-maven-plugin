@@ -20,8 +20,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.eclipse.aether.artifact.Artifact;
 
 /**
  * Settings for jacoco. For more information, please see

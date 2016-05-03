@@ -211,7 +211,7 @@ public class FileManager {
    */
   public boolean overCopyFile(final File source, final File target) throws MojoExecutionException {
     try (FileInputStream fin = new FileInputStream(source)) {
-      return overCopyFile(fin, target);
+      return overCopyFile(fin, target, source.lastModified());
     } catch (IOException e) {
       throw new MojoExecutionException("Cannot copy file " + source.getAbsolutePath() + " to "
           + target.getAbsolutePath(), e);
@@ -226,12 +226,21 @@ public class FileManager {
    *          The {@link InputStream} of the source.
    * @param targetFile
    *          The file that will be overridden if it is necessary.
+   * @param sourceLastModified
+   *          The timestamp of the source file or entry when it was modified.
    * @return true if the target file had to be changed, false if the target file was not changed.
    * @throws IOException
    *           if there is an error during copying the file.
    */
-  public boolean overCopyFile(final InputStream is, final File targetFile) throws IOException {
+  public boolean overCopyFile(final InputStream is, final File targetFile,
+      final Long sourceLastModified) throws IOException {
     touchedFiles.add(targetFile);
+
+    if (targetFile.exists() && sourceLastModified != null
+        && targetFile.lastModified() == sourceLastModified.longValue()) {
+      return false;
+    }
+
     boolean fileChanged = false;
     long sum = 0;
     byte[] buffer = new byte[FILE_COPY_BUFFER_SIZE];
@@ -252,6 +261,9 @@ public class FileManager {
       if (sum < originalTargetLength) {
         targetRAF.setLength(sum);
       }
+    }
+    if (sourceLastModified != null) {
+      targetFile.setLastModified(sourceLastModified);
     }
     return fileChanged;
   }
@@ -319,7 +331,7 @@ public class FileManager {
           File parentFolder = destFile.getParentFile();
           parentFolder.mkdirs();
           InputStream inputStream = zipFile.getInputStream(entry);
-          overCopyFile(inputStream, destFile);
+          overCopyFile(inputStream, destFile, entry.getLastModifiedDate().getTime());
           FileManager.setPermissionsOnFile(destFile, entry);
         }
       }

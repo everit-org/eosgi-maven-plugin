@@ -21,9 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.eclipse.aether.artifact.Artifact;
 import org.everit.osgi.dev.eosgi.dist.schema.util.MergeUtil;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 
@@ -72,7 +72,7 @@ public class LaunchConfig extends AbstractLaunchConfig {
    */
   public LaunchConfig createLaunchConfigForEnvironment(final LaunchConfig environmentLaunchConfig,
       final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact)
-          throws MojoExecutionException {
+      throws MojoExecutionException {
 
     LaunchConfig rval = new LaunchConfig();
 

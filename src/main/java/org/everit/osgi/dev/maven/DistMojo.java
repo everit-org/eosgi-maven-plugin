@@ -30,21 +30,17 @@ import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.ReflectionException;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryFactory;
-import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
-import org.apache.maven.artifact.resolver.ArtifactResolutionException;
-import org.apache.maven.artifact.resolver.ArtifactResolver;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.eclipse.aether.artifact.Artifact;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.resolution.ArtifactRequest;
 import org.everit.osgi.dev.eosgi.dist.schema.util.DistSchemaProvider;
 import org.everit.osgi.dev.eosgi.dist.schema.util.LaunchConfigurationDTO;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
@@ -86,15 +82,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   public static final String SYSPROP_ENVIRONMENT_ID = "org.everit.osgi.dev.environmentId";
 
   private static final String VAR_DIST_UTIL = "distUtil";
-
-  @Component
-  protected ArtifactFactory artifactFactory;
-
-  @Component
-  protected ArtifactRepositoryFactory artifactRepositoryFactory;
-
-  @Component
-  protected ArtifactResolver artifactResolver;
 
   /**
    * Path to folder where the distribution will be generated. The content of this folder will be
@@ -194,7 +181,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   private void distributeArtifacts(final String environmentId,
       final RemoteOSGiManager remoteOSGiManager,
       final File envDistFolderFile, final Map<String, ArtifactType> existingArtifactMap,
-      final ArtifactsType artifactsType)
+      final ArtifactsType artifactsType, final FileManager fileManager)
       throws MojoExecutionException {
 
     if (artifactsType == null) {
@@ -209,9 +196,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     for (ArtifactType artifact : artifacts) {
 
       Artifact mavenArtifact = resolveMavenArtifactByArtifactType(artifact);
-      downloadArtifactIfNecessary(mavenArtifact);
 
-      File targetFile = resolveArtifactAbsoluteFile(artifact, envDistFolderFile);
+      File targetFile = PluginUtil.resolveArtifactAbsoluteFile(artifact, envDistFolderFile);
 
       boolean fileChanged = fileManager.overCopyFile(mavenArtifact.getFile(), targetFile);
 
@@ -252,19 +238,6 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
       executeOnEnvironment(globalDistFolderFile, environment);
-    }
-  }
-
-  private void downloadArtifactIfNecessary(final Artifact mavenArtifact)
-      throws MojoExecutionException {
-    try {
-      artifactResolver.resolve(mavenArtifact, remoteRepositories, localRepository);
-    } catch (ArtifactResolutionException e) {
-      throw new MojoExecutionException(
-          "Could not resolve artifact for creating distribution package", e);
-    } catch (ArtifactNotFoundException e) {
-      throw new MojoExecutionException(
-          "Could not resolve artifact for creating distribution package", e);
     }
   }
 
@@ -316,7 +289,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       remoteOSGiManager.uninstallBundles(resolveBundlesToUninstall(bundlesToRemove));
 
       distributeArtifacts(environmentId,
-          remoteOSGiManager, environmentRootFolder, existingBundleMap, artifacts);
+          remoteOSGiManager, environmentRootFolder, existingBundleMap, artifacts, fileManager);
 
       parseParsables(environmentRootFolder, distributionPackage, fileManager);
       distributedEnvironments.add(
@@ -435,31 +408,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     return result;
   }
 
-  private File resolveArtifactAbsoluteFile(final ArtifactType artifactType,
-      final File distFolderFile) {
-
-    File artifactRelativeFile = resolveArtifactRelativeFile(artifactType);
-    File absoluteArtifactFile = new File(distFolderFile, artifactRelativeFile.getPath());
-    return absoluteArtifactFile;
-  }
-
-  private File resolveArtifactRelativeFile(final ArtifactType artifactType) {
-    String targetFolder = artifactType.getTargetFolder();
-    File targetFolderFile = new File(targetFolder);
-
-    String targetFile = artifactType.getTargetFile();
-    if (targetFile == null) {
-      targetFile = artifactType.getArtifactId() + "-" + artifactType.getVersion();
-      if (artifactType.getClassifier() != null) {
-        targetFile += "-" + artifactType.getClassifier();
-      }
-      targetFile += "." + artifactType.getType();
-    }
-
-    File artifactFile = new File(targetFolderFile, targetFile);
-    return artifactFile;
-  }
-
   private BundleDataType[] resolveBundlesToUninstall(final List<ArtifactType> bundlesToRemove) {
     List<BundleDataType> result = new ArrayList<>(bundlesToRemove.size());
 
@@ -481,21 +429,11 @@ public class DistMojo extends AbstractEOSGiMojo {
     } catch (IOException e) {
       throw new MojoExecutionException("Could not get distribution package", e);
     }
-    Artifact distPackageArtifact =
-        artifactFactory.createArtifact(distPackageIdParts[0], distPackageIdParts[1],
-            distPackageIdParts[2],
-            "compile", "zip");
+    ArtifactRequest artifactRequest = new ArtifactRequest();
+    artifactRequest.setArtifact(new DefaultArtifact(distPackageIdParts[0], distPackageIdParts[1],
+        "zip", distPackageIdParts[2]));
 
-    try {
-      artifactResolver.resolve(distPackageArtifact, remoteRepositories, localRepository);
-    } catch (ArtifactResolutionException e) {
-      throw new MojoExecutionException("Could not resolve distribution artifact: "
-          + distPackageArtifact.getArtifactId(), e);
-    } catch (ArtifactNotFoundException e) {
-      throw new MojoExecutionException("Could not resolve distribution artifact: "
-          + distPackageArtifact.getArtifactId(), e);
-    }
-    return distPackageArtifact;
+    return artifactResolver.resolve(artifactRequest);
   }
 
   /**
@@ -536,24 +474,13 @@ public class DistMojo extends AbstractEOSGiMojo {
     return distPackageParts;
   }
 
-  private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact) {
-    String artifactType = artifact.getType();
-    if (artifactType == null) {
-      artifactType = "jar";
-    }
-    Artifact mavenArtifact = null;
-    if (artifact.getClassifier() == null) {
-      mavenArtifact =
-          artifactFactory.createArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-              artifact.getVersion(), "compile", artifactType);
-    } else {
-      mavenArtifact =
-          artifactFactory.createArtifactWithClassifier(artifact.getGroupId(),
-              artifact.getArtifactId(),
-              artifact.getVersion(), artifactType, artifact.getClassifier());
+  private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact)
+      throws MojoExecutionException {
 
-    }
-    return mavenArtifact;
+    ArtifactRequest artifactRequest = new ArtifactRequest();
+    artifactRequest.setArtifact(new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
+        artifact.getClassifier(), artifact.getType(), artifact.getVersion()));
+    return artifactResolver.resolve(artifactRequest);
   }
 
 }

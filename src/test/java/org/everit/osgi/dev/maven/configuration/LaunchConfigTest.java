@@ -22,11 +22,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.DefaultArtifact;
-import org.apache.maven.artifact.handler.DefaultArtifactHandler;
-import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.eclipse.aether.artifact.Artifact;
+import org.eclipse.aether.artifact.DefaultArtifact;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,24 +34,18 @@ public class LaunchConfigTest {
   private static final String ENVIRONMENT_ID = "test";
 
   private static final Artifact JACOCO_AGENT_ARTIFACT = new DefaultArtifact(
-      "org.jacoco", "org.jacoco.agent", VersionRange.createFromVersion("0.7.5.201505241946"),
-      null, "jar", null, new DefaultArtifactHandler());
+      "org.jacoco", "org.jacoco.agent", null, "0.7.5.201505241946")
+          .setFile(new File("jacoco.jar") {
+
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public String getAbsolutePath() {
+              return "jacoco.jar";
+            };
+          });
 
   private static final String REPORT_FOLDER = "reportFolder";
-
-  static {
-    File mockedJacocoFile = new File("jacoco.jar") {
-
-      private static final long serialVersionUID = 4993324253886698659L;
-
-      @Override
-      public String getAbsolutePath() {
-        return "jacoco.jar";
-      }
-
-    };
-    JACOCO_AGENT_ARTIFACT.setFile(mockedJacocoFile);
-  }
 
   private void assertMap(final Map<String, String> actualMap,
       final String... expctedKeyValuePairs) {

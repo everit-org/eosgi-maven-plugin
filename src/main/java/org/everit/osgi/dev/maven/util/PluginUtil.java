@@ -205,6 +205,40 @@ public final class PluginUtil {
     return result.toString();
   }
 
+  /**
+   * Creates the absolute file of an artifact where it is placed in the environment folder.
+   *
+   * @param artifact
+   *          The artifact.
+   * @param environmentRootFolder
+   *          The root folder of the distributed environment.
+   * @return The absolute file of the artifact in the distributed environment.
+   */
+  public static File resolveArtifactAbsoluteFile(final ArtifactType artifact,
+      final File environmentRootFolder) {
+
+    File artifactRelativeFile = resolveArtifactRelativeFile(artifact);
+    File absoluteArtifactFile = new File(environmentRootFolder, artifactRelativeFile.getPath());
+    return absoluteArtifactFile;
+  }
+
+  private static File resolveArtifactRelativeFile(final ArtifactType artifactType) {
+    String targetFolder = artifactType.getTargetFolder();
+    File targetFolderFile = new File(targetFolder);
+
+    String targetFile = artifactType.getTargetFile();
+    if (targetFile == null) {
+      targetFile = artifactType.getArtifactId() + "-" + artifactType.getVersion();
+      if (artifactType.getClassifier() != null) {
+        targetFile += "-" + artifactType.getClassifier();
+      }
+      targetFile += "." + artifactType.getType();
+    }
+
+    File artifactFile = new File(targetFolderFile, targetFile);
+    return artifactFile;
+  }
+
   private PluginUtil() {
   }
 }
