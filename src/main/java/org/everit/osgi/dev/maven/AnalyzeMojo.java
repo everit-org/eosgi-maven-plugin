@@ -63,10 +63,10 @@ import org.osgi.framework.wiring.FrameworkWiring;
  * the JDK. This information can be useful to find out what should be specified for
  * <i>org.osgi.framework.system.packages</i> property and what could be added as a bundle.
  */
-@Mojo(name = "analyse", requiresProject = true,
+@Mojo(name = "analyze", requiresProject = true,
     requiresDependencyResolution = ResolutionScope.COMPILE)
 @Execute(phase = LifecyclePhase.PACKAGE)
-public class AnalyseMojo extends AbstractEOSGiMojo {
+public class AnalyzeMojo extends AbstractEOSGiMojo {
 
   private static File createTempDirectory() throws IOException {
     final File temp = File.createTempFile("eosgi-diagnose-",
@@ -90,7 +90,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
     if (files != null) { // some JVMs return null for empty dirs
       for (File f : files) {
         if (f.isDirectory()) {
-          AnalyseMojo.deleteFolder(f);
+          AnalyzeMojo.deleteFolder(f);
         } else {
           f.delete();
         }
@@ -109,7 +109,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
     Framework osgiContainer = null;
     File tempDirectory = null;
     try {
-      tempDirectory = AnalyseMojo.createTempDirectory();
+      tempDirectory = AnalyzeMojo.createTempDirectory();
     } catch (IOException e) {
       throw new MojoFailureException(
           "Cannot create temprorary directory for embedded OSGi container", e);
@@ -132,7 +132,7 @@ public class AnalyseMojo extends AbstractEOSGiMojo {
           Thread.currentThread().interrupt();
         }
       }
-      AnalyseMojo.deleteFolder(tempDirectory);
+      AnalyzeMojo.deleteFolder(tempDirectory);
     }
   }
 

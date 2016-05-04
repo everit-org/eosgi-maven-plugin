@@ -195,7 +195,7 @@ public class BundleExecutionPlan {
       Artifact resolvedArtifact = resolveArtifact(artifactResolver, artifact);
       File newArtifactFile = resolvedArtifact.getFile();
       File oldArtifactFile =
-          PluginUtil.resolveArtifactAbsoluteFile(artifact, environmentRootFolder);
+          PluginUtil.resolveArtifactAbsoluteFile(artifact, resolvedArtifact, environmentRootFolder);
 
       if (contentDifferent(newArtifactFile, oldArtifactFile)) {
         result.add(artifact);

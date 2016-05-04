@@ -16,12 +16,14 @@
 package org.everit.osgi.dev.maven.util;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.RuntimePathsType;
@@ -85,13 +87,13 @@ public final class EnvironmentCleaner {
     if (isPathRuntime(directory)) {
       return false;
     }
-    File[] dirContents = directory.listFiles();
+    File[] dirContents = directory.listFiles((FileFilter) TrueFileFilter.INSTANCE);
     boolean emptyAfterCleaning = true;
     for (File dirContent : dirContents) {
       if (dirContent.isDirectory()) {
-        emptyAfterCleaning = emptyAfterCleaning && cleanDirRecurse(dirContent);
+        emptyAfterCleaning = cleanDirRecurse(dirContent) && emptyAfterCleaning;
       } else {
-        emptyAfterCleaning = emptyAfterCleaning && cleanFile(dirContent);
+        emptyAfterCleaning = cleanFile(dirContent) && emptyAfterCleaning;
       }
     }
     if (emptyAfterCleaning && !touchedFiles.contains(directory)) {
@@ -114,6 +116,9 @@ public final class EnvironmentCleaner {
   private boolean isPathRuntime(final File pathFile) {
     Path relativePath = environmentRootPath.relativize(pathFile.toPath());
     String relativePathString = relativePath.normalize().toString();
+    if (pathFile.isDirectory()) {
+      relativePathString += "/";
+    }
     for (Pattern runtimePathPatter : runtimePathPatterns) {
       if (runtimePathPatter.matcher(relativePathString).matches()) {
         return true;

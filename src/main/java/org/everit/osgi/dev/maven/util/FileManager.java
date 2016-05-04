@@ -299,6 +299,7 @@ public class FileManager {
     File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
     ClassLoader cl = this.getClass().getClassLoader();
     ParserConfiguration configuration = new ParserConfiguration(cl);
+    configuration.setName(parseableFile.getPath());
 
     try (FileInputStream fin = new FileInputStream(parseableFile);
         FileOutputStream fout = new FileOutputStream(tmpFile);
@@ -342,8 +343,6 @@ public class FileManager {
   public void unpackZipFile(final File file, final File destinationDirectory)
       throws MojoExecutionException {
 
-    destinationDirectory.mkdirs();
-
     try (ZipFile zipFile = new ZipFile(file)) {
       Enumeration<? extends ZipArchiveEntry> entries = zipFile.getEntries();
       while (entries.hasMoreElements()) {
@@ -351,6 +350,7 @@ public class FileManager {
         String name = entry.getName();
         File destFile = new File(destinationDirectory, name);
         if (entry.isDirectory()) {
+          touchedFiles.add(destFile);
           destFile.mkdirs();
         } else {
           File parentFolder = destFile.getParentFile();

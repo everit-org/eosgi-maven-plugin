@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.maven.plugin.MojoFailureException;
+import org.eclipse.aether.artifact.Artifact;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
@@ -210,26 +211,25 @@ public final class PluginUtil {
    *
    * @param artifact
    *          The artifact.
+   * @param mavenArtifact
+   *          The resolved maven artifact.
    * @param environmentRootFolder
    *          The root folder of the distributed environment.
    * @return The absolute file of the artifact in the distributed environment.
    */
   public static File resolveArtifactAbsoluteFile(final ArtifactType artifact,
-      final File environmentRootFolder) {
+      final Artifact mavenArtifact, final File environmentRootFolder) {
 
-    File artifactRelativeFile = resolveArtifactRelativeFile(artifact);
+    File artifactRelativeFile = resolveArtifactRelativeFile(artifact, mavenArtifact);
     File absoluteArtifactFile = new File(environmentRootFolder, artifactRelativeFile.getPath());
     return absoluteArtifactFile;
   }
 
-  private static File resolveArtifactRelativeFile(final ArtifactType artifactType) {
+  private static File resolveArtifactRelativeFile(final ArtifactType artifactType,
+      final Artifact mavenArtifact) {
     String targetFile = artifactType.getTargetFile();
     if (targetFile == null) {
-      targetFile = artifactType.getArtifactId() + "-" + artifactType.getVersion();
-      if (artifactType.getClassifier() != null) {
-        targetFile += "-" + artifactType.getClassifier();
-      }
-      targetFile += "." + artifactType.getType();
+      targetFile = mavenArtifact.getFile().getName();
     }
 
     String targetFolder = artifactType.getTargetFolder();

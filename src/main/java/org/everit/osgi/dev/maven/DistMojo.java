@@ -37,12 +37,12 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.codehaus.plexus.component.annotations.Requirement;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -91,7 +91,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private static final String VAR_DIST_UTIL = "distUtil";
 
-  @Requirement
+  @Component
   protected ArtifactHandlerManager artifactHandlerManager;
 
   protected DistributedEnvironmentConfigurationProvider distEnvConfigProvider =
@@ -170,7 +170,8 @@ public class DistMojo extends AbstractEOSGiMojo {
             + "' cannot be specified as the key of a VM argument manually"
             + " as it is a reserved word.");
       }
-      if (entry.getValue().startsWith(environmentIdSyspropPrefix)) {
+      String value = entry.getValue();
+      if (value != null && value.trim().startsWith(environmentIdSyspropPrefix)) {
         throw new MojoFailureException("'" + SYSPROP_ENVIRONMENT_ID
             + "' cannot be specified as a system property manually as it is a reserved word.");
       }
@@ -242,7 +243,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
       Artifact mavenArtifact = resolveMavenArtifactByArtifactType(artifact);
 
-      File targetFile = PluginUtil.resolveArtifactAbsoluteFile(artifact, envDistFolderFile);
+      File targetFile =
+          PluginUtil.resolveArtifactAbsoluteFile(artifact, mavenArtifact, envDistFolderFile);
 
       boolean fileChanged = fileManager.overCopyFile(mavenArtifact.getFile(), targetFile);
 
