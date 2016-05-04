@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
@@ -63,13 +64,15 @@ public class BundleExecutionPlan {
    *          The default start level of the bundles that are newly installed.
    * @param artifactResolver
    *          Resolves the artifacts.
+   * @param artifactHandlerManager
    * @throws MojoExecutionException
    *           If an exception happens during generating the execution plan.
    */
   public BundleExecutionPlan(final EnvironmentType existingDistributedEnvironment,
       final ArtifactsType newArtifacts, final File environmentRootFolder,
       final int defaultBundleStartLevel,
-      final PredefinedRepoArtifactResolver artifactResolver)
+      final PredefinedRepoArtifactResolver artifactResolver,
+      final ArtifactHandlerManager artifactHandlerManager)
       throws MojoExecutionException {
 
     Map<String, ArtifactType> bundleByLocation =
@@ -98,7 +101,7 @@ public class BundleExecutionPlan {
     this.removeBundles = bundleByLocation.values();
     this.installBundles = installBundleMap.values();
     this.updateBundles = selectBundlesWithChangedContent(newBundlesThatExisted,
-        environmentRootFolder, artifactResolver);
+        environmentRootFolder, artifactResolver, artifactHandlerManager);
 
     this.lowestStartLevel = resolveLowestStartLevel(defaultBundleStartLevel);
   }
@@ -152,11 +155,14 @@ public class BundleExecutionPlan {
   }
 
   private Artifact resolveArtifact(final PredefinedRepoArtifactResolver artifactResolver,
-      final ArtifactType artifact) throws MojoExecutionException {
-    String extension = artifact.getType();
-    if (extension == null) {
-      extension = "jar";
+      final ArtifactType artifact, final ArtifactHandlerManager artifactHandlerManager)
+      throws MojoExecutionException {
+
+    String artifactType = artifact.getType();
+    if (artifactType == null) {
+      artifactType = "jar";
     }
+    String extension = artifactHandlerManager.getArtifactHandler(artifactType).getExtension();
     ArtifactRequest artifactRequest = new ArtifactRequest();
     Artifact aetherArtifact = new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
         artifact.getClassifier(), extension, artifact.getVersion());
@@ -188,11 +194,13 @@ public class BundleExecutionPlan {
 
   private Collection<ArtifactType> selectBundlesWithChangedContent(
       final List<ArtifactType> newBundlesThatExisted, final File environmentRootFolder,
-      final PredefinedRepoArtifactResolver artifactResolver) throws MojoExecutionException {
+      final PredefinedRepoArtifactResolver artifactResolver,
+      final ArtifactHandlerManager artifactHandlerManager) throws MojoExecutionException {
 
     List<ArtifactType> result = new ArrayList<>();
     for (ArtifactType artifact : newBundlesThatExisted) {
-      Artifact resolvedArtifact = resolveArtifact(artifactResolver, artifact);
+      Artifact resolvedArtifact =
+          resolveArtifact(artifactResolver, artifact, artifactHandlerManager);
       File newArtifactFile = resolvedArtifact.getFile();
       File oldArtifactFile =
           PluginUtil.resolveArtifactAbsoluteFile(artifact, resolvedArtifact, environmentRootFolder);
