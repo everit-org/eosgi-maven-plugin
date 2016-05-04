@@ -33,7 +33,7 @@ import org.eclipse.aether.resolution.ArtifactRequest;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 
 /**
@@ -53,7 +53,7 @@ public class BundleExecutionPlan {
   /**
    * Constructor.
    *
-   * @param existingDistributionPackage
+   * @param existingDistributedEnvironment
    *          The distribution that was previously generated.
    * @param newArtifacts
    *          The artifact list of the new distribution process.
@@ -66,14 +66,14 @@ public class BundleExecutionPlan {
    * @throws MojoExecutionException
    *           If an exception happens during generating the execution plan.
    */
-  public BundleExecutionPlan(final DistributionPackageType existingDistributionPackage,
+  public BundleExecutionPlan(final EnvironmentType existingDistributedEnvironment,
       final ArtifactsType newArtifacts, final File environmentRootFolder,
       final int defaultBundleStartLevel,
       final PredefinedRepoArtifactResolver artifactResolver)
       throws MojoExecutionException {
 
     Map<String, ArtifactType> bundleByLocation =
-        createExistingBundleByLocationMap(existingDistributionPackage);
+        createExistingBundleByLocationMap(existingDistributedEnvironment);
 
     Map<String, ArtifactType> installBundleMap = new HashMap<>();
     List<ArtifactType> newBundlesThatExisted = new ArrayList<>();
@@ -86,7 +86,7 @@ public class BundleExecutionPlan {
           if (installBundleMap.containsKey(bundleData.getLocation())) {
             throw new MojoExecutionException(
                 "Bundle location '" + bundleData.getLocation() + "' exists twice in environment '"
-                    + existingDistributionPackage.getEnvironmentId() + "'");
+                    + existingDistributedEnvironment.getId() + "'");
           }
           installBundleMap.put(bundleData.getLocation(), newArtifact);
         } else {
@@ -132,14 +132,15 @@ public class BundleExecutionPlan {
   }
 
   private Map<String, ArtifactType> createExistingBundleByLocationMap(
-      final DistributionPackageType existingDistributionPackage) {
+      final EnvironmentType existingDistributedEnvironment) {
 
     Map<String, ArtifactType> result = new HashMap<>();
-    if (existingDistributionPackage == null || existingDistributionPackage.getArtifacts() == null) {
+    if (existingDistributedEnvironment == null
+        || existingDistributedEnvironment.getArtifacts() == null) {
       return result;
     }
 
-    for (ArtifactType artifact : existingDistributionPackage.getArtifacts().getArtifact()) {
+    for (ArtifactType artifact : existingDistributedEnvironment.getArtifacts().getArtifact()) {
       BundleDataType bundleData = artifact.getBundle();
       if (bundleData != null
           && !OSGiActionType.NONE.equals(bundleData.getAction())) {
@@ -152,9 +153,13 @@ public class BundleExecutionPlan {
 
   private Artifact resolveArtifact(final PredefinedRepoArtifactResolver artifactResolver,
       final ArtifactType artifact) throws MojoExecutionException {
+    String extension = artifact.getType();
+    if (extension == null) {
+      extension = "jar";
+    }
     ArtifactRequest artifactRequest = new ArtifactRequest();
     Artifact aetherArtifact = new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-        artifact.getClassifier(), artifact.getType(), artifact.getVersion());
+        artifact.getClassifier(), extension, artifact.getVersion());
     artifactRequest.setArtifact(aetherArtifact);
 
     Artifact resolvedArtifact = artifactResolver.resolve(artifactRequest);

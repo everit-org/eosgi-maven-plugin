@@ -24,7 +24,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
@@ -41,25 +43,27 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
-import org.everit.osgi.dev.eosgi.dist.schema.util.DistSchemaProvider;
+import org.everit.osgi.dev.eosgi.dist.schema.util.DistributedEnvironmentConfigurationProvider;
 import org.everit.osgi.dev.eosgi.dist.schema.util.LaunchConfigurationDTO;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsableType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.TemplateEnginesType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.configuration.LaunchConfigOverride;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
-import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
 import org.everit.osgi.dev.maven.upgrade.NoopRemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManagerProvider;
+import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EnvironmentCleaner;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -84,6 +88,9 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private static final String VAR_DIST_UTIL = "distUtil";
 
+  protected DistributedEnvironmentConfigurationProvider distEnvConfigProvider =
+      new DistributedEnvironmentConfigurationProvider();
+
   /**
    * Path to folder where the distribution will be generated. The content of this folder will be
    * overridden if the files with same name already exist.
@@ -92,9 +99,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
   protected String distFolder;
 
-  protected List<DistributedEnvironment> distributedEnvironments;
-
-  protected DistSchemaProvider distSchemaProvider = new DistSchemaProvider();
+  protected List<DistributedEnvironmenData> distributedEnvironmentDataCollection;
 
   private JMXOSGiManagerProvider jMXOSGiManagerProvider;
 
@@ -105,7 +110,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * Map of plugin artifacts.
    */
   @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
-  protected Map<String, Artifact> pluginArtifactMap;
+  protected Map<String, org.apache.maven.artifact.Artifact> pluginArtifactMap;
 
   /**
    * The folder where the integration test reports will be placed. Please note that the content of
@@ -134,21 +139,41 @@ public class DistMojo extends AbstractEOSGiMojo {
       final EnvironmentConfiguration environment, final LaunchConfig launchConfig)
       throws MojoFailureException {
 
-    checkReservedSystemPropertyInSystemProperties(launchConfig.getSystemProperties());
+    checkReservedSystemPropertyInVmArguments(launchConfig.getVmArguments());
     LaunchConfigOverride[] overrides = launchConfig.getOverrides();
     for (LaunchConfigOverride launchConfigOverride : overrides) {
-      checkReservedSystemPropertyInSystemProperties(launchConfigOverride.getSystemProperties());
+      checkReservedSystemPropertyInVmArguments(launchConfigOverride.getVmArguments());
     }
 
-    launchConfig.getSystemProperties().put(SYSPROP_ENVIRONMENT_ID, environment.getId());
+    launchConfig.getVmArguments().put(SYSPROP_ENVIRONMENT_ID,
+        "-D" + SYSPROP_ENVIRONMENT_ID + "=" + environment.getId());
   }
 
-  private void checkReservedSystemPropertyInSystemProperties(
-      final Map<String, String> systemProperties) throws MojoFailureException {
-    if (systemProperties != null && systemProperties.containsKey(SYSPROP_ENVIRONMENT_ID)) {
-      throw new MojoFailureException("Reserved system property '" + SYSPROP_ENVIRONMENT_ID
-          + "' cannot be specified in launchConfig manually");
+  private void checkReservedSystemPropertyInVmArguments(final Map<String, String> vmArguments)
+      throws MojoFailureException {
+    if (vmArguments == null) {
+      return;
     }
+
+    String environmentIdSyspropPrefix = "-D" + SYSPROP_ENVIRONMENT_ID + "=";
+    Set<Entry<String, String>> entrySet = vmArguments.entrySet();
+
+    for (Entry<String, String> entry : entrySet) {
+      if (SYSPROP_ENVIRONMENT_ID.equals(entry.getKey())) {
+        throw new MojoFailureException("'" + SYSPROP_ENVIRONMENT_ID
+            + "' cannot be specified as the key of a VM argument manually"
+            + " as it is a reserved word.");
+      }
+      if (entry.getValue().startsWith(environmentIdSyspropPrefix)) {
+        throw new MojoFailureException("'" + SYSPROP_ENVIRONMENT_ID
+            + "' cannot be specified as a system property manually as it is a reserved word.");
+      }
+    }
+  }
+
+  private Artifact convertMavenArtifactToAether(final org.apache.maven.artifact.Artifact artifact) {
+    return new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
+        artifact.getClassifier(), artifact.getType(), artifact.getVersion());
   }
 
   private void copyDistFolderToTargetIfExists(final File environmentRootFolder,
@@ -164,7 +189,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   }
 
   private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
-      final File distFolderFile, final DistributionPackageType existingDistributionPackage) {
+      final File distFolderFile, final EnvironmentType existingDistributedEnvironment) {
 
     String jmxLocalURL =
         jMXOSGiManagerProvider.getJmxURLForEnvironment(environmentId, distFolderFile);
@@ -173,7 +198,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       return new NoopRemoteOSGiManager();
     }
 
-    if (existingDistributionPackage == null) {
+    if (existingDistributedEnvironment == null) {
       getLog().warn(
           "Found JVM that belongs to Environment, but there is no existing distribution package."
               + " The OSGi container will not be upgraded. Restarting of the container is truly"
@@ -252,7 +277,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     File globalDistFolderFile = new File(distFolder);
 
-    distributedEnvironments = new ArrayList<DistributedEnvironment>();
+    distributedEnvironmentDataCollection = new ArrayList<DistributedEnvironmenData>();
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
@@ -275,44 +300,44 @@ public class DistMojo extends AbstractEOSGiMojo {
     File distPackageFile = distPackageArtifact.getFile();
     File environmentRootFolder = new File(globalDistFolderFile, environmentId);
 
-    DistributionPackageType existingDistributionPackage =
-        distSchemaProvider.getOverriddenDistributionPackage(environmentRootFolder,
+    EnvironmentType existingDistributedEnvironment =
+        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
             UseByType.PARSABLES);
 
-    LaunchConfigurationDTO existingEnvConfig = distSchemaProvider.getLaunchConfiguration(
-        existingDistributionPackage);
+    LaunchConfigurationDTO existingEnvConfig = distEnvConfigProvider.getLaunchConfiguration(
+        existingDistributedEnvironment);
 
     fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
     copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
 
     parseConfiguration(environmentRootFolder, processedArtifacts, environment, fileManager);
 
-    DistributionPackageType distributionPackage =
-        distSchemaProvider.getOverriddenDistributionPackage(environmentRootFolder,
+    EnvironmentType distributedEnvironment =
+        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
             UseByType.PARSABLES);
 
-    LaunchConfigurationDTO envConfig = distSchemaProvider.getLaunchConfiguration(
-        distributionPackage);
+    LaunchConfigurationDTO envConfig = distEnvConfigProvider.getLaunchConfiguration(
+        distributedEnvironment);
 
-    ArtifactsType artifacts = distributionPackage.getArtifacts();
+    ArtifactsType artifacts = distributedEnvironment.getArtifacts();
 
     Map<String, ArtifactType> existingBundleMap =
-        PluginUtil.createBundleMap(existingDistributionPackage);
+        PluginUtil.createBundleMap(existingDistributedEnvironment);
     List<ArtifactType> bundlesToRemove =
         PluginUtil.getBundlesToRemove(existingBundleMap, artifacts);
 
     try (RemoteOSGiManager remoteOSGiManager =
         createRemoteOSGiManager(environmentId, environmentRootFolder,
-            existingDistributionPackage)) {
+            existingDistributedEnvironment)) {
 
       remoteOSGiManager.uninstallBundles(resolveBundlesToUninstall(bundlesToRemove));
 
       distributeArtifacts(environmentId,
           remoteOSGiManager, environmentRootFolder, existingBundleMap, artifacts, fileManager);
 
-      parseParsables(environmentRootFolder, distributionPackage, fileManager);
-      distributedEnvironments.add(
-          new DistributedEnvironment(environment, distributionPackage,
+      parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
+      distributedEnvironmentDataCollection.add(
+          new DistributedEnvironmenData(environment, distributedEnvironment,
               environmentRootFolder, processedArtifacts));
 
       if (envConfig.isChanged(existingEnvConfig)) {
@@ -326,7 +351,7 @@ public class DistMojo extends AbstractEOSGiMojo {
         remoteOSGiManager.refresh();
       }
 
-      EnvironmentCleaner.cleanEnvironmentFolder(distributionPackage, environmentRootFolder,
+      EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,
           fileManager);
     }
   }
@@ -345,7 +370,10 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
-    Artifact jacocoAgentArtifact = pluginArtifactMap.get("org.jacoco:org.jacoco.agent");
+    AutoResolveArtifactHolder jacocoAgentArtifact =
+        new AutoResolveArtifactHolder(
+            convertMavenArtifactToAether(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
+            artifactResolver);
 
     LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
         environment.getLaunchConfig(), environment.getId(),
@@ -358,10 +386,11 @@ public class DistMojo extends AbstractEOSGiMojo {
     vars.put("frameworkStartLevel", environment.getFrameworkStartLevel());
     vars.put("bundleStartLevel", environment.getBundleStartLevel());
     vars.put("distributableArtifacts", distributableArtifacts);
+    vars.put("runtimePaths", environment.getRuntimePaths());
     vars.put("launchConfig", launchConfig);
     vars.put(VAR_DIST_UTIL, new DistUtil());
     try {
-      fileManager.replaceFileWithParsed(configFile, vars, "UTF8");
+      fileManager.replaceFileWithParsed(configFile, vars, "UTF8", TemplateEnginesType.XML);
     } catch (IOException e) {
       throw new MojoExecutionException(
           "Could not run velocity on configuration file: " + configFile.getName(), e);
@@ -372,14 +401,14 @@ public class DistMojo extends AbstractEOSGiMojo {
    * Parses and processes the files that are templates.
    */
   private void parseParsables(final File distFolderFile,
-      final DistributionPackageType distributionPackage, final FileManager fileManager)
+      final EnvironmentType distributedEnvironment, final FileManager fileManager)
       throws MojoExecutionException {
 
     Map<String, Object> vars = new HashMap<>();
-    vars.put("distributionPackage", distributionPackage);
+    vars.put("distributedEnvironment", distributedEnvironment);
     vars.put(VAR_DIST_UTIL, new DistUtil());
 
-    ParsablesType parsables = distributionPackage.getParsables();
+    ParsablesType parsables = distributedEnvironment.getParsables();
     if (parsables != null) {
 
       List<ParsableType> parsable = parsables.getParsable();
@@ -395,7 +424,8 @@ public class DistMojo extends AbstractEOSGiMojo {
         }
 
         try {
-          fileManager.replaceFileWithParsed(parsableFile, vars, p.getEncoding());
+          fileManager.replaceFileWithParsed(parsableFile, vars, p.getEncoding(),
+              p.getTemplateEngine());
         } catch (IOException e) {
           throw new MojoExecutionException(
               "Could not replace parsable with parsed content: [" + p.getPath() + "]", e);
@@ -502,8 +532,12 @@ public class DistMojo extends AbstractEOSGiMojo {
       throws MojoExecutionException {
 
     ArtifactRequest artifactRequest = new ArtifactRequest();
+    String artifactType = artifact.getType();
+    if (artifactType == null) {
+      artifactType = "jar";
+    }
     artifactRequest.setArtifact(new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-        artifact.getClassifier(), artifact.getType(), artifact.getVersion()));
+        artifact.getClassifier(), artifactType, artifact.getVersion()));
     return artifactResolver.resolve(artifactRequest);
   }
 

@@ -51,13 +51,13 @@ import org.everit.osgi.dev.eosgi.dist.schema.util.LaunchConfigurationDTO;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
-import org.everit.osgi.dev.maven.dto.DistributedEnvironment;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
 import org.everit.osgi.dev.maven.util.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
@@ -392,19 +392,19 @@ public class IntegrationTestMojo extends DistMojo {
     TestResult testResultSum = new TestResult(null);
     List<TestResult> testResults = new ArrayList<>();
 
-    for (DistributedEnvironment distributedEnvironment : distributedEnvironments) {
+    for (DistributedEnvironmenData distributedEnvironmentData : distributedEnvironmentDataCollection) { // CS_DISABLE_LINE_LENGTH
 
-      EnvironmentConfiguration environment = distributedEnvironment.getEnvironment();
+      EnvironmentConfiguration environment = distributedEnvironmentData.getEnvironment();
 
       String environmentId = environment.getId();
-      File distFolderFile = distributedEnvironment.getDistributionFolder();
+      File distFolderFile = distributedEnvironmentData.getDistributionFolder();
       int shutdownTimeout = environment.getShutdownTimeout();
       int timeout = environment.getTimeout();
 
       ArtifactsType artifacts =
-          distributedEnvironment.getDistributionPackage().getArtifacts();
+          distributedEnvironmentData.getDistributedEnvironment().getArtifacts();
       List<DistributableArtifact> distributableArtifacts =
-          distributedEnvironment.getDistributableArtifacts();
+          distributedEnvironmentData.getDistributableArtifacts();
       int expectedTestNum = calculateExpectedTestNum(artifacts, distributableArtifacts);
 
       TestResult testResult = runIntegrationTestsOnEnvironment(
@@ -621,12 +621,12 @@ public class IntegrationTestMojo extends DistMojo {
   private String[] resolveCommandForEnvironment(final File distFolderFile)
       throws MojoFailureException {
 
-    DistributionPackageType distributionPackage =
-        distSchemaProvider.getOverriddenDistributionPackage(distFolderFile,
+    EnvironmentType distributedEnvironment =
+        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(distFolderFile,
             UseByType.INTEGRATION_TEST);
 
     LaunchConfigurationDTO environmentConfigurationDTO =
-        distSchemaProvider.getLaunchConfiguration(distributionPackage);
+        distEnvConfigProvider.getLaunchConfiguration(distributedEnvironment);
 
     List<String> command = new ArrayList<>();
 
@@ -638,7 +638,6 @@ public class IntegrationTestMojo extends DistMojo {
       command.add(classPath);
     }
 
-    command.addAll(environmentConfigurationDTO.systemProperties);
     command.addAll(environmentConfigurationDTO.vmArguments);
 
     command.add(environmentConfigurationDTO.mainClass);

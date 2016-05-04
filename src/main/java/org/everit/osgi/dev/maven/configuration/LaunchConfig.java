@@ -23,9 +23,9 @@ import java.util.Set;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.eclipse.aether.artifact.Artifact;
 import org.everit.osgi.dev.eosgi.dist.schema.util.MergeUtil;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 
 /**
  * The configuration of the launched OSGi Container.
@@ -43,9 +43,9 @@ public class LaunchConfig extends AbstractLaunchConfig {
   }
 
   LaunchConfig(final JacocoSettings jacoco, final Map<String, String> programArguments,
-      final Map<String, String> systemProperties, final Map<String, String> vmArguments,
+      final Map<String, String> vmArguments,
       final LaunchConfigOverride[] overrides) {
-    super(jacoco, programArguments, systemProperties, vmArguments);
+    super(jacoco, programArguments, vmArguments);
     this.overrides = overrides;
   }
 
@@ -71,7 +71,8 @@ public class LaunchConfig extends AbstractLaunchConfig {
    * environment and returns a new {@link LaunchConfig}.
    */
   public LaunchConfig createLaunchConfigForEnvironment(final LaunchConfig environmentLaunchConfig,
-      final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact)
+      final String environmentId, final String reportFolder,
+      final AutoResolveArtifactHolder jacocoAgentArtifact)
       throws MojoExecutionException {
 
     LaunchConfig rval = new LaunchConfig();
@@ -134,16 +135,13 @@ public class LaunchConfig extends AbstractLaunchConfig {
       final LaunchConfigOverride o1,
       final LaunchConfig d2,
       final LaunchConfigOverride o2,
-      final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact,
-      final UseByType useBy) {
+      final String environmentId, final String reportFolder,
+      final AutoResolveArtifactHolder jacocoAgentArtifact,
+      final UseByType useBy) throws MojoExecutionException {
 
     LaunchConfigOverride mergedLaunchConfigOverride = new LaunchConfigOverride();
     mergedLaunchConfigOverride.useBy = useBy;
 
-    mergedLaunchConfigOverride.systemProperties = MergeUtil.mergeOverrides(
-        getSystemPropertiesIfAvailable(o1),
-        getSystemPropertiesIfAvailable(d2),
-        getSystemPropertiesIfAvailable(o2));
     mergedLaunchConfigOverride.vmArguments = MergeUtil.mergeOverrides(
         getVmArgumentsIfAvailable(o1),
         getVmArgumentsIfAvailable(d2),
@@ -191,14 +189,6 @@ public class LaunchConfig extends AbstractLaunchConfig {
     return abstractLaunchConfig.programArguments;
   }
 
-  private Map<String, String> getSystemPropertiesIfAvailable(
-      final AbstractLaunchConfig abstractLaunchConfig) {
-    if (abstractLaunchConfig == null) {
-      return null;
-    }
-    return abstractLaunchConfig.systemProperties;
-  }
-
   private Map<String, String> getVmArgumentsIfAvailable(
       final AbstractLaunchConfig abstractLaunchConfig) {
     if (abstractLaunchConfig == null) {
@@ -208,11 +198,9 @@ public class LaunchConfig extends AbstractLaunchConfig {
   }
 
   private void mergeDefaults(final LaunchConfig rval, final LaunchConfig environmentLaunchConfig,
-      final String environmentId, final String reportFolder, final Artifact jacocoAgentArtifact) {
+      final String environmentId, final String reportFolder,
+      final AutoResolveArtifactHolder jacocoAgentArtifact) throws MojoExecutionException {
 
-    rval.systemProperties = MergeUtil.mergeDefaults(
-        systemProperties,
-        environmentLaunchConfig == null ? null : environmentLaunchConfig.systemProperties);
     rval.vmArguments = MergeUtil.mergeDefaults(
         vmArguments,
         environmentLaunchConfig == null ? null : environmentLaunchConfig.vmArguments);

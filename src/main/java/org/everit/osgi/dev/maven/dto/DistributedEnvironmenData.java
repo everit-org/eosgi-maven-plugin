@@ -18,33 +18,33 @@ package org.everit.osgi.dev.maven.dto;
 import java.io.File;
 import java.util.List;
 
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 
 /**
  * Metadata of a distributed environment.
  */
-public class DistributedEnvironment {
+public class DistributedEnvironmenData {
 
   private List<DistributableArtifact> distributableArtifacts;
 
   private File distributionFolder;
 
-  private DistributionPackageType distributionPackage;
+  private EnvironmentType distributedEnvironment;
 
   private EnvironmentConfiguration environment;
 
-  public DistributedEnvironment() {
+  public DistributedEnvironmenData() {
   }
 
   /**
    * Constructor.
    */
-  public DistributedEnvironment(final EnvironmentConfiguration environment,
-      final DistributionPackageType distributionPackage, final File distributionFolder,
+  public DistributedEnvironmenData(final EnvironmentConfiguration environment,
+      final EnvironmentType distributedEnvironment, final File distributionFolder,
       final List<DistributableArtifact> bundleArtifacts) {
     this.environment = environment;
-    this.distributionPackage = distributionPackage;
+    this.distributedEnvironment = distributedEnvironment;
     this.distributionFolder = distributionFolder;
     distributableArtifacts = bundleArtifacts;
   }
@@ -57,8 +57,8 @@ public class DistributedEnvironment {
     return distributionFolder;
   }
 
-  public DistributionPackageType getDistributionPackage() {
-    return distributionPackage;
+  public EnvironmentType getDistributedEnvironment() {
+    return distributedEnvironment;
   }
 
   public EnvironmentConfiguration getEnvironment() {
@@ -73,8 +73,8 @@ public class DistributedEnvironment {
     this.distributionFolder = distributionFolder;
   }
 
-  public void setDistributionPackage(final DistributionPackageType distributionPackage) {
-    this.distributionPackage = distributionPackage;
+  public void setDistributedEnvironment(final EnvironmentType distributedEnvironment) {
+    this.distributedEnvironment = distributedEnvironment;
   }
 
   public void setEnvironment(final EnvironmentConfiguration environment) {

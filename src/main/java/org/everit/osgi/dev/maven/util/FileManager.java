@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -37,8 +38,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.everit.expression.ExpressionCompiler;
 import org.everit.expression.ParserConfiguration;
-import org.everit.expression.mvel.MvelExpressionCompiler;
+import org.everit.expression.jexl.JexlExpressionCompiler;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.TemplateEnginesType;
 import org.everit.templating.CompiledTemplate;
+import org.everit.templating.TemplateCompiler;
+import org.everit.templating.html.HTMLTemplateCompiler;
 import org.everit.templating.text.TextTemplateCompiler;
 
 /**
@@ -66,6 +70,10 @@ public class FileManager {
 
   private static final int OWNER_WRITE_BITMASK;
 
+  private static final TemplateCompiler TEMPLATE_COMPILER_HTML;
+
+  private static final TemplateCompiler TEMPLATE_COMPILER_TEXT;
+
   static {
     final int octalDigitNum = 3;
     final int executeOctal = 1;
@@ -84,6 +92,12 @@ public class FileManager {
     OTHERS_READ_BITMASK = readOctal;
     GROUP_READ_BITMASK = OTHERS_READ_BITMASK << octalDigitNum;
     OWNER_READ_BITMASK = GROUP_READ_BITMASK << octalDigitNum;
+
+    ExpressionCompiler expressionCompiler = new JexlExpressionCompiler();
+    TEMPLATE_COMPILER_TEXT = new TextTemplateCompiler(expressionCompiler);
+    Map<String, TemplateCompiler> inlineCompilers = new HashMap<>();
+    inlineCompilers.put("text", TEMPLATE_COMPILER_TEXT);
+    TEMPLATE_COMPILER_HTML = new HTMLTemplateCompiler(expressionCompiler, inlineCompilers);
   }
 
   private static Set<PosixFilePermission> getGroupPermissions(final int unixPermissions) {
@@ -244,6 +258,13 @@ public class FileManager {
     boolean fileChanged = false;
     long sum = 0;
     byte[] buffer = new byte[FILE_COPY_BUFFER_SIZE];
+
+    if (!targetFile.exists()) {
+      File parentFile = targetFile.getParentFile();
+      parentFile.mkdirs();
+      touchedFiles.add(parentFile);
+      targetFile.createNewFile();
+    }
     try (RandomAccessFile targetRAF = new RandomAccessFile(targetFile, "rw");) {
       long originalTargetLength = targetFile.length();
       int r = is.read(buffer);
@@ -272,12 +293,10 @@ public class FileManager {
    * Replaces the original template file with parsed and processed file.
    */
   public void replaceFileWithParsed(final File parseableFile, final Map<String, Object> vars,
-      final String encoding) throws IOException, MojoExecutionException {
+      final String encoding, final TemplateEnginesType templateEngine)
+      throws IOException, MojoExecutionException {
 
     File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
-
-    ExpressionCompiler expressionCompiler = new MvelExpressionCompiler();
-    TextTemplateCompiler compiler = new TextTemplateCompiler(expressionCompiler);
     ClassLoader cl = this.getClass().getClassLoader();
     ParserConfiguration configuration = new ParserConfiguration(cl);
 
@@ -286,7 +305,13 @@ public class FileManager {
         OutputStreamWriter writer = new OutputStreamWriter(fout)) {
 
       String templateText = IOUtils.toString(fin);
-      CompiledTemplate compiledTemplate = compiler.compile(templateText, configuration);
+      CompiledTemplate compiledTemplate;
+      if (TemplateEnginesType.TEXT.equals(templateEngine)) {
+        compiledTemplate = TEMPLATE_COMPILER_TEXT.compile(templateText, configuration);
+      } else {
+        compiledTemplate = TEMPLATE_COMPILER_HTML.compile(templateText, configuration);
+      }
+
       compiledTemplate.render(writer, vars);
     }
 

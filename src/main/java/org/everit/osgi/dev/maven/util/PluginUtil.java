@@ -27,7 +27,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 
 /**
@@ -56,18 +56,18 @@ public final class PluginUtil {
   /**
    * Creates the bundle map for the distribution package.
    *
-   * @param distributionPackage
+   * @param distributedEnvironment
    *          The distribution package.
    * @return The artifact map.
    */
   public static Map<String, ArtifactType> createBundleMap(
-      final DistributionPackageType distributionPackage) {
+      final EnvironmentType distributedEnvironment) {
 
-    if (distributionPackage == null) {
+    if (distributedEnvironment == null) {
       return Collections.emptyMap();
     }
 
-    ArtifactsType artifacts = distributionPackage.getArtifacts();
+    ArtifactsType artifacts = distributedEnvironment.getArtifacts();
     if (artifacts == null) {
       return Collections.emptyMap();
     }
@@ -223,9 +223,6 @@ public final class PluginUtil {
   }
 
   private static File resolveArtifactRelativeFile(final ArtifactType artifactType) {
-    String targetFolder = artifactType.getTargetFolder();
-    File targetFolderFile = new File(targetFolder);
-
     String targetFile = artifactType.getTargetFile();
     if (targetFile == null) {
       targetFile = artifactType.getArtifactId() + "-" + artifactType.getVersion();
@@ -235,8 +232,13 @@ public final class PluginUtil {
       targetFile += "." + artifactType.getType();
     }
 
-    File artifactFile = new File(targetFolderFile, targetFile);
-    return artifactFile;
+    String targetFolder = artifactType.getTargetFolder();
+    if (targetFolder != null) {
+      File targetFolderFile = new File(targetFolder);
+      return new File(targetFolderFile, targetFile);
+    } else {
+      return new File(targetFile);
+    }
   }
 
   private PluginUtil() {

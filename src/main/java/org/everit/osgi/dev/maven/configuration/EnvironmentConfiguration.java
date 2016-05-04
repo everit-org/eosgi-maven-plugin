@@ -34,7 +34,7 @@ public class EnvironmentConfiguration {
    * {@link BundleSettings} class.
    */
   @Parameter
-  private List<BundleSettings> bundleSettings = new ArrayList<BundleSettings>();
+  private final List<BundleSettings> bundleSettings = new ArrayList<>();
 
   /**
    * The default startlevel for newly installed bundles.
@@ -66,19 +66,22 @@ public class EnvironmentConfiguration {
   @Parameter
   private LaunchConfig launchConfig;
 
+  @Parameter
+  private final List<String> runtimePaths = new ArrayList<>();
+
   /**
    * The amount of time in milliseconds until the plugin waits for the environment to stop after a
    * CTRL+C was sent. Default value is half a minute.
    */
   @Parameter(defaultValue = "30000")
-  private int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
+  private final int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
 
   /**
    * The timeout in milliseconds after the Tests should be finished for sure. The environment will
    * be stopped when this exceeds. Default value is five minutes.
    */
   @Parameter(defaultValue = "180000")
-  private int timeout = DEFAULT_TEST_RUN_TIMEOUT;
+  private final int timeout = DEFAULT_TEST_RUN_TIMEOUT;
 
   public List<BundleSettings> getBundleSettings() {
     return bundleSettings;
@@ -102,6 +105,10 @@ public class EnvironmentConfiguration {
 
   public LaunchConfig getLaunchConfig() {
     return launchConfig;
+  }
+
+  public List<String> getRuntimePaths() {
+    return runtimePaths;
   }
 
   public int getShutdownTimeout() {

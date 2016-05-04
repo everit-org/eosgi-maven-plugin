@@ -36,9 +36,8 @@ public class LaunchConfigOverride extends AbstractLaunchConfig {
   }
 
   LaunchConfigOverride(final UseByType useBy, final JacocoSettings jacoco,
-      final Map<String, String> programArguments,
-      final Map<String, String> systemProperties, final Map<String, String> vmArguments) {
-    super(jacoco, programArguments, systemProperties, vmArguments);
+      final Map<String, String> programArguments, final Map<String, String> vmArguments) {
+    super(jacoco, programArguments, vmArguments);
     this.useBy = useBy;
   }
 

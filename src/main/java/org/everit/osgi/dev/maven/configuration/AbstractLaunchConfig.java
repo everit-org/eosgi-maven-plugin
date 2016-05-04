@@ -39,12 +39,6 @@ public abstract class AbstractLaunchConfig {
   protected Map<String, String> programArguments = new HashMap<>();
 
   /**
-   * System properties that will be added to the JVM of started OSGI container.
-   */
-  @Parameter
-  protected Map<String, String> systemProperties = new HashMap<>();
-
-  /**
    * The JVM arguments that will be applied during starting the OSGI Container.
    */
   @Parameter
@@ -61,11 +55,10 @@ public abstract class AbstractLaunchConfig {
    * Constructor.
    */
   AbstractLaunchConfig(final JacocoSettings jacoco, final Map<String, String> programArguments,
-      final Map<String, String> systemProperties, final Map<String, String> vmArguments) {
+      final Map<String, String> vmArguments) {
     super();
     this.jacoco = jacoco;
     this.programArguments = programArguments;
-    this.systemProperties = systemProperties;
     this.vmArguments = vmArguments;
   }
 
@@ -81,10 +74,6 @@ public abstract class AbstractLaunchConfig {
 
   public Map<String, String> getProgramArguments() {
     return programArguments;
-  }
-
-  public Map<String, String> getSystemProperties() {
-    return systemProperties;
   }
 
   public Map<String, String> getVmArguments() {

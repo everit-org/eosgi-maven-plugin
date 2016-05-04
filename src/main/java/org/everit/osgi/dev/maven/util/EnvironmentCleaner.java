@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import org.apache.maven.plugin.MojoExecutionException;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.DistributionPackageType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.RuntimePathsType;
 
 /**
@@ -31,9 +31,9 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.RuntimePathsType;
  */
 public final class EnvironmentCleaner {
 
-  public static void cleanEnvironmentFolder(final DistributionPackageType distributionPackage,
+  public static void cleanEnvironmentFolder(final EnvironmentType distributedEnvironment,
       final File environmentRootDir, final FileManager fileManager) throws MojoExecutionException {
-    new EnvironmentCleaner(distributionPackage, environmentRootDir, fileManager).clean();
+    new EnvironmentCleaner(distributedEnvironment, environmentRootDir, fileManager).clean();
   }
 
   private final String environmentId;
@@ -44,18 +44,18 @@ public final class EnvironmentCleaner {
 
   private final Set<File> touchedFiles;
 
-  private EnvironmentCleaner(final DistributionPackageType distributionPackage,
+  private EnvironmentCleaner(final EnvironmentType distributedEnvironment,
       final File environmentDir, final FileManager fileManager) throws MojoExecutionException {
 
     this.environmentRootPath = environmentDir.toPath();
-    this.environmentId = distributionPackage.getEnvironmentId();
+    this.environmentId = distributedEnvironment.getId();
     this.touchedFiles = fileManager.getTouchedFiles();
 
-    RuntimePathsType runtimePaths = distributionPackage.getRuntimePaths();
+    RuntimePathsType runtimePaths = distributedEnvironment.getRuntimePaths();
     if (runtimePaths == null) {
       this.runtimePathPatterns = new Pattern[0];
     } else {
-      List<String> pathRegexList = distributionPackage.getRuntimePaths().getPathRegex();
+      List<String> pathRegexList = distributedEnvironment.getRuntimePaths().getPathRegex();
       this.runtimePathPatterns = new Pattern[pathRegexList.size()];
       int i = 0;
       for (String pathRegex : pathRegexList) {

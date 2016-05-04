@@ -20,8 +20,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.eclipse.aether.artifact.Artifact;
+import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 
 /**
  * Settings for jacoco. For more information, please see
@@ -49,10 +50,13 @@ public class JacocoSettings {
    * Returns the environment specific VM argument of the Jacoco java agent or <code>null</code> if
    * the provided settings is <code>null</code>. This method also creates the report folder
    * belonging to the environment.
+   *
+   * @throws MojoExecutionException
+   *           if anything happens.
    */
   public static String getJacocoAgentVmArgument(final Map<String, String> jacocoSettingsMap,
       final String environmentId, final String reportFolder,
-      final Artifact jacocoAgentArtifact) {
+      final AutoResolveArtifactHolder jacocoAgentArtifact) throws MojoExecutionException {
 
     if ((jacocoSettingsMap == null) || jacocoSettingsMap.isEmpty()) {
       return null;
@@ -60,7 +64,7 @@ public class JacocoSettings {
 
     JacocoSettings merged = JacocoSettings.valueOf(jacocoSettingsMap);
 
-    File jacocoAgentFile = jacocoAgentArtifact.getFile();
+    File jacocoAgentFile = jacocoAgentArtifact.getResolvedArtifact().getFile();
     String jacocoAgentAbsPath = jacocoAgentFile.getAbsolutePath();
 
     StringBuilder sb = new StringBuilder("-javaagent:");
