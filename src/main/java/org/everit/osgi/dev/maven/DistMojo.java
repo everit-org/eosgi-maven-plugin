@@ -32,6 +32,8 @@ import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.ReflectionException;
 
+import org.apache.maven.RepositoryUtils;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -40,6 +42,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.codehaus.plexus.component.annotations.Requirement;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
@@ -87,6 +90,9 @@ public class DistMojo extends AbstractEOSGiMojo {
   public static final String SYSPROP_ENVIRONMENT_ID = "org.everit.osgi.dev.environmentId";
 
   private static final String VAR_DIST_UTIL = "distUtil";
+
+  @Requirement
+  protected ArtifactHandlerManager artifactHandlerManager;
 
   protected DistributedEnvironmentConfigurationProvider distEnvConfigProvider =
       new DistributedEnvironmentConfigurationProvider();
@@ -169,11 +175,6 @@ public class DistMojo extends AbstractEOSGiMojo {
             + "' cannot be specified as a system property manually as it is a reserved word.");
       }
     }
-  }
-
-  private Artifact convertMavenArtifactToAether(final org.apache.maven.artifact.Artifact artifact) {
-    return new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-        artifact.getClassifier(), artifact.getType(), artifact.getVersion());
   }
 
   private void copyDistFolderToTargetIfExists(final File environmentRootFolder,
@@ -372,7 +373,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     AutoResolveArtifactHolder jacocoAgentArtifact =
         new AutoResolveArtifactHolder(
-            convertMavenArtifactToAether(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
+            RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
             artifactResolver);
 
     LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
@@ -531,13 +532,15 @@ public class DistMojo extends AbstractEOSGiMojo {
   private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact)
       throws MojoExecutionException {
 
-    ArtifactRequest artifactRequest = new ArtifactRequest();
     String artifactType = artifact.getType();
     if (artifactType == null) {
       artifactType = "jar";
     }
+    String extension = artifactHandlerManager.getArtifactHandler(artifactType).getExtension();
+
+    ArtifactRequest artifactRequest = new ArtifactRequest();
     artifactRequest.setArtifact(new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-        artifact.getClassifier(), artifactType, artifact.getVersion()));
+        artifact.getClassifier(), extension, artifact.getVersion()));
     return artifactResolver.resolve(artifactRequest);
   }
 
