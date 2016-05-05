@@ -15,8 +15,8 @@
  */
 package org.everit.osgi.dev.maven.configuration;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
@@ -36,13 +36,13 @@ public abstract class AbstractLaunchConfig {
    * The program arguments that will be applied during starting the OSGI Container.
    */
   @Parameter
-  protected Map<String, String> programArguments = new HashMap<>();
+  protected Map<String, String> programArguments = new TreeMap<>();
 
   /**
    * The JVM arguments that will be applied during starting the OSGI Container.
    */
-  @Parameter
-  protected Map<String, String> vmArguments = new HashMap<>();
+  @Parameter()
+  protected Map<String, String> vmArguments = new TreeMap<>();
 
   /**
    * Default constructor.
