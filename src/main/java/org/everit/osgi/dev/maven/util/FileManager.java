@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -44,6 +45,9 @@ import org.everit.templating.CompiledTemplate;
 import org.everit.templating.TemplateCompiler;
 import org.everit.templating.html.HTMLTemplateCompiler;
 import org.everit.templating.text.TextTemplateCompiler;
+
+import com.greenbird.xml.prettyprinter.PrettyPrinter;
+import com.greenbird.xml.prettyprinter.PrettyPrinterBuilder;
 
 /**
  * This class is not thread-safe. It should be used within one thread only.
@@ -184,6 +188,9 @@ public class FileManager {
     }
   }
 
+  private final PrettyPrinter prettyPrinter =
+      new PrettyPrinterBuilder().indentate(' ', 2).ignoreWhitespace().keepXMLDeclaration().build();
+
   private final HashSet<File> touchedFiles = new HashSet<>();
 
   /**
@@ -293,7 +300,7 @@ public class FileManager {
    * Replaces the original template file with parsed and processed file.
    */
   public void replaceFileWithParsed(final File parseableFile, final Map<String, Object> vars,
-      final String encoding, final TemplateEnginesType templateEngine)
+      final String encoding, final TemplateEnginesType templateEngine, final boolean prettify)
       throws IOException, MojoExecutionException {
 
     File tmpFile = File.createTempFile("eosgi-dist-parse", "tmp");
@@ -302,10 +309,9 @@ public class FileManager {
     configuration.setName(parseableFile.getPath());
 
     try (FileInputStream fin = new FileInputStream(parseableFile);
-        FileOutputStream fout = new FileOutputStream(tmpFile);
-        OutputStreamWriter writer = new OutputStreamWriter(fout)) {
+        OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(tmpFile), encoding)) {
 
-      String templateText = IOUtils.toString(fin);
+      String templateText = IOUtils.toString(fin, encoding);
       CompiledTemplate compiledTemplate;
       if (TemplateEnginesType.TEXT.equals(templateEngine)) {
         compiledTemplate = TEMPLATE_COMPILER_TEXT.compile(templateText, configuration);
@@ -313,7 +319,19 @@ public class FileManager {
         compiledTemplate = TEMPLATE_COMPILER_HTML.compile(templateText, configuration);
       }
 
-      compiledTemplate.render(writer, vars);
+      StringWriter sw = new StringWriter();
+      compiledTemplate.render(sw, vars);
+      String parsedContent = sw.toString();
+      if (prettify) {
+        StringBuilder sb = new StringBuilder();
+        prettyPrinter.process(parsedContent, sb);
+        parsedContent = sb.toString();
+        if (parsedContent.length() > 1 && parsedContent.startsWith("\n")) {
+          // Avoiding pretty printer bug that it takes a new line in the beginning of the file.
+          parsedContent = parsedContent.substring(1);
+        }
+      }
+      fw.write(parsedContent);
     }
 
     overCopyFile(tmpFile, parseableFile);

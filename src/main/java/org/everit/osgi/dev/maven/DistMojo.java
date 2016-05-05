@@ -393,7 +393,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     vars.put("launchConfig", launchConfig);
     vars.put(VAR_DIST_UTIL, new DistUtil());
     try {
-      fileManager.replaceFileWithParsed(configFile, vars, "UTF8", TemplateEnginesType.XML);
+      fileManager.replaceFileWithParsed(configFile, vars, "UTF8", TemplateEnginesType.XML, true);
     } catch (IOException e) {
       throw new MojoExecutionException(
           "Could not run velocity on configuration file: " + configFile.getName(), e);
@@ -427,8 +427,12 @@ public class DistMojo extends AbstractEOSGiMojo {
         }
 
         try {
-          fileManager.replaceFileWithParsed(parsableFile, vars, p.getEncoding(),
-              p.getTemplateEngine());
+          String encoding = p.getEncoding();
+          if (encoding == null) {
+            encoding = "UTF8";
+          }
+          fileManager.replaceFileWithParsed(parsableFile, vars, encoding,
+              p.getTemplateEngine(), false);
         } catch (IOException e) {
           throw new MojoExecutionException(
               "Could not replace parsable with parsed content: [" + p.getPath() + "]", e);
