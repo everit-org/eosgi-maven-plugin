@@ -52,7 +52,6 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsableType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.TemplateEnginesType;
@@ -67,6 +66,7 @@ import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManagerProvider;
 import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
+import org.everit.osgi.dev.maven.util.BundleExecutionPlan;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EnvironmentCleaner;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -191,7 +191,8 @@ public class DistMojo extends AbstractEOSGiMojo {
   }
 
   private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
-      final File distFolderFile, final EnvironmentType existingDistributedEnvironment) {
+      final File distFolderFile, final BundleExecutionPlan bundleExecutionPlan,
+      final EnvironmentType existingDistributedEnvironment) {
 
     String jmxLocalURL =
         jMXOSGiManagerProvider.getJmxURLForEnvironment(environmentId, distFolderFile);
@@ -205,6 +206,10 @@ public class DistMojo extends AbstractEOSGiMojo {
           "Found JVM that belongs to Environment, but there is no existing distribution package."
               + " The OSGi container will not be upgraded. Restarting of the container is truly"
               + " suggested after running this goal.");
+      return new NoopRemoteOSGiManager();
+    }
+
+    if (isBundleExecutionPlanEmpty(bundleExecutionPlan)) {
       return new NoopRemoteOSGiManager();
     }
 
@@ -313,7 +318,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
     copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
 
-    parseConfiguration(environmentRootFolder, processedArtifacts, environment, fileManager);
+    processConfigurationTemplate(environmentRootFolder, processedArtifacts, environment,
+        fileManager);
 
     EnvironmentType distributedEnvironment =
         distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
@@ -324,80 +330,62 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     ArtifactsType artifacts = distributedEnvironment.getArtifacts();
 
-    Map<String, ArtifactType> existingBundleMap =
-        PluginUtil.createBundleMap(existingDistributedEnvironment);
-    List<ArtifactType> bundlesToRemove =
-        PluginUtil.getBundlesToRemove(existingBundleMap, artifacts);
+    BundleExecutionPlan bundleExecutionPlan =
+        new BundleExecutionPlan(existingDistributedEnvironment, artifacts, environmentRootFolder,
+            artifactResolver, artifactHandlerManager);
 
     try (RemoteOSGiManager remoteOSGiManager =
         createRemoteOSGiManager(environmentId, environmentRootFolder,
-            existingDistributedEnvironment)) {
+            bundleExecutionPlan, existingDistributedEnvironment)) {
 
-      remoteOSGiManager.uninstallBundles(resolveBundlesToUninstall(bundlesToRemove));
+      int originalFrameworkStartLevel = remoteOSGiManager.getFrameworkStartLevel();
 
-      distributeArtifacts(environmentId,
-          remoteOSGiManager, environmentRootFolder, existingBundleMap, artifacts, fileManager);
+      int newStartLevel = resolveNecessaryStartlevel(remoteOSGiManager, bundleExecutionPlan,
+          originalFrameworkStartLevel);
 
-      parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
-      distributedEnvironmentDataCollection.add(
-          new DistributedEnvironmenData(environment, distributedEnvironment,
-              environmentRootFolder, processedArtifacts));
+      try {
+        remoteOSGiManager.setFrameworkStartLevel(newStartLevel);
 
-      if (envConfig.isChanged(existingEnvConfig)) {
-        getLog().warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        getLog().warn("!!! The environment configuration has been changed. "
-            + "[" + environmentId + "] should be restarted.");
-        getLog().warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        remoteOSGiManager
+            .uninstallBundles(bundleExecutionPlan.uninstallBundles.toArray(new BundleDataType[0]));
+
+        remoteOSGiManager
+            .stopBundles(bundleExecutionPlan.updateBundles.toArray(new BundleDataType[0]));
+
+        distributeArtifacts(environmentId,
+            remoteOSGiManager, environmentRootFolder, existingBundleMap, artifacts, fileManager);
+
+        parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
+        distributedEnvironmentDataCollection.add(
+            new DistributedEnvironmenData(environment, distributedEnvironment,
+                environmentRootFolder, processedArtifacts));
+
+        if (envConfig.isChanged(existingEnvConfig)) {
+          getLog()
+              .warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+          getLog().warn("!!! The environment configuration has been changed. "
+              + "[" + environmentId + "] should be restarted.");
+          getLog()
+              .warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        }
+
+        if (remoteOSGiManager != null) {
+          remoteOSGiManager.refresh();
+        }
+
+        EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,
+            fileManager);
+      } finally {
+        remoteOSGiManager.setFrameworkStartLevel(originalFrameworkStartLevel);
       }
 
-      if (remoteOSGiManager != null) {
-        remoteOSGiManager.refresh();
-      }
-
-      EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,
-          fileManager);
     }
   }
 
-  /**
-   * Parses the configuration of a distribution package.
-   *
-   * @throws MojoFailureException
-   *           if anything wrong happen.
-   */
-  private void parseConfiguration(
-      final File distFolderFile,
-      final List<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment, final FileManager fileManager)
-      throws MojoExecutionException, MojoFailureException {
-
-    File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
-
-    AutoResolveArtifactHolder jacocoAgentArtifact =
-        new AutoResolveArtifactHolder(
-            RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
-            artifactResolver);
-
-    LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
-        environment.getLaunchConfig(), environment.getId(),
-        reportFolder, jacocoAgentArtifact);
-
-    checkAndAddReservedLaunchConfigurationProperties(environment, launchConfig);
-
-    Map<String, Object> vars = new HashMap<>();
-    vars.put("environmentId", environment.getId());
-    vars.put("frameworkStartLevel", environment.getFrameworkStartLevel());
-    vars.put("bundleStartLevel", environment.getBundleStartLevel());
-    vars.put("distributableArtifacts", distributableArtifacts);
-    vars.put("runtimePaths", environment.getRuntimePaths());
-    vars.put("launchConfig", launchConfig);
-    vars.put(VAR_DIST_UTIL, new DistUtil());
-    try {
-      fileManager.replaceFileWithParsed(configFile, vars, "UTF8", TemplateEnginesType.XML, true);
-    } catch (IOException e) {
-      throw new MojoExecutionException(
-          "Could not run velocity on configuration file: " + configFile.getName(), e);
-    }
+  private boolean isBundleExecutionPlanEmpty(final BundleExecutionPlan bundleExecutionPlan) {
+    return bundleExecutionPlan.installBundles.size() == 0
+        && bundleExecutionPlan.uninstallBundles.size() == 0
+        && bundleExecutionPlan.updateBundles.size() == 0;
   }
 
   /**
@@ -442,6 +430,47 @@ public class DistMojo extends AbstractEOSGiMojo {
   }
 
   /**
+   * Parses the configuration of a distribution package.
+   *
+   * @throws MojoFailureException
+   *           if anything wrong happen.
+   */
+  private void processConfigurationTemplate(
+      final File distFolderFile,
+      final List<DistributableArtifact> distributableArtifacts,
+      final EnvironmentConfiguration environment, final FileManager fileManager)
+      throws MojoExecutionException, MojoFailureException {
+
+    File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
+
+    AutoResolveArtifactHolder jacocoAgentArtifact =
+        new AutoResolveArtifactHolder(
+            RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
+            artifactResolver);
+
+    LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
+        environment.getLaunchConfig(), environment.getId(),
+        reportFolder, jacocoAgentArtifact);
+
+    checkAndAddReservedLaunchConfigurationProperties(environment, launchConfig);
+
+    Map<String, Object> vars = new HashMap<>();
+    vars.put("environmentId", environment.getId());
+    vars.put("frameworkStartLevel", environment.getFrameworkStartLevel());
+    vars.put("bundleStartLevel", environment.getBundleStartLevel());
+    vars.put("distributableArtifacts", distributableArtifacts);
+    vars.put("runtimePaths", environment.getRuntimePaths());
+    vars.put("launchConfig", launchConfig);
+    vars.put(VAR_DIST_UTIL, new DistUtil());
+    try {
+      fileManager.replaceFileWithParsed(configFile, vars, "UTF8", TemplateEnginesType.XML, true);
+    } catch (IOException e) {
+      throw new MojoExecutionException(
+          "Could not run velocity on configuration file: " + configFile.getName(), e);
+    }
+  }
+
+  /**
    * Reading up the content of each /META-INF/eosgi-frameworks.properties file from the classpath of
    * the plugin.
    *
@@ -467,19 +496,6 @@ public class DistMojo extends AbstractEOSGiMojo {
       result.putAll(tmpProps);
     }
     return result;
-  }
-
-  private BundleDataType[] resolveBundlesToUninstall(final List<ArtifactType> bundlesToRemove) {
-    List<BundleDataType> result = new ArrayList<>(bundlesToRemove.size());
-
-    for (ArtifactType artifact : bundlesToRemove) {
-      BundleDataType bundleData = artifact.getBundle();
-      if (bundleData != null && !OSGiActionType.NONE.equals(bundleData.getAction())) {
-        result.add(bundleData);
-      }
-    }
-
-    return result.toArray(new BundleDataType[0]);
   }
 
   private Artifact resolveDistPackage(final String frameworkArtifact)
@@ -548,6 +564,26 @@ public class DistMojo extends AbstractEOSGiMojo {
     artifactRequest.setArtifact(new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
         artifact.getClassifier(), extension, artifact.getVersion()));
     return artifactResolver.resolve(artifactRequest);
+  }
+
+  private int resolveNecessaryStartlevel(final RemoteOSGiManager remoteOSGiManager,
+      final BundleExecutionPlan bundleExecutionPlan, final int originalFrameworkStartLevel) {
+
+    int newStartLevel = originalFrameworkStartLevel;
+
+    Integer lowestBundleStartLevel = bundleExecutionPlan.lowestStartLevel;
+    if (lowestBundleStartLevel != null && lowestBundleStartLevel.compareTo(newStartLevel) < 0) {
+      newStartLevel = lowestBundleStartLevel;
+    }
+
+    if (!isBundleExecutionPlanEmpty(bundleExecutionPlan)) {
+      int initialBundleStartLevel = remoteOSGiManager.getInitialBundleStartLevel();
+      if (initialBundleStartLevel < newStartLevel) {
+        newStartLevel = initialBundleStartLevel;
+      }
+    }
+
+    return newStartLevel;
   }
 
 }

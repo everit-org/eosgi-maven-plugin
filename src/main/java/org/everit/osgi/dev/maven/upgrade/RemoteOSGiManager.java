@@ -27,12 +27,23 @@ public interface RemoteOSGiManager extends Closeable {
   @Override
   void close();
 
+  int getFrameworkStartLevel();
+
+  int getInitialBundleStartLevel();
+
   void installBundles(BundleDataType... bundleDataTypes);
 
   void refresh();
 
+  void setBundleStartLevel(BundleDataType bundleIdentifier, int newlevel);
+
+  void setFrameworkStartLevel(int newlevel);
+
+  void startBundles(BundleDataType... bundleIdentifiers);
+
+  void stopBundles(BundleDataType... bundleIdentifiers);
+
   void uninstallBundles(BundleDataType... bundleDataTypes);
 
   void updateBundles(BundleDataType... bundleDataType);
-
 }

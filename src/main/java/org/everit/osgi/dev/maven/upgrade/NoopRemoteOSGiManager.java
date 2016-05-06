@@ -28,6 +28,16 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
+  public int getFrameworkStartLevel() {
+    return 0;
+  }
+
+  @Override
+  public int getInitialBundleStartLevel() {
+    return 0;
+  }
+
+  @Override
   public void installBundles(final BundleDataType... bundleDataTypes) {
     // Do nothing
 
@@ -36,6 +46,29 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   @Override
   public void refresh() {
     // Do nothing
+  }
+
+  @Override
+  public void setBundleStartLevel(final BundleDataType bundleIdentifier, final int newlevel) {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void setFrameworkStartLevel(final int newlevel) {
+    // Do nothing
+  }
+
+  @Override
+  public void startBundles(final BundleDataType... bundleIdentifiers) {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void stopBundles(final BundleDataType... bundleIdentifiers) {
+    // TODO Auto-generated method stub
+
   }
 
   @Override

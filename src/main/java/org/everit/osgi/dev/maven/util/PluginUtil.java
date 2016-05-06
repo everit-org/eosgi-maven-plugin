@@ -17,8 +17,6 @@ package org.everit.osgi.dev.maven.util;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -26,10 +24,6 @@ import java.util.Map.Entry;
 import org.apache.maven.plugin.MojoFailureException;
 import org.eclipse.aether.artifact.Artifact;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 
 /**
  * Util functions for every plugin in this library.
@@ -55,44 +49,6 @@ public final class PluginUtil {
   }
 
   /**
-   * Creates the bundle map for the distribution package.
-   *
-   * @param distributedEnvironment
-   *          The distribution package.
-   * @return The artifact map.
-   */
-  public static Map<String, ArtifactType> createBundleMap(
-      final EnvironmentType distributedEnvironment) {
-
-    if (distributedEnvironment == null) {
-      return Collections.emptyMap();
-    }
-
-    ArtifactsType artifacts = distributedEnvironment.getArtifacts();
-    if (artifacts == null) {
-      return Collections.emptyMap();
-    }
-
-    Map<String, ArtifactType> result = new HashMap<>();
-    List<ArtifactType> artifactList = artifacts.getArtifact();
-
-    for (ArtifactType artifact : artifactList) {
-
-      BundleDataType bundleDataType = artifact.getBundle();
-      if (bundleDataType != null && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
-
-        String location = bundleDataType.getLocation();
-        if (result.containsKey(location)) {
-          throw new DuplicateArtifactException(location);
-        }
-        result.put(location, artifact);
-      }
-    }
-
-    return result;
-  }
-
-  /**
    * Deletes a folder with its content from the computer.
    *
    * @param folder
@@ -110,39 +66,6 @@ public final class PluginUtil {
       }
       folder.delete();
     }
-  }
-
-  /**
-   * Calculates the artifacts that should be deleted after an upgrade.
-   *
-   * @param currentArtifactMap
-   *          The artifact map that is currently installed.
-   * @param artifacts
-   *          The artifacts of the new distribution package that will be installed.
-   * @return The artifact list that should be deleted.
-   */
-  public static List<ArtifactType> getBundlesToRemove(
-      final Map<String, ArtifactType> currentArtifactMap,
-      final ArtifactsType artifacts) {
-
-    Map<String, ArtifactType> tmpArtifactMap = new HashMap<>(currentArtifactMap);
-    if (artifacts == null) {
-      return new ArrayList<>(currentArtifactMap.values());
-    }
-
-    List<ArtifactType> artifactList = artifacts.getArtifact();
-
-    for (ArtifactType artifact : artifactList) {
-
-      BundleDataType bundleDataType = artifact.getBundle();
-
-      if (bundleDataType != null) {
-        String location = bundleDataType.getLocation();
-        tmpArtifactMap.remove(location);
-      }
-    }
-
-    return new ArrayList<>(tmpArtifactMap.values());
   }
 
   /**

@@ -43,13 +43,17 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
  */
 public class BundleExecutionPlan {
 
-  public final Collection<ArtifactType> installBundles;
+  public final Collection<BundleDataType> installBundles;
 
-  public final int lowestStartLevel;
+  /**
+   * The lowest start level that was assigned to any of the bundles that change state in the plan or
+   * <code>null</code> if none of these bundles had a specific startLevel.
+   */
+  public final Integer lowestStartLevel;
 
-  public final Collection<ArtifactType> removeBundles;
+  public final Collection<BundleDataType> uninstallBundles;
 
-  public final Collection<ArtifactType> updateBundles;
+  public final Collection<BundleDataType> updateBundles;
 
   /**
    * Constructor.
@@ -60,8 +64,6 @@ public class BundleExecutionPlan {
    *          The artifact list of the new distribution process.
    * @param environmentRootFolder
    *          The root folder of the environment where the artifacts will be copied.
-   * @param defaultBundleStartLevel
-   *          The default start level of the bundles that are newly installed.
    * @param artifactResolver
    *          Resolves the artifacts.
    * @param artifactHandlerManager
@@ -70,40 +72,39 @@ public class BundleExecutionPlan {
    */
   public BundleExecutionPlan(final EnvironmentType existingDistributedEnvironment,
       final ArtifactsType newArtifacts, final File environmentRootFolder,
-      final int defaultBundleStartLevel,
       final PredefinedRepoArtifactResolver artifactResolver,
       final ArtifactHandlerManager artifactHandlerManager)
       throws MojoExecutionException {
 
-    Map<String, ArtifactType> bundleByLocation =
+    Map<String, BundleDataType> bundleByLocation =
         createExistingBundleByLocationMap(existingDistributedEnvironment);
 
-    Map<String, ArtifactType> installBundleMap = new HashMap<>();
-    List<ArtifactType> newBundlesThatExisted = new ArrayList<>();
+    Map<String, BundleDataType> installBundleMap = new HashMap<>();
+    List<ArtifactType> newBundleArtifactsThatExisted = new ArrayList<>();
 
     for (ArtifactType newArtifact : newArtifacts.getArtifact()) {
       BundleDataType bundleData = newArtifact.getBundle();
       if (bundleData != null && !OSGiActionType.NONE.equals(bundleData.getAction())) {
-        ArtifactType existingBundle = bundleByLocation.remove(bundleData.getLocation());
+        BundleDataType existingBundle = bundleByLocation.remove(bundleData.getLocation());
         if (existingBundle == null) {
           if (installBundleMap.containsKey(bundleData.getLocation())) {
             throw new MojoExecutionException(
                 "Bundle location '" + bundleData.getLocation() + "' exists twice in environment '"
                     + existingDistributedEnvironment.getId() + "'");
           }
-          installBundleMap.put(bundleData.getLocation(), newArtifact);
+          installBundleMap.put(bundleData.getLocation(), bundleData);
         } else {
-          newBundlesThatExisted.add(newArtifact);
+          newBundleArtifactsThatExisted.add(newArtifact);
         }
       }
     }
 
-    this.removeBundles = bundleByLocation.values();
+    this.uninstallBundles = bundleByLocation.values();
     this.installBundles = installBundleMap.values();
-    this.updateBundles = selectBundlesWithChangedContent(newBundlesThatExisted,
+    this.updateBundles = selectBundlesWithChangedContent(newBundleArtifactsThatExisted,
         environmentRootFolder, artifactResolver, artifactHandlerManager);
 
-    this.lowestStartLevel = resolveLowestStartLevel(defaultBundleStartLevel);
+    this.lowestStartLevel = resolveLowestStartLevel();
   }
 
   private boolean contentDifferent(final File newArtifactFile, final File oldArtifactFile)
@@ -134,10 +135,10 @@ public class BundleExecutionPlan {
 
   }
 
-  private Map<String, ArtifactType> createExistingBundleByLocationMap(
+  private Map<String, BundleDataType> createExistingBundleByLocationMap(
       final EnvironmentType existingDistributedEnvironment) {
 
-    Map<String, ArtifactType> result = new HashMap<>();
+    Map<String, BundleDataType> result = new HashMap<>();
     if (existingDistributedEnvironment == null
         || existingDistributedEnvironment.getArtifacts() == null) {
       return result;
@@ -148,7 +149,7 @@ public class BundleExecutionPlan {
       if (bundleData != null
           && !OSGiActionType.NONE.equals(bundleData.getAction())) {
 
-        result.put(bundleData.getLocation(), artifact);
+        result.put(bundleData.getLocation(), bundleData);
       }
     }
     return result;
@@ -172,41 +173,43 @@ public class BundleExecutionPlan {
     return resolvedArtifact;
   }
 
-  private int resolveLowestStartLevel(final Collection<ArtifactType> bundleArtifacts,
-      final int pLowestStartLevel) {
-    int tmpLowestStartLevel = pLowestStartLevel;
-    for (ArtifactType bundleArtifact : bundleArtifacts) {
-      Integer startLevel = bundleArtifact.getBundle().getStartLevel();
-      if (startLevel != null && startLevel.compareTo(tmpLowestStartLevel) < 0) {
+  private int resolveLowestStartLevel() {
+    Integer tmpLowestStartLevel = null;
+    tmpLowestStartLevel = resolveLowestStartLevel(this.installBundles, tmpLowestStartLevel);
+    tmpLowestStartLevel = resolveLowestStartLevel(this.uninstallBundles, tmpLowestStartLevel);
+    tmpLowestStartLevel = resolveLowestStartLevel(this.updateBundles, tmpLowestStartLevel);
+    return tmpLowestStartLevel;
+  }
+
+  private int resolveLowestStartLevel(final Collection<BundleDataType> bundleDataCollection,
+      final Integer pLowestStartLevel) {
+    Integer tmpLowestStartLevel = pLowestStartLevel;
+    for (BundleDataType bundleData : bundleDataCollection) {
+      Integer startLevel = bundleData.getStartLevel();
+      if (startLevel != null
+          && (pLowestStartLevel == null || startLevel.compareTo(tmpLowestStartLevel) < 0)) {
         tmpLowestStartLevel = startLevel;
       }
     }
     return tmpLowestStartLevel;
   }
 
-  private int resolveLowestStartLevel(final int defaultBundleStartLevel) {
-    int tmpLowestStartLevel = defaultBundleStartLevel;
-    tmpLowestStartLevel = resolveLowestStartLevel(this.installBundles, tmpLowestStartLevel);
-    tmpLowestStartLevel = resolveLowestStartLevel(this.removeBundles, tmpLowestStartLevel);
-    tmpLowestStartLevel = resolveLowestStartLevel(this.updateBundles, tmpLowestStartLevel);
-    return tmpLowestStartLevel;
-  }
-
-  private Collection<ArtifactType> selectBundlesWithChangedContent(
-      final List<ArtifactType> newBundlesThatExisted, final File environmentRootFolder,
+  private Collection<BundleDataType> selectBundlesWithChangedContent(
+      final List<ArtifactType> newBundleArtifactsThatExisted, final File environmentRootFolder,
       final PredefinedRepoArtifactResolver artifactResolver,
       final ArtifactHandlerManager artifactHandlerManager) throws MojoExecutionException {
 
-    List<ArtifactType> result = new ArrayList<>();
-    for (ArtifactType artifact : newBundlesThatExisted) {
+    List<BundleDataType> result = new ArrayList<>();
+    for (ArtifactType bundleArtifact : newBundleArtifactsThatExisted) {
       Artifact resolvedArtifact =
-          resolveArtifact(artifactResolver, artifact, artifactHandlerManager);
+          resolveArtifact(artifactResolver, bundleArtifact, artifactHandlerManager);
       File newArtifactFile = resolvedArtifact.getFile();
       File oldArtifactFile =
-          PluginUtil.resolveArtifactAbsoluteFile(artifact, resolvedArtifact, environmentRootFolder);
+          PluginUtil.resolveArtifactAbsoluteFile(bundleArtifact, resolvedArtifact,
+              environmentRootFolder);
 
       if (contentDifferent(newArtifactFile, oldArtifactFile)) {
-        result.add(artifact);
+        result.add(bundleArtifact.getBundle());
       }
     }
     return result;
