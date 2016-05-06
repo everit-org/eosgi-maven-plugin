@@ -199,6 +199,15 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     }
   }
 
+  @Override
+  public void resolveAll() {
+    try {
+      frameworkMBean.resolveBundles(null);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private long[] resolveBundleIdentifiers(final BundleDataType[] bundleDataArray,
       final String string) {
     long[] bundleIdentifierArray = new long[bundleDataArray.length];
@@ -240,6 +249,16 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   public void setFrameworkStartLevel(final int newlevel) {
     try {
       frameworkMBean.setFrameworkStartLevel(newlevel);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+  }
+
+  @Override
+  public void setInitialBundleStartLevel(final int startLevel) {
+    try {
+      frameworkMBean.setInitialBundleStartLevel(startLevel);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

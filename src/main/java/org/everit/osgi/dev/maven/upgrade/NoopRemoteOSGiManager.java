@@ -49,9 +49,13 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void setBundleStartLevel(final BundleDataType bundleIdentifier, final int newlevel) {
-    // TODO Auto-generated method stub
+  public void resolveAll() {
+    // Do nothing
+  }
 
+  @Override
+  public void setBundleStartLevel(final BundleDataType bundleIdentifier, final int newlevel) {
+    // Do nothing
   }
 
   @Override
@@ -60,15 +64,18 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void startBundles(final BundleDataType... bundleIdentifiers) {
-    // TODO Auto-generated method stub
+  public void setInitialBundleStartLevel(final int startLevel) {
+    // Do nothing
+  }
 
+  @Override
+  public void startBundles(final BundleDataType... bundleIdentifiers) {
+    // Do nothing
   }
 
   @Override
   public void stopBundles(final BundleDataType... bundleIdentifiers) {
-    // TODO Auto-generated method stub
-
+    // Do nothing
   }
 
   @Override

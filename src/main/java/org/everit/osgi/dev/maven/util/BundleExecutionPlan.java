@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -43,13 +44,43 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
  */
 public class BundleExecutionPlan {
 
+  /**
+   * Data of bundle with the start level that is currently set with the existing configuration.
+   */
+  public static class BundleDataWithCurrentStartLevel {
+    public BundleDataType bundleData;
+
+    public int oldStartLevel;
+
+    public BundleDataWithCurrentStartLevel(final BundleDataType bundleData,
+        final int oldStartLevel) {
+      this.bundleData = bundleData;
+      this.oldStartLevel = oldStartLevel;
+    }
+
+  }
+
+  public final Collection<BundleDataType> changeStartLevelIfInitialBundleStartLevelChangesOnBundles;
+
+  public final Collection<BundleDataType> higherStartLevelOnBundles;
+
   public final Collection<BundleDataType> installBundles;
+
+  public final Collection<BundleDataType> lowerStartLevelOnBundles;
 
   /**
    * The lowest start level that was assigned to any of the bundles that change state in the plan or
    * <code>null</code> if none of these bundles had a specific startLevel.
    */
   public final Integer lowestStartLevel;
+
+  public final Collection<BundleDataWithCurrentStartLevel> setInitialStartLevelOnBundles;
+
+  public final Collection<BundleDataType> setStartLevelFromInitialBundles;
+
+  public final Collection<BundleDataType> startStoppedBundles;
+
+  public final Collection<BundleDataType> stopStartedBundles;
 
   public final Collection<BundleDataType> uninstallBundles;
 
@@ -67,6 +98,7 @@ public class BundleExecutionPlan {
    * @param artifactResolver
    *          Resolves the artifacts.
    * @param artifactHandlerManager
+   *          Artifact resolver.
    * @throws MojoExecutionException
    *           If an exception happens during generating the execution plan.
    */
@@ -80,7 +112,15 @@ public class BundleExecutionPlan {
         createExistingBundleByLocationMap(existingDistributedEnvironment);
 
     Map<String, BundleDataType> installBundleMap = new HashMap<>();
-    List<ArtifactType> newBundleArtifactsThatExisted = new ArrayList<>();
+
+    List<BundleDataType> tmpUpdateBundles = new ArrayList<>();
+    List<BundleDataType> tmpStopStartedBundles = new ArrayList<>();
+    List<BundleDataType> tmpStartStoppedBundles = new ArrayList<>();
+    List<BundleDataType> tmpLowerStartLevelOnBundles = new ArrayList<>();
+    List<BundleDataType> tmpHigherStartLevelOnBundles = new ArrayList<>();
+    List<BundleDataWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles = new ArrayList<>();
+    List<BundleDataType> tmpSetStartLevelFromInitialBundles = new ArrayList<>();
+    List<BundleDataType> tmpIfInitialChanges = new ArrayList<>();
 
     for (ArtifactType newArtifact : newArtifacts.getArtifact()) {
       BundleDataType bundleData = newArtifact.getBundle();
@@ -94,22 +134,70 @@ public class BundleExecutionPlan {
           }
           installBundleMap.put(bundleData.getLocation(), bundleData);
         } else {
-          newBundleArtifactsThatExisted.add(newArtifact);
+          if (bundleContentChanged(newArtifact, environmentRootFolder, artifactResolver,
+              artifactHandlerManager)) {
+            tmpUpdateBundles.add(bundleData);
+          } else {
+            if (bundleBecameStarted(bundleData, existingBundle)) {
+              tmpStartStoppedBundles.add(bundleData);
+            }
+
+            if (bundleBecameStopped(bundleData, existingBundle)) {
+              tmpStopStartedBundles.add(bundleData);
+            }
+          }
+
+          fillStartLevelChangeWhereNecessary(bundleData, existingBundle,
+              tmpSetInitialStartLevelOnBundles, tmpSetStartLevelFromInitialBundles,
+              tmpLowerStartLevelOnBundles, tmpHigherStartLevelOnBundles, tmpIfInitialChanges);
         }
       }
     }
 
     this.uninstallBundles = bundleByLocation.values();
     this.installBundles = installBundleMap.values();
-    this.updateBundles = selectBundlesWithChangedContent(newBundleArtifactsThatExisted,
-        environmentRootFolder, artifactResolver, artifactHandlerManager);
-
+    this.updateBundles = tmpUpdateBundles;
+    this.startStoppedBundles = tmpStartStoppedBundles;
+    this.stopStartedBundles = tmpStopStartedBundles;
+    this.lowerStartLevelOnBundles = tmpLowerStartLevelOnBundles;
+    this.higherStartLevelOnBundles = tmpHigherStartLevelOnBundles;
+    this.setInitialStartLevelOnBundles = tmpSetInitialStartLevelOnBundles;
+    this.setStartLevelFromInitialBundles = tmpSetStartLevelFromInitialBundles;
+    this.changeStartLevelIfInitialBundleStartLevelChangesOnBundles = tmpIfInitialChanges;
     this.lowestStartLevel = resolveLowestStartLevel();
+  }
+
+  private boolean bundleBecameStarted(final BundleDataType bundleData,
+      final BundleDataType existingBundle) {
+    return OSGiActionType.INSTALL.equals(existingBundle.getAction())
+        && OSGiActionType.START.equals(bundleData.getAction());
+  }
+
+  private boolean bundleBecameStopped(final BundleDataType bundleData,
+      final BundleDataType existingBundle) {
+    return OSGiActionType.START.equals(existingBundle.getAction())
+        && OSGiActionType.INSTALL.equals(bundleData.getAction());
+  }
+
+  private boolean bundleContentChanged(final ArtifactType newArtifact,
+      final File environmentRootFolder,
+      final PredefinedRepoArtifactResolver artifactResolver,
+      final ArtifactHandlerManager artifactHandlerManager) throws MojoExecutionException {
+
+    Artifact resolvedArtifact =
+        resolveArtifact(artifactResolver, newArtifact, artifactHandlerManager);
+    File newArtifactFile = resolvedArtifact.getFile();
+    File oldArtifactFile =
+        PluginUtil.resolveArtifactAbsoluteFile(newArtifact, resolvedArtifact,
+            environmentRootFolder);
+
+    return contentDifferent(newArtifactFile, oldArtifactFile);
   }
 
   private boolean contentDifferent(final File newArtifactFile, final File oldArtifactFile)
       throws MojoExecutionException {
-    if (newArtifactFile.lastModified() == oldArtifactFile.lastModified()) {
+    if (!oldArtifactFile.exists()
+        || newArtifactFile.lastModified() == oldArtifactFile.lastModified()) {
       return false;
     }
     try (InputStream newIn = new BufferedInputStream(new FileInputStream(newArtifactFile));
@@ -130,7 +218,7 @@ public class BundleExecutionPlan {
       return changed;
     } catch (IOException e) {
       throw new MojoExecutionException(
-          "Error during diff check on files: " + oldArtifactFile + ", " + newArtifactFile);
+          "Error during diff check on files: " + oldArtifactFile + ", " + newArtifactFile, e);
     }
 
   }
@@ -155,6 +243,32 @@ public class BundleExecutionPlan {
     return result;
   }
 
+  private void fillStartLevelChangeWhereNecessary(final BundleDataType bundleData,
+      final BundleDataType existingBundle,
+      final List<BundleDataWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles,
+      final List<BundleDataType> tmpSetStartLevelFromInitialBundles,
+      final List<BundleDataType> tmpLowerStartLevelOnBundles,
+      final List<BundleDataType> tmpHigherStartLevelOnBundles,
+      final List<BundleDataType> tmpIfInitialChanges) {
+
+    Integer newStartLevel = bundleData.getStartLevel();
+    Integer existingStartLevel = existingBundle.getStartLevel();
+    if (!Objects.equals(newStartLevel, existingStartLevel)) {
+      if (newStartLevel == null) {
+        tmpSetInitialStartLevelOnBundles
+            .add(new BundleDataWithCurrentStartLevel(bundleData, existingStartLevel));
+      } else if (existingStartLevel == null) {
+        tmpSetStartLevelFromInitialBundles.add(bundleData);
+      } else if (newStartLevel.compareTo(existingStartLevel) > 0) {
+        tmpHigherStartLevelOnBundles.add(bundleData);
+      } else {
+        tmpLowerStartLevelOnBundles.add(bundleData);
+      }
+    } else if (newStartLevel == null) {
+      tmpIfInitialChanges.add(bundleData);
+    }
+  }
+
   private Artifact resolveArtifact(final PredefinedRepoArtifactResolver artifactResolver,
       final ArtifactType artifact, final ArtifactHandlerManager artifactHandlerManager)
       throws MojoExecutionException {
@@ -173,15 +287,22 @@ public class BundleExecutionPlan {
     return resolvedArtifact;
   }
 
-  private int resolveLowestStartLevel() {
+  private Integer resolveLowestStartLevel() {
     Integer tmpLowestStartLevel = null;
     tmpLowestStartLevel = resolveLowestStartLevel(this.installBundles, tmpLowestStartLevel);
     tmpLowestStartLevel = resolveLowestStartLevel(this.uninstallBundles, tmpLowestStartLevel);
     tmpLowestStartLevel = resolveLowestStartLevel(this.updateBundles, tmpLowestStartLevel);
+    tmpLowestStartLevel = resolveLowestStartLevel(this.startStoppedBundles, tmpLowestStartLevel);
+    tmpLowestStartLevel =
+        resolveLowestStartLevel(this.lowerStartLevelOnBundles, tmpLowestStartLevel);
+
+    tmpLowestStartLevel =
+        resolveLowestStartLevel(this.setStartLevelFromInitialBundles, tmpLowestStartLevel);
+
     return tmpLowestStartLevel;
   }
 
-  private int resolveLowestStartLevel(final Collection<BundleDataType> bundleDataCollection,
+  private Integer resolveLowestStartLevel(final Collection<BundleDataType> bundleDataCollection,
       final Integer pLowestStartLevel) {
     Integer tmpLowestStartLevel = pLowestStartLevel;
     for (BundleDataType bundleData : bundleDataCollection) {
@@ -192,26 +313,5 @@ public class BundleExecutionPlan {
       }
     }
     return tmpLowestStartLevel;
-  }
-
-  private Collection<BundleDataType> selectBundlesWithChangedContent(
-      final List<ArtifactType> newBundleArtifactsThatExisted, final File environmentRootFolder,
-      final PredefinedRepoArtifactResolver artifactResolver,
-      final ArtifactHandlerManager artifactHandlerManager) throws MojoExecutionException {
-
-    List<BundleDataType> result = new ArrayList<>();
-    for (ArtifactType bundleArtifact : newBundleArtifactsThatExisted) {
-      Artifact resolvedArtifact =
-          resolveArtifact(artifactResolver, bundleArtifact, artifactHandlerManager);
-      File newArtifactFile = resolvedArtifact.getFile();
-      File oldArtifactFile =
-          PluginUtil.resolveArtifactAbsoluteFile(bundleArtifact, resolvedArtifact,
-              environmentRootFolder);
-
-      if (contentDifferent(newArtifactFile, oldArtifactFile)) {
-        result.add(bundleArtifact.getBundle());
-      }
-    }
-    return result;
   }
 }
