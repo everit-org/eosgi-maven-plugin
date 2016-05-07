@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -154,8 +155,8 @@ public class BundleExecutionPlan {
       }
     }
 
-    this.uninstallBundles = bundleByLocation.values();
-    this.installBundles = installBundleMap.values();
+    this.uninstallBundles = new HashSet<>(bundleByLocation.values());
+    this.installBundles = new HashSet<>(installBundleMap.values());
     this.updateBundles = tmpUpdateBundles;
     this.startStoppedBundles = tmpStartStoppedBundles;
     this.stopStartedBundles = tmpStopStartedBundles;
@@ -197,7 +198,8 @@ public class BundleExecutionPlan {
   private boolean contentDifferent(final File newArtifactFile, final File oldArtifactFile)
       throws MojoExecutionException {
     if (!oldArtifactFile.exists()
-        || newArtifactFile.lastModified() == oldArtifactFile.lastModified()) {
+        || (newArtifactFile.lastModified() == oldArtifactFile.lastModified()
+            && newArtifactFile.length() == oldArtifactFile.length())) {
       return false;
     }
     try (InputStream newIn = new BufferedInputStream(new FileInputStream(newArtifactFile));
@@ -207,7 +209,7 @@ public class BundleExecutionPlan {
       int newR = 0;
 
       boolean changed = false;
-      while (oldR < 0 && !changed) {
+      while (oldR >= 0 && newR >= 0 && !changed) {
         oldR = oldIn.read();
         newR = newIn.read();
 

@@ -303,6 +303,8 @@ public class DistMojo extends AbstractEOSGiMojo {
         new BundleExecutionPlan(existingDistributedEnvironment, artifacts, environmentRootFolder,
             artifactResolver, artifactHandlerManager);
 
+    hackBundleExecutionPlanForEquinox(bundleExecutionPlan);
+
     try (RemoteOSGiManager remoteOSGiManager =
         createRemoteOSGiManager(environmentId, environmentRootFolder,
             bundleExecutionPlan, existingDistributedEnvironment)) {
@@ -341,12 +343,12 @@ public class DistMojo extends AbstractEOSGiMojo {
           remoteOSGiManager.setInitialBundleStartLevel(newInitialBundleStartLevel);
         }
 
+        distributeArtifactFiles(environmentRootFolder, artifacts, fileManager);
+
         remoteOSGiManager
             .installBundles(bundleExecutionPlan.installBundles.toArray(new BundleDataType[0]));
 
         setStartLevelOnNewlyInstalledBundles(bundleExecutionPlan.installBundles, remoteOSGiManager);
-
-        distributeArtifactFiles(environmentRootFolder, artifacts, fileManager);
 
         remoteOSGiManager
             .updateBundles(bundleExecutionPlan.updateBundles.toArray(new BundleDataType[0]));
@@ -357,16 +359,13 @@ public class DistMojo extends AbstractEOSGiMojo {
         lowerBundleStartLevelWhereNecessary(bundleExecutionPlan, currentInitialBundleStartLevel,
             newInitialBundleStartLevel, remoteOSGiManager);
 
+        parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
+
         startBundlesWhereNecessary(bundleExecutionPlan, remoteOSGiManager);
 
-        parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
         distributedEnvironmentDataCollection.add(
             new DistributedEnvironmenData(environment, distributedEnvironment,
                 environmentRootFolder, processedArtifacts));
-
-        if (remoteOSGiManager != null) {
-          remoteOSGiManager.refresh();
-        }
 
         EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,
             fileManager);
@@ -376,6 +375,13 @@ public class DistMojo extends AbstractEOSGiMojo {
         }
       }
 
+    }
+  }
+
+  private void hackBundleExecutionPlanForEquinox(final BundleExecutionPlan bundleExecutionPlan) {
+    for (BundleDataType bundleData : bundleExecutionPlan.updateBundles) {
+      bundleExecutionPlan.uninstallBundles.add(bundleData);
+      bundleExecutionPlan.installBundles.add(bundleData);
     }
   }
 

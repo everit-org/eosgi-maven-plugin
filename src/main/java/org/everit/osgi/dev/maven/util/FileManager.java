@@ -15,7 +15,6 @@
  */
 package org.everit.osgi.dev.maven.util;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,8 +23,13 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -53,8 +57,6 @@ import com.greenbird.xml.prettyprinter.PrettyPrinterBuilder;
  * This class is not thread-safe. It should be used within one thread only.
  */
 public class FileManager {
-
-  private static final int FILE_COPY_BUFFER_SIZE = 1024;
 
   private static final int GROUP_EXECUTE_BITMASK;
 
@@ -226,13 +228,19 @@ public class FileManager {
     return result;
   }
 
+  private boolean isSameFile(final File destFile, final long sourceLength,
+      final long sourceLastModified) {
+    return destFile.exists() && destFile.length() == sourceLength
+        && destFile.lastModified() == sourceLastModified;
+  }
+
   /**
    * Copies the source file into a target file. In case the file already exists, only those bytes
    * are overwritten in the target file that are changed.
    */
   public boolean overCopyFile(final File source, final File target) throws MojoExecutionException {
-    try (FileInputStream fin = new FileInputStream(source)) {
-      return overCopyFile(fin, target, source.lastModified());
+    try (FileChannel sourceChannel = FileChannel.open(source.toPath(), StandardOpenOption.READ)) {
+      return overCopyFile(sourceChannel, source.length(), source.lastModified(), target);
     } catch (IOException e) {
       throw new MojoExecutionException("Cannot copy file " + source.getAbsolutePath() + " to "
           + target.getAbsolutePath(), e);
@@ -243,57 +251,38 @@ public class FileManager {
    * Copies an {@link InputStream} into a file. In case the file already exists, only those bytes
    * are overwritten in the target file that are changed.
    *
-   * @param is
-   *          The {@link InputStream} of the source.
-   * @param targetFile
-   *          The file that will be overridden if it is necessary.
+   * @param sourceSize
+   *          the size of the source file.
    * @param sourceLastModified
    *          The timestamp of the source file or entry when it was modified.
+   * @param targetFile
+   *          The file that will be overridden if it is necessary.
+   * @param is
+   *          The {@link InputStream} of the source.
+   *
    * @return true if the target file had to be changed, false if the target file was not changed.
    * @throws IOException
    *           if there is an error during copying the file.
    */
-  public boolean overCopyFile(final InputStream is, final File targetFile,
-      final Long sourceLastModified) throws IOException {
+  private boolean overCopyFile(final ReadableByteChannel sourceChannel, final long sourceSize,
+      final long sourceLastModified, final File targetFile) throws IOException {
+    targetFile.getParentFile().mkdirs();
     touchedFiles.add(targetFile);
 
-    if (targetFile.exists() && sourceLastModified != null
-        && targetFile.lastModified() == sourceLastModified.longValue()) {
-      return false;
-    }
+    try (FileChannel fileChannel = FileChannel.open(targetFile.toPath(), StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE)) {
 
-    boolean fileChanged = false;
-    long sum = 0;
-    byte[] buffer = new byte[FILE_COPY_BUFFER_SIZE];
-
-    if (!targetFile.exists()) {
-      File parentFile = targetFile.getParentFile();
-      parentFile.mkdirs();
-      touchedFiles.add(parentFile);
-      targetFile.createNewFile();
-    }
-    try (RandomAccessFile targetRAF = new RandomAccessFile(targetFile, "rw");) {
-      long originalTargetLength = targetFile.length();
-      int r = is.read(buffer);
-      while (r > -1) {
-        sum += r;
-        byte[] bytesInTarget = tryReadingAmount(targetRAF, r);
-        if (!PluginUtil.isBufferSame(buffer, r, bytesInTarget)) {
-          fileChanged = true;
-          targetRAF.seek(targetRAF.getFilePointer() - bytesInTarget.length);
-          targetRAF.write(buffer, 0, r);
-        }
-
-        r = is.read(buffer);
+      long position = 0;
+      while (position < sourceSize) {
+        position += fileChannel.transferFrom(sourceChannel, position, sourceSize - position);
       }
-      if (sum < originalTargetLength) {
-        targetRAF.setLength(sum);
+      if (fileChannel.size() > sourceSize) {
+        fileChannel.truncate(sourceSize);
       }
     }
-    if (sourceLastModified != null) {
-      targetFile.setLastModified(sourceLastModified);
-    }
-    return fileChanged;
+    targetFile.setLastModified(sourceLastModified);
+
+    return true;
   }
 
   /**
@@ -341,15 +330,25 @@ public class FileManager {
   /**
    * Reads the given amount of bytes from the the {@link RandomAccessFile}.
    */
-  public byte[] tryReadingAmount(final RandomAccessFile is, final int amount) throws IOException {
-    ByteArrayOutputStream bout = new ByteArrayOutputStream(amount);
-    byte[] buffer = new byte[amount];
-    int r = is.read(buffer);
-    while ((r > -1) && (bout.size() < amount)) {
-      bout.write(buffer, 0, r);
-      r = is.read(buffer, 0, amount - bout.size());
+  public byte[] tryReadingAmount(final FileChannel is, final int amount) throws IOException {
+    ByteBuffer byteBuffer = ByteBuffer.allocate(amount);
+    ByteBuffer[] bbArray = new ByteBuffer[] { byteBuffer };
+    int rSum = 0;
+    int left = amount;
+    for (long r = is.read(bbArray, rSum, left); rSum < amount && r >= 0; r =
+        is.read(bbArray, rSum, left)) {
+      rSum = rSum + (int) r;
+      left = left - (int) r;
     }
-    return bout.toByteArray();
+
+    byte[] result;
+    if (rSum == amount) {
+      result = byteBuffer.array();
+    } else {
+      result = new byte[rSum];
+      byteBuffer.get(result);
+    }
+    return result;
   }
 
   /**
@@ -370,11 +369,12 @@ public class FileManager {
         if (entry.isDirectory()) {
           touchedFiles.add(destFile);
           destFile.mkdirs();
-        } else {
+        } else if (!isSameFile(destFile, entry.getSize(), entry.getLastModifiedDate().getTime())) {
           File parentFolder = destFile.getParentFile();
           parentFolder.mkdirs();
           InputStream inputStream = zipFile.getInputStream(entry);
-          overCopyFile(inputStream, destFile, entry.getLastModifiedDate().getTime());
+          overCopyFile(Channels.newChannel(inputStream), entry.getSize(),
+              entry.getLastModifiedDate().getTime(), destFile);
           FileManager.setPermissionsOnFile(destFile, entry);
         }
       }

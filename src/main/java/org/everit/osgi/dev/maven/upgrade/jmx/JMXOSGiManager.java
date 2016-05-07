@@ -193,7 +193,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   @Override
   public void refresh() {
     try {
-      frameworkMBean.refreshBundles(null);
+      frameworkMBean.refreshBundlesAndWait(null);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
