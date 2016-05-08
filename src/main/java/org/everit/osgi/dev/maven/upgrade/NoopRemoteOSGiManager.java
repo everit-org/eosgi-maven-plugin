@@ -28,6 +28,11 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
+  public RuntimeBundleInfo[] getDependencyClosure(final BundleDataType... bundleDataArray) {
+    return new RuntimeBundleInfo[0];
+  }
+
+  @Override
   public int getFrameworkStartLevel() {
     return 0;
   }
@@ -35,6 +40,11 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   @Override
   public int getInitialBundleStartLevel() {
     return 0;
+  }
+
+  @Override
+  public RuntimeBundleInfo[] getRuntimeBundleInfoArray() {
+    return new RuntimeBundleInfo[0];
   }
 
   @Override

@@ -16,10 +16,11 @@
 package org.everit.osgi.dev.maven.upgrade.jmx;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import javax.management.InstanceNotFoundException;
@@ -38,6 +39,8 @@ import javax.management.remote.JMXServiceURL;
 import org.apache.maven.plugin.logging.Log;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
+import org.everit.osgi.dev.maven.upgrade.RuntimeBundleInfo;
+import org.osgi.framework.Bundle;
 import org.osgi.jmx.framework.BundleStateMBean;
 import org.osgi.jmx.framework.FrameworkMBean;
 
@@ -59,8 +62,6 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     }
   }
 
-  private final Map<String, Long> bundleIdentifierByUniqueId;
-
   private final BundleStateMBean bundleStateMBean;
 
   private final FrameworkMBean frameworkMBean;
@@ -68,6 +69,8 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   private final JMXConnector jmxConnector;
 
   private final Log log;
+
+  private final UniqueIdBundleIdMap uniqueIdBundleIdMap;
 
   /**
    * Constructor.
@@ -103,7 +106,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     frameworkMBean = JMX.newMBeanProxy(mbsc, framewotkMBeanON, FrameworkMBean.class);
     bundleStateMBean = JMX.newMBeanProxy(mbsc, bundleStateMBeanON, BundleStateMBean.class);
 
-    bundleIdentifierByUniqueId = getBundleIdentifierByUniqueId();
+    uniqueIdBundleIdMap = getUniqueIdBundleIdMap();
 
   }
 
@@ -116,6 +119,49 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     }
   }
 
+  private boolean contains(final long[] dependencyClosure, final long bundleId) {
+    int searchResult = Arrays.binarySearch(dependencyClosure, bundleId);
+    return searchResult > 0;
+  }
+
+  private RuntimeBundleInfo convertCompositeDataToRuntimeBundleInfo(final Object value) {
+    CompositeData compositeData = (CompositeData) value;
+    Long bundleId = (Long) compositeData.get(BundleStateMBean.IDENTIFIER);
+    String symbolicName = (String) compositeData.get(BundleStateMBean.SYMBOLIC_NAME);
+    String version = (String) compositeData.get(BundleStateMBean.VERSION);
+    String state = (String) compositeData.get(BundleStateMBean.STATE);
+    RuntimeBundleInfo runtimeBundleInfo = new RuntimeBundleInfo(bundleId, symbolicName, version,
+        convertStringToIntState(state));
+    return runtimeBundleInfo;
+  }
+
+  private int convertStringToIntState(final String state) {
+    int result;
+    switch (state) {
+      case BundleStateMBean.ACTIVE:
+        result = Bundle.ACTIVE;
+        break;
+      case BundleStateMBean.INSTALLED:
+        result = Bundle.INSTALLED;
+        break;
+      case BundleStateMBean.RESOLVED:
+        result = Bundle.RESOLVED;
+        break;
+      case BundleStateMBean.STARTING:
+        result = Bundle.STARTING;
+        break;
+      case BundleStateMBean.STOPPING:
+        result = Bundle.STOPPING;
+        break;
+      case BundleStateMBean.UNINSTALLED:
+        result = Bundle.UNINSTALLED;
+        break;
+      default:
+        throw new RuntimeException("Unknown state: " + state);
+    }
+    return result;
+  }
+
   private String createUniqueIdentifier(final BundleDataType bundleDataType) {
     String symbolicName = bundleDataType.getSymbolicName();
     String version = bundleDataType.getVersion();
@@ -126,32 +172,29 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     return symbolicName + "@" + version;
   }
 
-  private Map<String, Long> getBundleIdentifierByUniqueId() {
+  @Override
+  public RuntimeBundleInfo[] getDependencyClosure(final BundleDataType... bundleDataArray) {
+    long[] bundleIds = resolveBundleIdentifiers(bundleDataArray, "getDependencyClosure");
 
-    Map<String, Long> identifiers = new HashMap<>();
-
-    TabularData tabularData;
     try {
-      tabularData = bundleStateMBean.listBundles();
+      long[] dependencyClosure = frameworkMBean.getDependencyClosure(bundleIds);
+      if (dependencyClosure.length == 0) {
+        return new RuntimeBundleInfo[0];
+      }
+      Arrays.sort(dependencyClosure);
+      Collection<RuntimeBundleInfo> result = getRuntimeBundleInfoCollection();
+
+      for (Iterator<RuntimeBundleInfo> iterator = result.iterator(); iterator.hasNext();) {
+        RuntimeBundleInfo runtimeBundleInfo = iterator.next();
+
+        if (!contains(dependencyClosure, runtimeBundleInfo.bundleId)) {
+          iterator.remove();
+        }
+      }
+      return result.toArray(new RuntimeBundleInfo[0]);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-
-    Collection<?> values = tabularData.values();
-    for (Object value : values) {
-
-      CompositeData compositeData = (CompositeData) value;
-
-      String symbolicName = (String) compositeData.get(BundleStateMBean.SYMBOLIC_NAME);
-      String version = (String) compositeData.get(BundleStateMBean.VERSION);
-      Long bundleIdentifier = (Long) compositeData.get(BundleStateMBean.IDENTIFIER);
-
-      String uniqueIdentifier = createUniqueIdentifier(symbolicName, version);
-
-      identifiers.put(uniqueIdentifier, bundleIdentifier);
-    }
-
-    return identifiers;
   }
 
   @Override
@@ -173,6 +216,60 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
+  public RuntimeBundleInfo[] getRuntimeBundleInfoArray() {
+    return getRuntimeBundleInfoCollection().toArray(new RuntimeBundleInfo[0]);
+  }
+
+  private Collection<RuntimeBundleInfo> getRuntimeBundleInfoCollection() {
+    TabularData tabularData;
+    try {
+      tabularData =
+          bundleStateMBean.listBundles(BundleStateMBean.IDENTIFIER, BundleStateMBean.SYMBOLIC_NAME,
+              BundleStateMBean.VERSION, BundleStateMBean.STATE);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    List<RuntimeBundleInfo> result = new ArrayList<>();
+
+    Collection<?> values = tabularData.values();
+    for (Object value : values) {
+      RuntimeBundleInfo runtimeBundleInfo = convertCompositeDataToRuntimeBundleInfo(value);
+
+      result.add(runtimeBundleInfo);
+    }
+    return result;
+  }
+
+  private UniqueIdBundleIdMap getUniqueIdBundleIdMap() {
+
+    UniqueIdBundleIdMap result = new UniqueIdBundleIdMap();
+
+    TabularData tabularData;
+    try {
+      tabularData = bundleStateMBean.listBundles();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    Collection<?> values = tabularData.values();
+    for (Object value : values) {
+
+      CompositeData compositeData = (CompositeData) value;
+
+      String symbolicName = (String) compositeData.get(BundleStateMBean.SYMBOLIC_NAME);
+      String version = (String) compositeData.get(BundleStateMBean.VERSION);
+      Long bundleIdentifier = (Long) compositeData.get(BundleStateMBean.IDENTIFIER);
+
+      String uniqueIdentifier = createUniqueIdentifier(symbolicName, version);
+
+      result.put(uniqueIdentifier, bundleIdentifier);
+    }
+
+    return result;
+  }
+
+  @Override
   public void installBundles(final BundleDataType... bundleDataTypes) {
 
     if ((bundleDataTypes == null) || (bundleDataTypes.length == 0)) {
@@ -183,7 +280,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
       for (BundleDataType bundleDataType : bundleDataTypes) {
         String bundleLocation = bundleDataType.getLocation();
         long bundleIdentifier = frameworkMBean.installBundle(bundleLocation);
-        bundleIdentifierByUniqueId.put(createUniqueIdentifier(bundleDataType), bundleIdentifier);
+        uniqueIdBundleIdMap.put(createUniqueIdentifier(bundleDataType), bundleIdentifier);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -209,17 +306,17 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   private long[] resolveBundleIdentifiers(final BundleDataType[] bundleDataArray,
-      final String string) {
+      final String actionNameForMessages) {
     long[] bundleIdentifierArray = new long[bundleDataArray.length];
     int i = 0;
 
     for (BundleDataType bundleData : bundleDataArray) {
-      Long bundleIdentifier = bundleIdentifierByUniqueId.get(createUniqueIdentifier(bundleData));
+      Long bundleIdentifier = uniqueIdBundleIdMap.getBundleId(createUniqueIdentifier(bundleData));
       if (bundleIdentifier != null) {
         bundleIdentifierArray[i] = bundleIdentifier;
         i++;
       } else {
-        log.warn("'" + string
+        log.warn("'" + actionNameForMessages
             + "' action cannot be executed on bundle as it is not found on the container: "
             + bundleData.getSymbolicName() + ":" + bundleData.getVersion());
       }
@@ -231,7 +328,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
 
   @Override
   public void setBundleStartLevel(final BundleDataType bundleData, final int newlevel) {
-    Long bundleIdentifier = bundleIdentifierByUniqueId.get(createUniqueIdentifier(bundleData));
+    Long bundleIdentifier = uniqueIdBundleIdMap.getBundleId(createUniqueIdentifier(bundleData));
     if (bundleIdentifier == null) {
       log.warn("Cannot set bundle start level as it is not found in the container: "
           + bundleData.getSymbolicName() + ":" + bundleData.getVersion());
@@ -298,13 +395,13 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     try {
       for (BundleDataType bundleData : bundleDataArray) {
         String uniqueIdentifier = createUniqueIdentifier(bundleData);
-        Long bundleIdentifier = bundleIdentifierByUniqueId.get(uniqueIdentifier);
+        Long bundleIdentifier = uniqueIdBundleIdMap.getBundleId(uniqueIdentifier);
         if (bundleIdentifier == null) {
           throw new RuntimeException("Could not uninstall bundle as it does not exist: "
               + bundleData.getSymbolicName() + ":" + bundleData.getVersion());
         }
         frameworkMBean.uninstallBundle(bundleIdentifier);
-        bundleIdentifierByUniqueId.remove(uniqueIdentifier);
+        uniqueIdBundleIdMap.removeByUniqueId(uniqueIdentifier);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
