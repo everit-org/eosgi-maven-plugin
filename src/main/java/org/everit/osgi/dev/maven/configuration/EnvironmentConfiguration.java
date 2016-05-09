@@ -37,12 +37,6 @@ public class EnvironmentConfiguration {
   private final List<BundleSettings> bundleSettings = new ArrayList<>();
 
   /**
-   * The default startlevel for newly installed bundles.
-   */
-  @Parameter
-  private Integer bundleStartLevel;
-
-  /**
    * The name of the osgi framework. Currently equinox is supported. Default is equinox.
    */
   @Parameter
@@ -59,6 +53,12 @@ public class EnvironmentConfiguration {
    */
   @Parameter
   private String id;
+
+  /**
+   * The default startlevel for newly installed bundles.
+   */
+  @Parameter
+  private Integer initialBundleStartLevel;
 
   /**
    * The configuration of the launched OSGi Container.
@@ -87,10 +87,6 @@ public class EnvironmentConfiguration {
     return bundleSettings;
   }
 
-  public Integer getBundleStartLevel() {
-    return bundleStartLevel;
-  }
-
   public String getFramework() {
     return framework;
   }
@@ -101,6 +97,10 @@ public class EnvironmentConfiguration {
 
   public String getId() {
     return id;
+  }
+
+  public Integer getInitialBundleStartLevel() {
+    return initialBundleStartLevel;
   }
 
   public LaunchConfig getLaunchConfig() {

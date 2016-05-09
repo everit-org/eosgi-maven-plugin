@@ -558,7 +558,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     Map<String, Object> vars = new HashMap<>();
     vars.put("environmentId", environment.getId());
     vars.put("frameworkStartLevel", environment.getFrameworkStartLevel());
-    vars.put("bundleStartLevel", environment.getBundleStartLevel());
+    vars.put("bundleStartLevel", environment.getInitialBundleStartLevel());
     vars.put("distributableArtifacts", distributableArtifacts);
     vars.put("runtimePaths", environment.getRuntimePaths());
     vars.put("launchConfig", launchConfig);
