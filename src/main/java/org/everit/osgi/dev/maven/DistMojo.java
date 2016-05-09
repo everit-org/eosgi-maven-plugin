@@ -204,7 +204,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
       final File distFolderFile, final BundleExecutionPlan bundleExecutionPlan,
-      final EnvironmentType existingDistributedEnvironment) {
+      final EnvironmentType existingDistributedEnvironment) throws MojoExecutionException {
 
     String jmxLocalURL =
         jMXOSGiManagerProvider.getJmxURLForEnvironment(environmentId, distFolderFile);
@@ -214,11 +214,10 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
 
     if (existingDistributedEnvironment == null) {
-      getLog().warn(
-          "Found JVM that belongs to Environment, but there is no existing distribution package."
-              + " The OSGi container will not be upgraded. Restarting of the container is truly"
-              + " suggested after running this goal.");
-      return new NoopRemoteOSGiManager();
+      throw new MojoExecutionException(
+          "Found JVM that belongs to Environment, but there is no distributed environment in the"
+              + " file system. Try stopping the Environment JVM before runnign the distribution"
+              + " upgrade.");
     }
 
     if (isBundleExecutionPlanEmpty(bundleExecutionPlan)) {
@@ -230,15 +229,9 @@ public class DistMojo extends AbstractEOSGiMojo {
     } catch (IOException | InstanceNotFoundException | IntrospectionException
         | ReflectionException e) {
 
-      getLog().warn(
-          "Could not connect to the running JVM of the environment or apply the changes."
-              + " Either install the OSGi JMX Bundle or stop the environment before each"
-              + " upgrade! If the JMX Bundle is installed, try solving the cause of this exception!"
-              + " EnvironmentId: " + environmentId,
-          e);
+      throw new RuntimeException(e);
     }
 
-    return new NoopRemoteOSGiManager();
   }
 
   private Map<String, BundleDataType> createStartActionBundleByUniqueLabelMap(

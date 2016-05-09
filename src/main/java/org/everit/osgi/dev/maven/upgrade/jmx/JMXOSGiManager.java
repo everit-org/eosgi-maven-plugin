@@ -87,14 +87,21 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     Set<ObjectName> frameworkMBeanONs = mbsc.queryNames(FRAMEWORK_MBEAN_MBEAN_FILTER, null);
     Set<ObjectName> bundleStateMBeanONs = mbsc.queryNames(BUNDLE_STATE_MBEAN_FILTER, null);
 
-    if (frameworkMBeanONs.size() != 1) {
-      throw new InstanceNotFoundException("Exactly one FrameworkMBean must be available in the "
-          + "JMX registry. Currently [" + frameworkMBeanONs.size() + "] available.");
+    if (frameworkMBeanONs.size() == 0) {
+      throw new InstanceNotFoundException("Found the JVM that runs the OSGi container of the"
+          + " environment, but no live incremental distribution is available. "
+          + "Either stop the JVM before running distribution command, or install bundle(s) that"
+          + " implement the OSGi Remote Service Admin specification. One solution can be if"
+          + " you add org.everit.osgi.jmx:org.everit.osgi.jmx.activator maven artifact with "
+          + "its dependencies your project.");
     }
 
-    if (bundleStateMBeanONs.size() != 1) {
-      throw new InstanceNotFoundException("Exactly one BundleStateMBean must be available in the "
-          + "JMX registry. Currently [" + bundleStateMBeanONs.size() + "] available.");
+    if (bundleStateMBeanONs.size() > 1) {
+      throw new InstanceNotFoundException("Found the JVM for the environment, but live"
+          + " distribution upgrade is not possible as multiple FrameworkMBean found on it. Please"
+          + " be sure that only one bundle is installed on the system that implements the "
+          + "OSGi Remote Admin Service specification or stop the JVM before running the "
+          + "distribution upgrade.");
     }
 
     ObjectName framewotkMBeanON = frameworkMBeanONs.iterator().next();
