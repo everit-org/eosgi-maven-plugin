@@ -25,8 +25,9 @@ import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.EntryType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.RuntimePathsType;
+import org.everit.osgi.dev.eosgi.dist.schema.xsd.RuntimePathRegexesType;
 
 /**
  * Cleans the folder of an environment from unwanted files after an incremental upgrade.
@@ -53,16 +54,16 @@ public final class EnvironmentCleaner {
     this.environmentId = distributedEnvironment.getId();
     this.touchedFiles = fileManager.getTouchedFiles();
 
-    RuntimePathsType runtimePaths = distributedEnvironment.getRuntimePaths();
+    RuntimePathRegexesType runtimePaths = distributedEnvironment.getRuntimePathRegexes();
     if (runtimePaths == null) {
       this.runtimePathPatterns = new Pattern[0];
     } else {
-      List<String> pathRegexList = distributedEnvironment.getRuntimePaths().getPathRegex();
-      this.runtimePathPatterns = new Pattern[pathRegexList.size()];
+      List<EntryType> pathRegexEntries = distributedEnvironment.getRuntimePathRegexes().getEntry();
+      this.runtimePathPatterns = new Pattern[pathRegexEntries.size()];
       int i = 0;
-      for (String pathRegex : pathRegexList) {
+      for (EntryType pathRegex : pathRegexEntries) {
         try {
-          runtimePathPatterns[i] = Pattern.compile(pathRegex);
+          runtimePathPatterns[i] = Pattern.compile(pathRegex.getValue());
         } catch (PatternSyntaxException e) {
           throw new MojoExecutionException(
               "Invalid regular expression for runtime path in environment '" + environmentId + "': "

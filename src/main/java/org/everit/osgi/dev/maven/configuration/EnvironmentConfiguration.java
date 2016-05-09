@@ -17,6 +17,7 @@ package org.everit.osgi.dev.maven.configuration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.maven.plugins.annotations.Parameter;
 
@@ -76,14 +77,14 @@ public class EnvironmentConfiguration {
    * are removed that are not created during the distribution. E.g.:
    *
    * <pre>
-   * &lt;runtimePaths&gt;
-   *    &lt;pathRegex&gt;log/&lt;/pathRegex&gt;
-   *    &lt;pathRegex&gt;configuration/.*\.log&lt;/pathRegex&gt;
+   * &lt;runtimePathRegexes&gt;
+   *    &lt;log&gt;log/&lt;/log&gt;
+   *    &lt;errorLogs&gt;configuration/.*\.log&lt;/errorLogs&gt;
    *  &lt;/runtimePaths&gt;
    * </pre>
    */
   @Parameter
-  private final List<String> runtimePaths = new ArrayList<>();
+  private Map<String, String> runtimePathRegexes;
 
   /**
    * The amount of time in milliseconds until the plugin waits for the environment to stop after a
@@ -127,8 +128,8 @@ public class EnvironmentConfiguration {
     return launchConfig;
   }
 
-  public List<String> getRuntimePaths() {
-    return runtimePaths;
+  public Map<String, String> getRuntimePathRegexes() {
+    return runtimePathRegexes;
   }
 
   public int getShutdownTimeout() {
