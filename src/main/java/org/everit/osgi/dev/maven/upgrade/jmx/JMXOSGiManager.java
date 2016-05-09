@@ -92,8 +92,9 @@ public class JMXOSGiManager implements RemoteOSGiManager {
           + " environment, but no live incremental distribution is available. "
           + "Either stop the JVM before running distribution command, or install bundle(s) that"
           + " implement the OSGi Remote Service Admin specification. One solution can be if"
-          + " you add org.everit.osgi.jmx:org.everit.osgi.jmx.activator maven artifact with "
-          + "its dependencies your project.");
+          + " you add org.apache.aries.jmx:org.apache.aries.jmx.core and"
+          + " org.everit.osgi.jmx:org.everit.osgi.jmx.activator maven artifacts with "
+          + "their dependencies to your project.");
     }
 
     if (bundleStateMBeanONs.size() > 1) {
