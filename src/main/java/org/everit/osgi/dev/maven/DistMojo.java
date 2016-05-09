@@ -128,14 +128,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   protected String reportFolder;
 
   /**
-   * Comma separated list of ports of currently running OSGi containers. Such ports are normally
-   * opened with richConsole. In case this property is defined, dependency changes will be pushed
-   * via the defined ports.
-   */
-  @Parameter(property = "eosgi.servicePort")
-  protected String servicePort;
-
-  /**
    * The directory where there may be additional files to create the distribution package
    * (optional).
    */
