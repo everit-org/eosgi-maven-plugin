@@ -347,8 +347,8 @@ public class DistMojo extends AbstractEOSGiMojo {
           distributedEnvironment.getFrameworkStartLevel(), originalFrameworkStartLevel);
 
       int currentInitialBundleStartLevel = remoteOSGiManager.getInitialBundleStartLevel();
-      int newInitialBundleStartLevel = (distributedEnvironment.getBundleStartLevel() != null)
-          ? distributedEnvironment.getBundleStartLevel() : currentInitialBundleStartLevel;
+      int newInitialBundleStartLevel = (distributedEnvironment.getInitialBundleStartLevel() != null)
+          ? distributedEnvironment.getInitialBundleStartLevel() : currentInitialBundleStartLevel;
 
       int frameworkStartLevelDuringUpdate =
           resolveNecessaryStartlevel(bundleExecutionPlan,
