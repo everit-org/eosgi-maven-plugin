@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -40,7 +41,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -52,8 +52,8 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.maven.configuration.EOSGiArtifact;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
@@ -201,7 +201,7 @@ public class IntegrationTestMojo extends DistMojo {
   protected boolean skipTests = false;
 
   private int calculateExpectedTestNum(final ArtifactsType artifacts,
-      final List<DistributableArtifact> distributableArtifacts) {
+      final Collection<DistributableArtifact> distributableArtifacts) {
 
     if (artifacts == null) {
       return 0;
@@ -213,7 +213,7 @@ public class IntegrationTestMojo extends DistMojo {
 
       BundleDataType bundleDataType = artifactType.getBundle();
 
-      if ((bundleDataType != null) && !OSGiActionType.NONE.equals(bundleDataType.getAction())) {
+      if (bundleDataType != null) {
 
         String artifactKey = getArtifactKey(artifactType);
         artifactsKeys.add(artifactKey);
@@ -228,7 +228,7 @@ public class IntegrationTestMojo extends DistMojo {
 
       if (bundle != null) {
 
-        Artifact artifact = distributableArtifact.getArtifact();
+        EOSGiArtifact artifact = distributableArtifact.getArtifact();
         String artifactKey = getArtifactKey(artifact);
 
         if (artifactsKeys.contains(artifactKey)) {
@@ -403,7 +403,7 @@ public class IntegrationTestMojo extends DistMojo {
 
       ArtifactsType artifacts =
           distributedEnvironmentData.getDistributedEnvironment().getArtifacts();
-      List<DistributableArtifact> distributableArtifacts =
+      Collection<DistributableArtifact> distributableArtifacts =
           distributedEnvironmentData.getDistributableArtifacts();
       int expectedTestNum = calculateExpectedTestNum(artifacts, distributableArtifacts);
 
@@ -507,20 +507,20 @@ public class IntegrationTestMojo extends DistMojo {
     return classifier;
   }
 
-  private String getArtifactKey(final Artifact artifact) {
-    return artifact.getGroupId() + ":"
-        + artifact.getArtifactId() + ":"
-        + artifact.getVersion() + ":"
-        + evaluateArtifactType(artifact.getType()) + ":"
-        + evaluateClassifier(artifact.getClassifier());
-  }
-
   private String getArtifactKey(final ArtifactType artifactType) {
     return artifactType.getGroupId() + ":"
         + artifactType.getArtifactId() + ":"
         + artifactType.getVersion() + ":"
         + evaluateArtifactType(artifactType.getType()) + ":"
         + evaluateClassifier(artifactType.getClassifier());
+  }
+
+  private String getArtifactKey(final EOSGiArtifact artifact) {
+    return artifact.getGroupId() + ":"
+        + artifact.getArtifactId() + ":"
+        + artifact.getVersion() + ":"
+        + evaluateArtifactType(artifact.getType()) + ":"
+        + evaluateClassifier(artifact.getClassifier());
   }
 
   private File initializeReportFolder() {

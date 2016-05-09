@@ -36,11 +36,9 @@ import javax.management.IntrospectionException;
 import javax.management.ReflectionException;
 
 import org.apache.maven.RepositoryUtils;
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -96,9 +94,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   public static final String SYSPROP_ENVIRONMENT_ID = "org.everit.osgi.dev.environmentId";
 
   private static final String VAR_DIST_UTIL = "distUtil";
-
-  @Component
-  protected ArtifactHandlerManager artifactHandlerManager;
 
   protected DistributedEnvironmentConfigurationProvider distEnvConfigProvider =
       new DistributedEnvironmentConfigurationProvider();
@@ -306,8 +301,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     FileManager fileManager = new FileManager();
 
-    List<DistributableArtifact> processedArtifacts =
-        generateDistributableArtifacts(environment.getBundleSettings());
+    Collection<DistributableArtifact> processedArtifacts =
+        generateDistributableArtifacts(environment);
 
     String environmentId = environment.getId();
 
@@ -538,7 +533,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    */
   private void processConfigurationTemplate(
       final File distFolderFile,
-      final List<DistributableArtifact> distributableArtifacts,
+      final Collection<DistributableArtifact> distributableArtifacts,
       final EnvironmentConfiguration environment, final FileManager fileManager)
       throws MojoExecutionException, MojoFailureException {
 
@@ -676,16 +671,13 @@ public class DistMojo extends AbstractEOSGiMojo {
   private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact)
       throws MojoExecutionException {
 
+    String groupId = artifact.getGroupId();
+    String artifactId = artifact.getArtifactId();
+    String classifier = artifact.getClassifier();
+    String version = artifact.getVersion();
     String artifactType = artifact.getType();
-    if (artifactType == null) {
-      artifactType = "jar";
-    }
-    String extension = artifactHandlerManager.getArtifactHandler(artifactType).getExtension();
 
-    ArtifactRequest artifactRequest = new ArtifactRequest();
-    artifactRequest.setArtifact(new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-        artifact.getClassifier(), extension, artifact.getVersion()));
-    return artifactResolver.resolve(artifactRequest);
+    return resolveArtifact(groupId, artifactId, classifier, version, artifactType);
   }
 
   private int resolveNecessaryStartlevel(final BundleExecutionPlan bundleExecutionPlan,

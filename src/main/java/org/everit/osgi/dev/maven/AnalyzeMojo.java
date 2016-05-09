@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -141,12 +142,12 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
-      List<DistributableArtifact> distributableArtifacts;
-      distributableArtifacts = generateDistributableArtifacts(environment.getBundleSettings());
+      Collection<DistributableArtifact> distributableArtifacts;
+      distributableArtifacts = generateDistributableArtifacts(environment);
 
       List<String> bundleLocations = new ArrayList<>();
       for (DistributableArtifact distributableArtifact : distributableArtifacts) {
-        bundleLocations.add(resolveArtifactFileURI(distributableArtifact.getArtifact()));
+        bundleLocations.add(resolveArtifactFileURI(distributableArtifact.getArtifactFile()));
       }
       diagnose(bundleLocations.toArray(new String[bundleLocations.size()]));
     }
@@ -260,11 +261,10 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
     return false;
   }
 
-  private String resolveArtifactFileURI(final Artifact artifact) {
-    File artifactFile = artifact.getFile();
+  private String resolveArtifactFileURI(final File artifactFile) {
     if (artifactFile != null) {
       try {
-        return artifact.getFile().toURI().toURL().toExternalForm();
+        return artifactFile.toURI().toURL().toExternalForm();
       } catch (MalformedURLException e) {
         getLog().error(e);
       }

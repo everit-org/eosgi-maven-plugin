@@ -15,9 +15,10 @@
  */
 package org.everit.osgi.dev.maven.dto;
 
+import java.io.File;
 import java.util.jar.Manifest;
 
-import org.apache.maven.artifact.Artifact;
+import org.everit.osgi.dev.maven.configuration.EOSGiArtifact;
 
 /**
  * A Maven artifact that has information about potential OSGi headers.
@@ -27,7 +28,9 @@ public class DistributableArtifact {
   /**
    * The maven artifact.
    */
-  private final Artifact artifact;
+  private final EOSGiArtifact artifact;
+
+  private final File artifactFile;
 
   private final DistributableArtifactBundleMeta bundle;
 
@@ -39,15 +42,20 @@ public class DistributableArtifact {
   /**
    * Constructor.
    */
-  public DistributableArtifact(final Artifact artifact, final Manifest manifest,
-      final DistributableArtifactBundleMeta bundleMeta) {
+  public DistributableArtifact(final EOSGiArtifact artifact, final File artifactFile,
+      final Manifest manifest, final DistributableArtifactBundleMeta bundleMeta) {
     this.artifact = artifact;
     this.manifest = manifest;
-    bundle = bundleMeta;
+    this.bundle = bundleMeta;
+    this.artifactFile = artifactFile;
   }
 
-  public Artifact getArtifact() {
+  public EOSGiArtifact getArtifact() {
     return artifact;
+  }
+
+  public File getArtifactFile() {
+    return artifactFile;
   }
 
   public DistributableArtifactBundleMeta getBundle() {

@@ -36,6 +36,9 @@ public class EnvironmentConfiguration {
   @Parameter
   private final List<BundleSettings> bundleSettings = new ArrayList<>();
 
+  @Parameter
+  private List<EOSGiArtifact> dependencies;
+
   /**
    * The name of the osgi framework. Currently equinox is supported. Default is equinox.
    */
@@ -66,6 +69,19 @@ public class EnvironmentConfiguration {
   @Parameter
   private LaunchConfig launchConfig;
 
+  /**
+   * Regular expressions of paths that should be skipped during the cleanup process in the end of
+   * the distribution. URI-s are relative to the root folder of the environment and directory names
+   * end with slash. Slash is used as directory separators. During the clean up process all files
+   * are removed that are not created during the distribution. E.g.:
+   *
+   * <pre>
+   * &lt;runtimePaths&gt;
+   *    &lt;pathRegex&gt;log/&lt;/pathRegex&gt;
+   *    &lt;pathRegex&gt;configuration/.*\.log&lt;/pathRegex&gt;
+   *  &lt;/runtimePaths&gt;
+   * </pre>
+   */
   @Parameter
   private final List<String> runtimePaths = new ArrayList<>();
 
@@ -85,6 +101,10 @@ public class EnvironmentConfiguration {
 
   public List<BundleSettings> getBundleSettings() {
     return bundleSettings;
+  }
+
+  public List<EOSGiArtifact> getDependencies() {
+    return dependencies;
   }
 
   public String getFramework() {

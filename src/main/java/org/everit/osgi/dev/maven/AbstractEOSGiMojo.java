@@ -19,12 +19,16 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -36,9 +40,12 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.resolution.ArtifactRequest;
 import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingService;
 import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.configuration.BundleSettings;
+import org.everit.osgi.dev.maven.configuration.EOSGiArtifact;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.dto.DistributableArtifact;
@@ -66,6 +73,9 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   @Parameter(property = "eosgi.analytics.waiting.time", defaultValue = "3000")
   private long analyticsWaitingTimeInMs;
+
+  @Component
+  protected ArtifactHandlerManager artifactHandlerManager;
 
   protected PredefinedRepoArtifactResolver artifactResolver;
 
@@ -106,16 +116,16 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * The current repository/network configuration of Maven.
    */
   @Parameter(defaultValue = "${repositorySystemSession}", readonly = true)
-  private RepositorySystemSession repoSession;
+  protected RepositorySystemSession repoSession;
 
   /**
    * The entry point to Aether, i.e. the component doing all the work.
    */
   @Component
-  private RepositorySystem repoSystem;
+  protected RepositorySystem repoSystem;
 
   @Parameter(defaultValue = "${settings}", readonly = true)
-  private Settings settings;
+  protected Settings settings;
 
   /**
    * Skip analytics tracking or not. That means send event statistics to Google Analytics or not.
@@ -123,6 +133,89 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   @Parameter(property = "eosgi.analytics.skip", defaultValue = "false")
   private boolean skipAnalytics;
+
+  /**
+   * Appends artifacts that are defined within the environment to the distributable artifact map.
+   *
+   * @param environmentConfiguration
+   *          The configuration of the environment.
+   * @param distributableArtifacts
+   *          The distributable artifacts.
+   * @throws MojoExecutionException
+   *           if anything happens.
+   */
+  protected void appendEnvironmentArtifactsToDistributables(
+      final EnvironmentConfiguration environmentConfiguration,
+      final Map<EOSGiArtifact, DistributableArtifact> distributableArtifacts)
+      throws MojoExecutionException {
+
+    List<EOSGiArtifact> environmentDependencies = environmentConfiguration.getDependencies();
+
+    if (environmentDependencies == null) {
+      return;
+    }
+
+    for (EOSGiArtifact eosgiArtifact : environmentDependencies) {
+      org.eclipse.aether.artifact.Artifact resolvedArtifact =
+          resolveArtifact(eosgiArtifact.getGroupId(), eosgiArtifact.getArtifactId(),
+              eosgiArtifact.getClassifier(), eosgiArtifact.getVersion(), eosgiArtifact.getType());
+
+      DistributableArtifact distributableArtifact = processArtifact(
+          environmentConfiguration.getBundleSettings(), eosgiArtifact, resolvedArtifact.getFile());
+
+      distributableArtifacts.put(eosgiArtifact, distributableArtifact);
+    }
+
+  }
+
+  /**
+   * Appends the artifacts of the project to the distributable artifact map.
+   *
+   * @param environmentConfiguration
+   *          The configuration of the environment.
+   * @param distributableArtifacts
+   *          The distributable artifact map that will be appended.
+   */
+  protected void appendProjectArtifactsToDistributables(
+      final EnvironmentConfiguration environmentConfiguration,
+      final Map<EOSGiArtifact, DistributableArtifact> distributableArtifacts) {
+    List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+
+    if (executedProject != null) {
+      availableArtifacts.add(executedProject.getArtifact());
+    } else {
+      availableArtifacts.add(project.getArtifact());
+    }
+
+    List<BundleSettings> bundleSettingsList = environmentConfiguration.getBundleSettings();
+    for (Artifact artifact : availableArtifacts) {
+      if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
+        EOSGiArtifact eosgiArtifact = convertMavenToEOSGiArtifact(artifact);
+
+        DistributableArtifact processedArtifact =
+            processArtifact(bundleSettingsList, eosgiArtifact, artifact.getFile());
+
+        distributableArtifacts.put(eosgiArtifact, processedArtifact);
+      }
+    }
+  }
+
+  /**
+   * Converts a maven artifact to an EOSGi Artifact type.
+   *
+   * @param artifact
+   *          The maven artifact.
+   * @return The EOSGi Artifact.
+   */
+  protected EOSGiArtifact convertMavenToEOSGiArtifact(final Artifact artifact) {
+    EOSGiArtifact result = new EOSGiArtifact();
+    result.setGroupId(artifact.getGroupId());
+    result.setArtifactId(artifact.getArtifactId());
+    result.setType(artifact.getType());
+    result.setVersion(artifact.getVersion());
+    result.setClassifier(artifact.getClassifier());
+    return result;
+  }
 
   protected abstract void doExecute() throws MojoExecutionException, MojoFailureException;
 
@@ -138,8 +231,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
     String pluginVersion = this.getClass().getPackage().getImplementationVersion();
     GoogleAnalyticsTrackingService googleAnalyticsTrackingService =
-        new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs,
-            skipAnalytics(), pluginVersion, getLog());
+        new GoogleAnalyticsTrackingServiceImpl(analyticsWaitingTimeInMs, skipAnalytics(),
+            pluginVersion, getLog());
 
     try {
       eventId = googleAnalyticsTrackingService.sendEvent(analyticsReferer, goalName);
@@ -167,32 +260,24 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Getting the processed artifacts of the project. The artifact list is calculated each time when
    * the function is called therefore the developer should not call it inside an iteration.
    *
-   * @param bundleSettingsList
-   *          The bundle settings list of the environment that the distributable artifacts will be
-   *          generated for.
+   * @param environmentConfiguration
+   *          The configuration of the environment that the artifact list is generated for.
    * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
+   * @throws MojoExecutionException
+   *           if anything happens
    * @throws MalformedURLException
    *           if the URL for the artifact is broken.
    */
-  protected List<DistributableArtifact> generateDistributableArtifacts(
-      final List<BundleSettings> bundleSettingsList) {
+  protected Collection<DistributableArtifact> generateDistributableArtifacts(
+      final EnvironmentConfiguration environmentConfiguration) throws MojoExecutionException {
 
-    List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+    Map<EOSGiArtifact, DistributableArtifact> result = new LinkedHashMap<>();
 
-    if (executedProject != null) {
-      availableArtifacts.add(executedProject.getArtifact());
-    } else {
-      availableArtifacts.add(project.getArtifact());
-    }
+    appendProjectArtifactsToDistributables(environmentConfiguration, result);
 
-    List<DistributableArtifact> result = new ArrayList<DistributableArtifact>();
-    for (Artifact artifact : availableArtifacts) {
-      if (!Artifact.SCOPE_PROVIDED.equals(artifact.getScope())) {
-        DistributableArtifact processedArtifact = processArtifact(bundleSettingsList, artifact);
-        result.add(processedArtifact);
-      }
-    }
-    return result;
+    appendEnvironmentArtifactsToDistributables(environmentConfiguration, result);
+
+    return result.values();
   }
 
   /**
@@ -275,21 +360,21 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    *         default 0.0.0 version is provided.
    */
   public DistributableArtifact processArtifact(final List<BundleSettings> bundleSettingsList,
-      final Artifact artifact) {
+      final EOSGiArtifact artifact, final File artifactFile) {
 
     if ("pom".equals(artifact.getType())) {
-      return new DistributableArtifact(artifact, null, null);
+      return new DistributableArtifact(artifact, artifactFile, null, null);
     }
-    File artifactFile = artifact.getFile();
+
     if ((artifactFile == null) || !artifactFile.exists()) {
-      return new DistributableArtifact(artifact, null, null);
+      return new DistributableArtifact(artifact, artifactFile, null, null);
     }
     Manifest manifest = null;
 
     try (JarFile jarFile = new JarFile(artifactFile)) {
       manifest = jarFile.getManifest();
       if (manifest == null) {
-        return new DistributableArtifact(artifact, null, null);
+        return new DistributableArtifact(artifact, artifactFile, null, null);
       }
 
       Attributes mainAttributes = manifest.getMainAttributes();
@@ -320,10 +405,45 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
                 exportPackage, startLevel);
       }
 
-      return new DistributableArtifact(artifact, manifest, bundleData);
+      return new DistributableArtifact(artifact, artifactFile, manifest, bundleData);
     } catch (IOException e) {
-      return new DistributableArtifact(artifact, null, null);
+      return new DistributableArtifact(artifact, artifactFile, null, null);
     }
+  }
+
+  /**
+   * Resolves an artifact so its file will be available.
+   *
+   * @param groupId
+   *          The group id of the artifact.
+   * @param artifactId
+   *          The artifact id of the artifact.
+   * @param classifier
+   *          The classifier of the artifact.
+   * @param version
+   *          The version of the artifact.
+   * @param artifactType
+   *          The type of the artifact.
+   * @return The Aether resolved artifact.
+   * @throws MojoExecutionException
+   *           if something wrong happens.
+   */
+  protected org.eclipse.aether.artifact.Artifact resolveArtifact(final String groupId,
+      final String artifactId,
+      final String classifier, final String version, final String artifactType)
+      throws MojoExecutionException {
+
+    String tmpArtifactType = artifactType;
+    if (tmpArtifactType == null) {
+      tmpArtifactType = "jar";
+    }
+    String extension = artifactHandlerManager.getArtifactHandler(tmpArtifactType).getExtension();
+
+    ArtifactRequest artifactRequest = new ArtifactRequest();
+
+    artifactRequest.setArtifact(new DefaultArtifact(groupId, artifactId,
+        classifier, extension, version));
+    return artifactResolver.resolve(artifactRequest);
   }
 
   public void setEnvironmentId(final String environmentId) {
