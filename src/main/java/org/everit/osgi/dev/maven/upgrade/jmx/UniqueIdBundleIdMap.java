@@ -18,11 +18,16 @@ package org.everit.osgi.dev.maven.upgrade.jmx;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A mapping of bundle unique ids and bundle ids. It is up to the caller library how to generate a
+ * unique string for this mapping, but it must be unique. E.g.: A concatenation of symbolic name and
+ * version.
+ */
 public class UniqueIdBundleIdMap {
 
-  private Map<String, Long> bundleIdByUniqueId = new HashMap<>();
+  private final Map<String, Long> bundleIdByUniqueId = new HashMap<>();
 
-  private Map<Long, String> uniqueIdByBundleId = new HashMap<>();
+  private final Map<Long, String> uniqueIdByBundleId = new HashMap<>();
 
   public Long getBundleId(final String uniqueId) {
     return bundleIdByUniqueId.get(uniqueId);
@@ -37,6 +42,12 @@ public class UniqueIdBundleIdMap {
     uniqueIdByBundleId.put(bundleId, uniqueId);
   }
 
+  /**
+   * Removes an entry by the unique id of the map.
+   *
+   * @param uniqueId
+   *          The unique id of the map.
+   */
   public void removeByUniqueId(final String uniqueId) {
     Long bundleId = bundleIdByUniqueId.remove(uniqueId);
     if (bundleId != null) {

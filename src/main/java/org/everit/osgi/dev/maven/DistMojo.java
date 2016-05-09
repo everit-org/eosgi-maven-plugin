@@ -196,6 +196,17 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
+  private Map<String, BundleDataType> createJustStartedBundleByUniqueLabelMap(
+      final Set<BundleDataType> justStartedBundles) {
+    Map<String, BundleDataType> justStartedBundleByUniqueLabel = new HashMap<>();
+    for (BundleDataType bundleData : justStartedBundles) {
+      justStartedBundleByUniqueLabel.put(
+          createUniqueLabelForBundle(bundleData.getSymbolicName(), bundleData.getVersion()),
+          bundleData);
+    }
+    return justStartedBundleByUniqueLabel;
+  }
+
   private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
       final File distFolderFile, final BundleExecutionPlan bundleExecutionPlan,
       final EnvironmentType existingDistributedEnvironment) {
@@ -233,6 +244,20 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
 
     return new NoopRemoteOSGiManager();
+  }
+
+  private Map<String, BundleDataType> createStartActionBundleByUniqueLabelMap(
+      final ArtifactsType artifacts) {
+    Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel = new HashMap<>();
+    for (ArtifactType artifact : artifacts.getArtifact()) {
+      BundleDataType bundleData = artifact.getBundle();
+      if (bundleData != null && OSGiActionType.START.equals(bundleData.getAction())) {
+        shouldBeActiveBundleByUniqueLabel.put(
+            createUniqueLabelForBundle(bundleData.getSymbolicName(), bundleData.getVersion()),
+            bundleData);
+      }
+    }
+    return shouldBeActiveBundleByUniqueLabel;
   }
 
   private String createUniqueLabelForBundle(final String symbolicName, final String version) {
@@ -633,6 +658,21 @@ public class DistMojo extends AbstractEOSGiMojo {
     return (frameworkStartLevel != null) ? frameworkStartLevel : originalFrameworkStartLevel;
   }
 
+  private Set<BundleDataType> resolveJustStartedActiveBundles(
+      final RemoteOSGiManager remoteOSGiManager,
+      final Map<String, BundleDataType> justStartedBundleByUniqueLabel) {
+    RuntimeBundleInfo[] runtimeBundleInfoArray = remoteOSGiManager.getRuntimeBundleInfoArray();
+    Set<BundleDataType> activeJustStartedBundleSet = new HashSet<>();
+    for (RuntimeBundleInfo runtimeBundleInfo : runtimeBundleInfoArray) {
+      BundleDataType bundleData = justStartedBundleByUniqueLabel.get(
+          createUniqueLabelForBundle(runtimeBundleInfo.symbolicName, runtimeBundleInfo.version));
+      if (runtimeBundleInfo.state == Bundle.ACTIVE && bundleData != null) {
+        activeJustStartedBundleSet.add(bundleData);
+      }
+    }
+    return activeJustStartedBundleSet;
+  }
+
   private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact)
       throws MojoExecutionException {
 
@@ -669,6 +709,22 @@ public class DistMojo extends AbstractEOSGiMojo {
     return newStartLevel;
   }
 
+  private List<BundleDataType> resolveResolvedBundlesInJustStartedActiveBundleDependencyClosure(
+      final Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel,
+      final RuntimeBundleInfo[] dependencyClosure) {
+    List<BundleDataType> bundlesInClosureToStart = new ArrayList<>();
+    for (RuntimeBundleInfo runtimeBundleInfo : dependencyClosure) {
+      if (runtimeBundleInfo.state == Bundle.RESOLVED) {
+        BundleDataType bundleData = shouldBeActiveBundleByUniqueLabel.get(
+            createUniqueLabelForBundle(runtimeBundleInfo.symbolicName, runtimeBundleInfo.version));
+        if (bundleData != null) {
+          bundlesInClosureToStart.add(bundleData);
+        }
+      }
+    }
+    return bundlesInClosureToStart;
+  }
+
   private void setStartLevelOnNewlyInstalledBundles(final Collection<BundleDataType> installBundles,
       final RemoteOSGiManager remoteOSGiManager) {
     for (BundleDataType bundleData : installBundles) {
@@ -698,58 +754,29 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     remoteOSGiManager.startBundles(bundlesToStart.toArray(new BundleDataType[0]));
 
-    startStoppedBundlesFromDependencyClosure(bundlesToStart, artifacts, remoteOSGiManager);
+    startResolvedBundlesOfJustStartedActiveBundlesDependencies(bundlesToStart, artifacts,
+        remoteOSGiManager);
   }
 
-  private void startStoppedBundlesFromDependencyClosure(
+  private void startResolvedBundlesOfJustStartedActiveBundlesDependencies(
       final Set<BundleDataType> justStartedBundles,
       final ArtifactsType artifacts, final RemoteOSGiManager remoteOSGiManager) {
 
-    // Create a map to be able to search in just started bundle by BSN + Version
-    Map<String, BundleDataType> justStartedBundleByUniqueLabel = new HashMap<>();
-    for (BundleDataType bundleData : justStartedBundles) {
-      justStartedBundleByUniqueLabel.put(
-          createUniqueLabelForBundle(bundleData.getSymbolicName(), bundleData.getVersion()),
-          bundleData);
-    }
+    Map<String, BundleDataType> justStartedBundleByUniqueLabel =
+        createJustStartedBundleByUniqueLabelMap(justStartedBundles);
 
-    // Find those bundles that have been just started and became ACTIVE successfully
-    RuntimeBundleInfo[] runtimeBundleInfoArray = remoteOSGiManager.getRuntimeBundleInfoArray();
-    Set<BundleDataType> activeJustStartedBundleSet = new HashSet<>();
-    for (RuntimeBundleInfo runtimeBundleInfo : runtimeBundleInfoArray) {
-      BundleDataType bundleData = justStartedBundleByUniqueLabel.get(
-          createUniqueLabelForBundle(runtimeBundleInfo.symbolicName, runtimeBundleInfo.version));
-      if (runtimeBundleInfo.state == Bundle.ACTIVE && bundleData != null) {
-        activeJustStartedBundleSet.add(bundleData);
-      }
-    }
+    Set<BundleDataType> activeJustStartedBundleSet =
+        resolveJustStartedActiveBundles(remoteOSGiManager, justStartedBundleByUniqueLabel);
 
-    // Get the closure for active just started bundles
+    Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel =
+        createStartActionBundleByUniqueLabelMap(artifacts);
+
     RuntimeBundleInfo[] dependencyClosure = remoteOSGiManager
         .getDependencyClosure(activeJustStartedBundleSet.toArray(new BundleDataType[0]));
 
-    // Create a helper map of BundleData that should be active.
-    Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel = new HashMap<>();
-    for (ArtifactType artifact : artifacts.getArtifact()) {
-      BundleDataType bundleData = artifact.getBundle();
-      if (bundleData != null && OSGiActionType.START.equals(bundleData.getAction())) {
-        shouldBeActiveBundleByUniqueLabel.put(
-            createUniqueLabelForBundle(bundleData.getSymbolicName(), bundleData.getVersion()),
-            bundleData);
-      }
-    }
-
-    // Get those bundles that are resolved but should be started from the dependency closure
-    List<BundleDataType> bundlesInClosureToStart = new ArrayList<>();
-    for (RuntimeBundleInfo runtimeBundleInfo : dependencyClosure) {
-      if (runtimeBundleInfo.state == Bundle.RESOLVED) {
-        BundleDataType bundleData = shouldBeActiveBundleByUniqueLabel.get(
-            createUniqueLabelForBundle(runtimeBundleInfo.symbolicName, runtimeBundleInfo.version));
-        if (bundleData != null) {
-          bundlesInClosureToStart.add(bundleData);
-        }
-      }
-    }
+    List<BundleDataType> bundlesInClosureToStart =
+        resolveResolvedBundlesInJustStartedActiveBundleDependencyClosure(
+            shouldBeActiveBundleByUniqueLabel, dependencyClosure);
 
     remoteOSGiManager.startBundles(bundlesInClosureToStart.toArray(new BundleDataType[0]));
   }

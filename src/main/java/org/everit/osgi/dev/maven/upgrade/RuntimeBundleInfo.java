@@ -15,6 +15,9 @@
  */
 package org.everit.osgi.dev.maven.upgrade;
 
+/**
+ * Runtime information of a bundle.
+ */
 public class RuntimeBundleInfo {
 
   public long bundleId;
@@ -25,6 +28,18 @@ public class RuntimeBundleInfo {
 
   public String version;
 
+  /**
+   * Constructor.
+   *
+   * @param bundleId
+   *          The id of the bundle.
+   * @param symbolicName
+   *          The symbolic name of the bundle.
+   * @param version
+   *          The version of the bundle.
+   * @param state
+   *          The state of the bundle.
+   */
   public RuntimeBundleInfo(final long bundleId, final String symbolicName, final String version,
       final int state) {
     this.bundleId = bundleId;
