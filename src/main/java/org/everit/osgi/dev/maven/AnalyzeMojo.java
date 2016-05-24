@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Execute;
@@ -38,12 +37,12 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
 import org.eclipse.osgi.service.resolver.PlatformAdmin;
 import org.eclipse.osgi.service.resolver.State;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
-import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -104,7 +103,7 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
    * Map of plugin artifacts.
    */
   @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
-  private Map<String, Artifact> pluginArtifactMap;
+  private Map<String, org.apache.maven.artifact.Artifact> pluginArtifactMap;
 
   private void diagnose(final String[] bundleLocations) throws MojoFailureException {
     Framework osgiContainer = null;
@@ -142,12 +141,12 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
     for (EnvironmentConfiguration environment : environmentsToProcess) {
-      Collection<DistributableArtifact> distributableArtifacts;
+      Collection<Artifact> distributableArtifacts;
       distributableArtifacts = generateDistributableArtifacts(environment);
 
       List<String> bundleLocations = new ArrayList<>();
-      for (DistributableArtifact distributableArtifact : distributableArtifacts) {
-        bundleLocations.add(resolveArtifactFileURI(distributableArtifact.getArtifactFile()));
+      for (Artifact distributableArtifact : distributableArtifacts) {
+        bundleLocations.add(resolveArtifactFileURI(distributableArtifact.getFile()));
       }
       diagnose(bundleLocations.toArray(new String[bundleLocations.size()]));
     }
@@ -292,7 +291,7 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
 
     BundleContext systemBundleContext = framework.getBundleContext();
 
-    Artifact equinoxCompatibilityStateArtifact =
+    org.apache.maven.artifact.Artifact equinoxCompatibilityStateArtifact =
         pluginArtifactMap.get("org.eclipse.tycho:org.eclipse.osgi.compatibility.state");
 
     URI compatibilityBundleURI = equinoxCompatibilityStateArtifact.getFile().toURI();

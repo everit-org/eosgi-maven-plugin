@@ -60,7 +60,6 @@ import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.configuration.LaunchConfigOverride;
-import org.everit.osgi.dev.maven.dto.DistributableArtifact;
 import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
 import org.everit.osgi.dev.maven.upgrade.NoopRemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
@@ -286,7 +285,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     FileManager fileManager = new FileManager();
 
-    Collection<DistributableArtifact> processedArtifacts =
+    Collection<Artifact> processedArtifacts =
         generateDistributableArtifacts(environment);
 
     String environmentId = environment.getId();
@@ -518,7 +517,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    */
   private void processConfigurationTemplate(
       final File distFolderFile,
-      final Collection<DistributableArtifact> distributableArtifacts,
+      final Collection<Artifact> distributableArtifacts,
       final EnvironmentConfiguration environment, final FileManager fileManager)
       throws MojoExecutionException, MojoFailureException {
 
@@ -656,13 +655,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact)
       throws MojoExecutionException {
 
-    String groupId = artifact.getGroupId();
-    String artifactId = artifact.getArtifactId();
-    String classifier = artifact.getClassifier();
-    String version = artifact.getVersion();
-    String artifactType = artifact.getType();
-
-    return resolveArtifact(groupId, artifactId, classifier, version, artifactType);
+    return resolveArtifact(new DefaultArtifact(artifact.getId(), artifact.getProperties());
   }
 
   private int resolveNecessaryStartlevel(final BundleExecutionPlan bundleExecutionPlan,

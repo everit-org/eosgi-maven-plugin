@@ -27,14 +27,10 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.jar.Attributes;
 import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -48,15 +44,9 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.everit.osgi.dev.eosgi.dist.schema.util.LaunchConfigurationDTO;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
 import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
-import org.everit.osgi.dev.maven.configuration.EOSGiArtifact;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
-import org.everit.osgi.dev.maven.dto.DistributableArtifact;
-import org.everit.osgi.dev.maven.dto.DistributableArtifactBundleMeta;
 import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
 import org.everit.osgi.dev.maven.util.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.util.PluginUtil;
@@ -125,11 +115,7 @@ public class IntegrationTestMojo extends DistMojo {
    */
   private static class TestResult {
 
-    private final String environmentId;
-
     private int error;
-
-    private int expectedTestNum;
 
     private int failure;
 
@@ -137,25 +123,14 @@ public class IntegrationTestMojo extends DistMojo {
 
     private int tests;
 
-    TestResult(final String environmentId) {
-      super();
-      this.environmentId = environmentId;
-    }
-
     private void addToSum(final TestResult testResult) {
       tests += testResult.tests;
       error += testResult.error;
       failure += testResult.failure;
       skipped += testResult.skipped;
-      expectedTestNum += testResult.expectedTestNum;
     }
 
   }
-
-  /**
-   * Constant of the MANIFEST header key to count the {@link #expectedNumberOfIntegrationTests}.
-   */
-  private static final String EXPECTED_NUMBER_OF_INTEGRATION_TESTS = "EOSGi-TestNum";
 
   private static final long LOGGING_INTERVAL = 5000;
 
@@ -199,63 +174,6 @@ public class IntegrationTestMojo extends DistMojo {
    */
   @Parameter(property = "eosgi.test.skip", defaultValue = "false")
   protected boolean skipTests = false;
-
-  private int calculateExpectedTestNum(final ArtifactsType artifacts,
-      final Collection<DistributableArtifact> distributableArtifacts) {
-
-    if (artifacts == null) {
-      return 0;
-    }
-
-    Set<String> artifactsKeys = new HashSet<>();
-
-    for (ArtifactType artifactType : artifacts.getArtifact()) {
-
-      BundleDataType bundleDataType = artifactType.getBundle();
-
-      if (bundleDataType != null) {
-
-        String artifactKey = getArtifactKey(artifactType);
-        artifactsKeys.add(artifactKey);
-      }
-    }
-
-    int eosgiTestNum = 0;
-
-    for (DistributableArtifact distributableArtifact : distributableArtifacts) {
-
-      DistributableArtifactBundleMeta bundle = distributableArtifact.getBundle();
-
-      if (bundle != null) {
-
-        EOSGiArtifact artifact = distributableArtifact.getArtifact();
-        String artifactKey = getArtifactKey(artifact);
-
-        if (artifactsKeys.contains(artifactKey)) {
-
-          Attributes mainAttributes = distributableArtifact.getManifest().getMainAttributes();
-
-          String currentExpectedNumberString =
-              mainAttributes.getValue(EXPECTED_NUMBER_OF_INTEGRATION_TESTS);
-          if ((currentExpectedNumberString != null) && !currentExpectedNumberString.isEmpty()) {
-            eosgiTestNum += Long.valueOf(currentExpectedNumberString);
-          }
-        }
-      }
-
-    }
-    return eosgiTestNum;
-  }
-
-  private List<TestResult> calculateExpectedTestNumFailures(final List<TestResult> testResults) {
-    List<TestResult> expecationTestNumFailures = new ArrayList<TestResult>();
-    for (TestResult testResult : testResults) {
-      if (testResult.expectedTestNum != testResult.tests) {
-        expecationTestNumFailures.add(testResult);
-      }
-    }
-    return expecationTestNumFailures;
-  }
 
   private void checkExitCode(final Process process, final String environmentId)
       throws MojoExecutionException {
@@ -389,7 +307,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     File testReportFolderFile = initializeReportFolder();
 
-    TestResult testResultSum = new TestResult(null);
+    TestResult testResultSum = new TestResult();
     List<TestResult> testResults = new ArrayList<>();
 
     for (DistributedEnvironmenData distributedEnvironmentData : distributedEnvironmentDataCollection) { // CS_DISABLE_LINE_LENGTH
@@ -401,25 +319,16 @@ public class IntegrationTestMojo extends DistMojo {
       int shutdownTimeout = environment.getShutdownTimeout();
       int timeout = environment.getTimeout();
 
-      ArtifactsType artifacts =
-          distributedEnvironmentData.getDistributedEnvironment().getArtifacts();
-      Collection<DistributableArtifact> distributableArtifacts =
-          distributedEnvironmentData.getDistributableArtifacts();
-      int expectedTestNum = calculateExpectedTestNum(artifacts, distributableArtifacts);
-
       TestResult testResult = runIntegrationTestsOnEnvironment(
-          environmentId, distFolderFile, testReportFolderFile,
-          expectedTestNum, shutdownTimeout, timeout);
+          environmentId, distFolderFile, testReportFolderFile, shutdownTimeout, timeout);
 
       testResults.add(testResult);
       testResultSum.addToSum(testResult);
     }
 
-    List<TestResult> expectedTestNumFailures = calculateExpectedTestNumFailures(testResults);
-
     printTestResultSum(testResultSum);
 
-    throwExceptionsBasedOnTestResultsIfNecesssary(expectedTestNumFailures, testResultSum);
+    throwExceptionsBasedOnTestResultsIfNecesssary(testResultSum);
   }
 
   private Closeable doStreamRedirections(final Process process, final File resultFolder)
@@ -491,36 +400,6 @@ public class IntegrationTestMojo extends DistMojo {
         }
       }
     };
-  }
-
-  private String evaluateArtifactType(final String artifactType) {
-    if ((artifactType == null) || "".equals(artifactType.trim())) {
-      return "jar";
-    }
-    return artifactType;
-  }
-
-  private String evaluateClassifier(final String classifier) {
-    if ((classifier == null) || (classifier.trim().length() == 0)) {
-      return null;
-    }
-    return classifier;
-  }
-
-  private String getArtifactKey(final ArtifactType artifactType) {
-    return artifactType.getGroupId() + ":"
-        + artifactType.getArtifactId() + ":"
-        + artifactType.getVersion() + ":"
-        + evaluateArtifactType(artifactType.getType()) + ":"
-        + evaluateClassifier(artifactType.getClassifier());
-  }
-
-  private String getArtifactKey(final EOSGiArtifact artifact) {
-    return artifact.getGroupId() + ":"
-        + artifact.getArtifactId() + ":"
-        + artifact.getVersion() + ":"
-        + evaluateArtifactType(artifact.getType()) + ":"
-        + evaluateClassifier(artifact.getClassifier());
   }
 
   private File initializeReportFolder() {
@@ -648,14 +527,13 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private TestResult runIntegrationTestsOnEnvironment(final String environmentId,
-      final File distFolderFile, final File testReportFolderFile,
-      final int expectedTestNum, final int shutdownTimeout, final int timeout)
+      final File distFolderFile, final File testReportFolderFile, final int shutdownTimeout,
+      final int timeout)
       throws MojoFailureException, MojoExecutionException {
 
     printEnvironmentProcessStartToLog(environmentId);
 
-    TestResult testResult = new TestResult(environmentId);
-    testResult.expectedTestNum = expectedTestNum;
+    TestResult testResult = new TestResult();
 
     String[] command = resolveCommandForEnvironment(distFolderFile);
 
@@ -745,23 +623,10 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private void throwExceptionsBasedOnTestResultsIfNecesssary(
-      final List<TestResult> expecationErroredResults, final TestResult resultSum)
+  private void throwExceptionsBasedOnTestResultsIfNecesssary(final TestResult resultSum)
       throws MojoFailureException {
     if ((resultSum.error > 0) || (resultSum.failure > 0)) {
       throw new MojoFailureException("Error during running OSGi integration tests");
-    }
-
-    if (expecationErroredResults.size() > 0) {
-      for (TestResult testResult : expecationErroredResults) {
-        getLog().error(
-            "Error at test environment '" + testResult.environmentId + "'. Expected test number is "
-                + testResult.expectedTestNum + " while " + testResult.tests
-                + " number of tests ran.");
-      }
-      throw new MojoFailureException(
-          "Number of expected tests " + resultSum.expectedTestNum + " while "
-              + resultSum.tests + " tests ran.");
     }
   }
 

@@ -15,7 +15,6 @@
  */
 package org.everit.osgi.dev.maven.configuration;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -30,15 +29,8 @@ public class EnvironmentConfiguration {
 
   private static final int DEFAULT_TEST_RUN_TIMEOUT = 180000;
 
-  /**
-   * Setting non-default behaviors for bundles. For more information see the javadoc of
-   * {@link BundleSettings} class.
-   */
   @Parameter
-  private final List<BundleSettings> bundleSettings = new ArrayList<>();
-
-  @Parameter
-  private List<EOSGiArtifact> dependencies;
+  private List<EOSGiArtifact> artifacts;
 
   /**
    * The name of the osgi framework. Currently equinox is supported. Default is equinox.
@@ -100,12 +92,8 @@ public class EnvironmentConfiguration {
   @Parameter(defaultValue = "180000")
   private final int timeout = DEFAULT_TEST_RUN_TIMEOUT;
 
-  public List<BundleSettings> getBundleSettings() {
-    return bundleSettings;
-  }
-
-  public List<EOSGiArtifact> getDependencies() {
-    return dependencies;
+  public List<EOSGiArtifact> getArtifacts() {
+    return artifacts;
   }
 
   public String getFramework() {
