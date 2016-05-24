@@ -44,7 +44,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.everit.expression.ExpressionCompiler;
 import org.everit.expression.ParserConfiguration;
 import org.everit.expression.jexl.JexlExpressionCompiler;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.TemplateEnginesType;
+import org.everit.osgi.dev.dist.util.configuration.schema.TemplateEnginesType;
 import org.everit.templating.CompiledTemplate;
 import org.everit.templating.TemplateCompiler;
 import org.everit.templating.html.HTMLTemplateCompiler;

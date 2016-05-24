@@ -15,7 +15,7 @@
  */
 package org.everit.osgi.dev.maven.upgrade;
 
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import java.util.Collection;
 
 /**
  * An implementation that does nothing.
@@ -28,7 +28,7 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public RuntimeBundleInfo[] getDependencyClosure(final BundleDataType... bundleDataArray) {
+  public RuntimeBundleInfo[] getDependencyClosure(final Collection<String> bundleLocations) {
     return new RuntimeBundleInfo[0];
   }
 
@@ -48,7 +48,7 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void installBundles(final BundleDataType... bundleDataTypes) {
+  public void installBundles(final Collection<String> bundleLocations) {
     // Do nothing
 
   }
@@ -64,7 +64,7 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void setBundleStartLevel(final BundleDataType bundleIdentifier, final int newlevel) {
+  public void setBundleStartLevel(final String bundleLocation, final int newlevel) {
     // Do nothing
   }
 
@@ -79,22 +79,22 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void startBundles(final BundleDataType... bundleIdentifiers) {
+  public void startBundles(final Collection<String> bundleLocations) {
     // Do nothing
   }
 
   @Override
-  public void stopBundles(final BundleDataType... bundleIdentifiers) {
+  public void stopBundles(final Collection<String> bundleLocations) {
     // Do nothing
   }
 
   @Override
-  public void uninstallBundles(final BundleDataType... bundleDataTypes) {
+  public void uninstallBundles(final Collection<String> bundleLocations) {
     // Do nothing
   }
 
   @Override
-  public void updateBundles(final BundleDataType... bundleDataType) {
+  public void updateBundles(final Collection<String> bundleLocations) {
     // Do nothing
   }
 

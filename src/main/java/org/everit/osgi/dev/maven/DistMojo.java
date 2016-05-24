@@ -47,16 +47,15 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
-import org.everit.osgi.dev.eosgi.dist.schema.util.DistributedEnvironmentConfigurationProvider;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsableType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ParsablesType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.TemplateEnginesType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.dist.util.configuration.DistributedEnvironmentConfigurationProvider;
+import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
+import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactsType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
+import org.everit.osgi.dev.dist.util.configuration.schema.OSGiActionType;
+import org.everit.osgi.dev.dist.util.configuration.schema.ParsableType;
+import org.everit.osgi.dev.dist.util.configuration.schema.ParsablesType;
+import org.everit.osgi.dev.dist.util.configuration.schema.TemplateEnginesType;
+import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.configuration.LaunchConfigOverride;
@@ -69,6 +68,7 @@ import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManagerProvider;
 import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.everit.osgi.dev.maven.util.BundleExecutionPlan;
 import org.everit.osgi.dev.maven.util.BundleExecutionPlan.BundleDataWithCurrentStartLevel;
+import org.everit.osgi.dev.maven.util.BundleExecutionPlan.BundleLocationWithCurrentStartLevel;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.EnvironmentCleaner;
 import org.everit.osgi.dev.maven.util.FileManager;
@@ -338,17 +338,14 @@ public class DistMojo extends AbstractEOSGiMojo {
           remoteOSGiManager.setFrameworkStartLevel(frameworkStartLevelDuringUpdate);
         }
 
-        remoteOSGiManager
-            .stopBundles(bundleExecutionPlan.updateBundles.toArray(new BundleDataType[0]));
+        remoteOSGiManager.stopBundles(bundleExecutionPlan.updateBundles);
 
-        remoteOSGiManager
-            .stopBundles(bundleExecutionPlan.stopStartedBundles.toArray(new BundleDataType[0]));
+        remoteOSGiManager.stopBundles(bundleExecutionPlan.stopStartedBundles);
 
         higherBundleStartLevelWhereNecessary(bundleExecutionPlan, currentInitialBundleStartLevel,
             newInitialBundleStartLevel, remoteOSGiManager);
 
-        remoteOSGiManager
-            .uninstallBundles(bundleExecutionPlan.uninstallBundles.toArray(new BundleDataType[0]));
+        remoteOSGiManager.uninstallBundles(bundleExecutionPlan.uninstallBundles);
 
         if (newInitialBundleStartLevel != currentInitialBundleStartLevel) {
           remoteOSGiManager.setInitialBundleStartLevel(newInitialBundleStartLevel);
@@ -356,13 +353,11 @@ public class DistMojo extends AbstractEOSGiMojo {
 
         distributeArtifactFiles(environmentRootFolder, artifacts, fileManager);
 
-        remoteOSGiManager
-            .installBundles(bundleExecutionPlan.installBundles.toArray(new BundleDataType[0]));
+        remoteOSGiManager.installBundles(bundleExecutionPlan.installBundles);
 
         setStartLevelOnNewlyInstalledBundles(bundleExecutionPlan.installBundles, remoteOSGiManager);
 
-        remoteOSGiManager
-            .updateBundles(bundleExecutionPlan.updateBundles.toArray(new BundleDataType[0]));
+        remoteOSGiManager.updateBundles(bundleExecutionPlan.updateBundles);
 
         remoteOSGiManager.resolveAll();
         remoteOSGiManager.refresh();
@@ -390,9 +385,9 @@ public class DistMojo extends AbstractEOSGiMojo {
   }
 
   private void hackBundleExecutionPlanForEquinox(final BundleExecutionPlan bundleExecutionPlan) {
-    for (BundleDataType bundleData : bundleExecutionPlan.updateBundles) {
-      bundleExecutionPlan.uninstallBundles.add(bundleData);
-      bundleExecutionPlan.installBundles.add(bundleData);
+    for (String bundleLocation : bundleExecutionPlan.updateBundles) {
+      bundleExecutionPlan.uninstallBundles.add(bundleLocation);
+      bundleExecutionPlan.installBundles.add(bundleLocation);
     }
     bundleExecutionPlan.updateBundles.clear();
   }
@@ -402,13 +397,15 @@ public class DistMojo extends AbstractEOSGiMojo {
       final RemoteOSGiManager remoteOSGiManager) {
 
     if (newInitialBundleStartLevel > currentInitialBundleStartLevel) {
-      for (BundleDataType bundleData : bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles) { // CS_DISABLE_LINE_LENGTH
-        remoteOSGiManager.setBundleStartLevel(bundleData, newInitialBundleStartLevel);
+      for (String bundleLocation : bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles) { // CS_DISABLE_LINE_LENGTH
+        remoteOSGiManager.setBundleStartLevel(bundleLocation, newInitialBundleStartLevel);
       }
     }
 
-    for (BundleDataType bundleData : bundleExecutionPlan.higherStartLevelOnBundles) {
-      remoteOSGiManager.setBundleStartLevel(bundleData, bundleData.getStartLevel());
+    for (Entry<String, Integer> bundleLocationWithStartLevel : bundleExecutionPlan.higherStartLevelOnBundles
+        .entrySet()) {
+      remoteOSGiManager.setBundleStartLevel(bundleLocationWithStartLevel.getKey(),
+          bundleLocationWithStartLevel.getValue());
     }
 
     for (BundleDataWithCurrentStartLevel bundleDataWithCurrentStartLevel : bundleExecutionPlan.setInitialStartLevelOnBundles) { // CS_DISABLE_LINE_LENGTH
@@ -449,14 +446,16 @@ public class DistMojo extends AbstractEOSGiMojo {
       }
     }
 
-    for (BundleDataType bundleData : bundleExecutionPlan.lowerStartLevelOnBundles) {
-      remoteOSGiManager.setBundleStartLevel(bundleData, bundleData.getStartLevel());
+    for (Entry<String, Integer> bundleLocationWithStartLevel : bundleExecutionPlan.lowerStartLevelOnBundles
+        .entrySet()) {
+      remoteOSGiManager.setBundleStartLevel(bundleLocationWithStartLevel.getKey(),
+          bundleLocationWithStartLevel.getValue());
     }
 
-    for (BundleDataWithCurrentStartLevel bundleDataWithCurrentStartLevel : bundleExecutionPlan.setInitialStartLevelOnBundles) { // CS_DISABLE_LINE_LENGTH
+    for (BundleLocationWithCurrentStartLevel bundleDataWithCurrentStartLevel : bundleExecutionPlan.setInitialStartLevelOnBundles) { // CS_DISABLE_LINE_LENGTH
       int oldStartLevel = bundleDataWithCurrentStartLevel.oldStartLevel;
       if (oldStartLevel > newInitialBundleStartLevel) {
-        remoteOSGiManager.setBundleStartLevel(bundleDataWithCurrentStartLevel.bundleData,
+        remoteOSGiManager.setBundleStartLevel(bundleDataWithCurrentStartLevel.bundleLocation,
             newInitialBundleStartLevel);
       }
     }

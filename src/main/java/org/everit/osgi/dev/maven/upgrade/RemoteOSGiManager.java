@@ -16,8 +16,7 @@
 package org.everit.osgi.dev.maven.upgrade;
 
 import java.io.Closeable;
-
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
+import java.util.Collection;
 
 /**
  * Interface to manage an OSGi Framework remotely.
@@ -27,7 +26,7 @@ public interface RemoteOSGiManager extends Closeable {
   @Override
   void close();
 
-  RuntimeBundleInfo[] getDependencyClosure(BundleDataType... bundleDataArray);
+  RuntimeBundleInfo[] getDependencyClosure(Collection<String> bundleLocations);
 
   int getFrameworkStartLevel();
 
@@ -35,23 +34,23 @@ public interface RemoteOSGiManager extends Closeable {
 
   RuntimeBundleInfo[] getRuntimeBundleInfoArray();
 
-  void installBundles(BundleDataType... bundleDataArray);
+  void installBundles(Collection<String> bundleLocations);
 
   void refresh();
 
   void resolveAll();
 
-  void setBundleStartLevel(BundleDataType bundleData, int newlevel);
+  void setBundleStartLevel(String bundleLocation, int newlevel);
 
   void setFrameworkStartLevel(int startLevel);
 
   void setInitialBundleStartLevel(int startLevel);
 
-  void startBundles(BundleDataType... bundleDataArray);
+  void startBundles(Collection<String> bundleLocations);
 
-  void stopBundles(BundleDataType... bundleDataArray);
+  void stopBundles(Collection<String> bundleLocations);
 
-  void uninstallBundles(BundleDataType... bundleDataArray);
+  void uninstallBundles(Collection<String> bundleLocations);
 
-  void updateBundles(BundleDataType... bundleDataArray);
+  void updateBundles(Collection<String> bundleLocations);
 }

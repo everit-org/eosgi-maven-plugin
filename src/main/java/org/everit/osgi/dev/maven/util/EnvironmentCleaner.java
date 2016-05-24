@@ -25,9 +25,9 @@ import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.EntryType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.RuntimePathRegexesType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EntryType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
+import org.everit.osgi.dev.dist.util.configuration.schema.RuntimePathRegexesType;
 
 /**
  * Cleans the folder of an environment from unwanted files after an incremental upgrade.

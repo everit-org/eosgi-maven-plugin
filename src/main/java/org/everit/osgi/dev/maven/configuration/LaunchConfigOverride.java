@@ -18,7 +18,7 @@ package org.everit.osgi.dev.maven.configuration;
 import java.util.Map;
 
 import org.apache.maven.plugins.annotations.Parameter;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 
 /**
  * The configuration of the launched OSGi Container that can override other configurations.

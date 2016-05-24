@@ -24,7 +24,7 @@ import java.util.Set;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.eclipse.aether.artifact.DefaultArtifact;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.junit.Assert;
 import org.junit.Test;

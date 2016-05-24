@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.eclipse.aether.artifact.Artifact;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 
 /**

@@ -23,8 +23,8 @@ import java.util.Set;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.everit.osgi.dev.eosgi.dist.schema.util.MergeUtil;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.UseByType;
+import org.everit.osgi.dev.dist.util.configuration.MergeUtil;
+import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 
 /**

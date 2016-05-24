@@ -23,7 +23,7 @@ import java.util.Map.Entry;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.eclipse.aether.artifact.Artifact;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
+import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
 
 /**
  * Util functions for every plugin in this library.

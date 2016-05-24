@@ -22,22 +22,24 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
-import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.ArtifactsType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.BundleDataType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.EnvironmentType;
-import org.everit.osgi.dev.eosgi.dist.schema.xsd.OSGiActionType;
+import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
+import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactsType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EntryType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
+import org.everit.osgi.dev.dist.util.configuration.schema.OSGiActionType;
+import org.everit.osgi.dev.dist.util.configuration.schema.PropertiesType;
 
 /**
  * Creates a bundle execution plan on the OSGi container based on the old and new settings and the
@@ -48,26 +50,26 @@ public class BundleExecutionPlan {
   /**
    * Data of bundle with the start level that is currently set with the existing configuration.
    */
-  public static class BundleDataWithCurrentStartLevel {
-    public BundleDataType bundleData;
+  public static class BundleLocationWithCurrentStartLevel {
+    public String bundleLocation;
 
     public int oldStartLevel;
 
-    public BundleDataWithCurrentStartLevel(final BundleDataType bundleData,
+    public BundleLocationWithCurrentStartLevel(final String bundleLocation,
         final int oldStartLevel) {
-      this.bundleData = bundleData;
+      this.bundleLocation = bundleLocation;
       this.oldStartLevel = oldStartLevel;
     }
 
   }
 
-  public final Collection<BundleDataType> changeStartLevelIfInitialBundleStartLevelChangesOnBundles;
+  public final Collection<String> changeStartLevelIfInitialBundleStartLevelChangesOnBundles;
 
-  public final Collection<BundleDataType> higherStartLevelOnBundles;
+  public final Map<String, Integer> higherStartLevelOnBundles;
 
-  public final Collection<BundleDataType> installBundles;
+  public final Collection<String> installBundles;
 
-  public final Collection<BundleDataType> lowerStartLevelOnBundles;
+  public final Map<String, Integer> lowerStartLevelOnBundles;
 
   /**
    * The lowest start level that was assigned to any of the bundles that change state in the plan or
@@ -75,17 +77,17 @@ public class BundleExecutionPlan {
    */
   public final Integer lowestStartLevel;
 
-  public final Collection<BundleDataWithCurrentStartLevel> setInitialStartLevelOnBundles;
+  public final Collection<BundleLocationWithCurrentStartLevel> setInitialStartLevelOnBundles;
 
-  public final Collection<BundleDataType> setStartLevelFromInitialBundles;
+  public final Map<String, Integer> setStartLevelFromInitialBundles;
 
-  public final Collection<BundleDataType> startStoppedBundles;
+  public final Collection<String> startStoppedBundles;
 
-  public final Collection<BundleDataType> stopStartedBundles;
+  public final Collection<String> stopStartedBundles;
 
-  public final Collection<BundleDataType> uninstallBundles;
+  public final Collection<String> uninstallBundles;
 
-  public final Collection<BundleDataType> updateBundles;
+  public final Collection<String> updateBundles;
 
   /**
    * Constructor.
@@ -105,46 +107,48 @@ public class BundleExecutionPlan {
    */
   public BundleExecutionPlan(final EnvironmentType existingDistributedEnvironment,
       final ArtifactsType newArtifacts, final File environmentRootFolder,
-      final PredefinedRepoArtifactResolver artifactResolver,
-      final ArtifactHandlerManager artifactHandlerManager)
+      final PredefinedRepoArtifactResolver artifactResolver)
       throws MojoExecutionException {
 
-    Map<String, BundleDataType> bundleByLocation =
-        createExistingBundleByLocationMap(existingDistributedEnvironment);
+    Map<String, Map<String, String>> existingBundleLocationsWithProperties =
+        createExistingBundleLocationWithArtifactProperties(existingDistributedEnvironment);
 
-    Map<String, BundleDataType> installBundleMap = new HashMap<>();
+    Set<String> tmpInstallBundles = new HashSet<>();
 
-    List<BundleDataType> tmpUpdateBundles = new ArrayList<>();
-    List<BundleDataType> tmpStopStartedBundles = new ArrayList<>();
-    List<BundleDataType> tmpStartStoppedBundles = new ArrayList<>();
-    List<BundleDataType> tmpLowerStartLevelOnBundles = new ArrayList<>();
-    List<BundleDataType> tmpHigherStartLevelOnBundles = new ArrayList<>();
-    List<BundleDataWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles = new ArrayList<>();
-    List<BundleDataType> tmpSetStartLevelFromInitialBundles = new ArrayList<>();
-    List<BundleDataType> tmpIfInitialChanges = new ArrayList<>();
+    List<String> tmpUpdateBundles = new ArrayList<>();
+    List<String> tmpStopStartedBundles = new ArrayList<>();
+    List<String> tmpStartStoppedBundles = new ArrayList<>();
+    Map<String, Integer> tmpLowerStartLevelOnBundles = new HashMap<>();
+    Map<String, Integer> tmpHigherStartLevelOnBundles = new HashMap<>();
+    List<BundleLocationWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles = new ArrayList<>();
+    Map<String, Integer> tmpSetStartLevelFromInitialBundles = new HashMap<>();
+    List<String> tmpIfInitialChanges = new ArrayList<>();
 
     for (ArtifactType newArtifact : newArtifacts.getArtifact()) {
-      BundleDataType bundleData = newArtifact.getBundle();
-      if (bundleData != null && !OSGiActionType.NONE.equals(bundleData.getAction())) {
-        BundleDataType existingBundle = bundleByLocation.remove(bundleData.getLocation());
-        if (existingBundle == null) {
-          if (installBundleMap.containsKey(bundleData.getLocation())) {
+      Map<String, String> newArtifactProperties = getArtifactPropertyMap(newArtifact);
+      String newBundleAction = newArtifactProperties.get("bundle.action");
+      if (newBundleAction != null
+          && !OSGiActionType.NONE.name().equalsIgnoreCase(newBundleAction)) {
+        String bundleLocation = newArtifactProperties.get("bundle.location");
+        Map<String, String> existingArtifactProperties =
+            existingBundleLocationsWithProperties.remove(bundleLocation);
+        if (existingArtifactProperties == null) {
+          if (tmpInstallBundles.contains(bundleLocation)) {
             throw new MojoExecutionException(
-                "Bundle location '" + bundleData.getLocation() + "' exists twice in environment '"
+                "Bundle location '" + bundleLocation + "' exists twice in environment '"
                     + existingDistributedEnvironment.getId() + "'");
           }
-          installBundleMap.put(bundleData.getLocation(), bundleData);
+          tmpInstallBundles.add(bundleLocation);
         } else {
-          if (bundleContentChanged(newArtifact, environmentRootFolder, artifactResolver,
-              artifactHandlerManager)) {
-            tmpUpdateBundles.add(bundleData);
+          if (bundleContentChanged(newArtifact, environmentRootFolder, artifactResolver)) {
+            tmpUpdateBundles.add(bundleLocation);
           } else {
-            if (bundleBecameStarted(bundleData, existingBundle)) {
-              tmpStartStoppedBundles.add(bundleData);
+            if (bundleBecameStarted(existingArtifactProperties, newArtifactProperties)) {
+              tmpStartStoppedBundles.add(bundleLocation);
             }
 
-            if (bundleBecameStopped(bundleData, existingBundle)) {
-              tmpStopStartedBundles.add(bundleData);
+            if (bundleBecameStopped(existingArtifactProperties, newArtifactProperties)) {
+              tmpStopStartedBundles.add(bundleLocation);
             }
           }
 
@@ -155,8 +159,8 @@ public class BundleExecutionPlan {
       }
     }
 
-    this.uninstallBundles = new HashSet<>(bundleByLocation.values());
-    this.installBundles = new HashSet<>(installBundleMap.values());
+    this.uninstallBundles = new HashSet<>(existingBundleLocationsWithProperties.keySet());
+    this.installBundles = tmpInstallBundles;
     this.updateBundles = tmpUpdateBundles;
     this.startStoppedBundles = tmpStartStoppedBundles;
     this.stopStartedBundles = tmpStopStartedBundles;
@@ -168,25 +172,30 @@ public class BundleExecutionPlan {
     this.lowestStartLevel = resolveLowestStartLevel();
   }
 
-  private boolean bundleBecameStarted(final BundleDataType bundleData,
-      final BundleDataType existingBundle) {
-    return OSGiActionType.INSTALL.equals(existingBundle.getAction())
-        && OSGiActionType.START.equals(bundleData.getAction());
+  private boolean bundleBecameStarted(final Map<String, String> existingArtifactProperties,
+      final Map<String, String> newArtifactProperties) {
+
+    String existingBundleAction = existingArtifactProperties.get("bundle.action");
+    String newBundleAction = newArtifactProperties.get("bundle.action");
+    return OSGiActionType.INSTALL.name().equalsIgnoreCase(existingBundleAction)
+        && OSGiActionType.START.name().equalsIgnoreCase(newBundleAction);
   }
 
-  private boolean bundleBecameStopped(final BundleDataType bundleData,
-      final BundleDataType existingBundle) {
-    return OSGiActionType.START.equals(existingBundle.getAction())
-        && OSGiActionType.INSTALL.equals(bundleData.getAction());
+  private boolean bundleBecameStopped(final Map<String, String> existingArtifactProperties,
+      final Map<String, String> newArtifactProperties) {
+
+    String existingBundleAction = existingArtifactProperties.get("bundle.action");
+    String newBundleAction = newArtifactProperties.get("bundle.action");
+    return OSGiActionType.START.name().equalsIgnoreCase(existingBundleAction)
+        && OSGiActionType.INSTALL.name().equalsIgnoreCase(newBundleAction);
   }
 
   private boolean bundleContentChanged(final ArtifactType newArtifact,
       final File environmentRootFolder,
-      final PredefinedRepoArtifactResolver artifactResolver,
-      final ArtifactHandlerManager artifactHandlerManager) throws MojoExecutionException {
+      final PredefinedRepoArtifactResolver artifactResolver) throws MojoExecutionException {
 
     Artifact resolvedArtifact =
-        resolveArtifact(artifactResolver, newArtifact, artifactHandlerManager);
+        resolveArtifact(artifactResolver, newArtifact);
     File newArtifactFile = resolvedArtifact.getFile();
     File oldArtifactFile =
         PluginUtil.resolveArtifactAbsoluteFile(newArtifact, resolvedArtifact,
@@ -225,21 +234,23 @@ public class BundleExecutionPlan {
 
   }
 
-  private Map<String, BundleDataType> createExistingBundleByLocationMap(
+  private Map<String, Map<String, String>> createExistingBundleLocationWithArtifactProperties(
       final EnvironmentType existingDistributedEnvironment) {
 
-    Map<String, BundleDataType> result = new HashMap<>();
+    Map<String, Map<String, String>> result = new HashMap<>();
     if (existingDistributedEnvironment == null
         || existingDistributedEnvironment.getArtifacts() == null) {
       return result;
     }
 
     for (ArtifactType artifact : existingDistributedEnvironment.getArtifacts().getArtifact()) {
-      BundleDataType bundleData = artifact.getBundle();
-      if (bundleData != null
-          && !OSGiActionType.NONE.equals(bundleData.getAction())) {
+      Map<String, String> propertyMap = getArtifactPropertyMap(artifact);
+      String bundleAction = propertyMap.get("bundle.action");
+      if (bundleAction != null
+          && !OSGiActionType.NONE.name().equalsIgnoreCase(bundleAction)) {
 
-        result.put(bundleData.getLocation(), bundleData);
+        String bundleLocation = propertyMap.get("bundle.location");
+        result.put(bundleLocation, propertyMap);
       }
     }
     return result;
@@ -247,7 +258,7 @@ public class BundleExecutionPlan {
 
   private void fillStartLevelChangeWhereNecessary(final BundleDataType bundleData,
       final BundleDataType existingBundle,
-      final List<BundleDataWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles,
+      final List<BundleLocationWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles,
       final List<BundleDataType> tmpSetStartLevelFromInitialBundles,
       final List<BundleDataType> tmpLowerStartLevelOnBundles,
       final List<BundleDataType> tmpHigherStartLevelOnBundles,
@@ -258,7 +269,7 @@ public class BundleExecutionPlan {
     if (!Objects.equals(newStartLevel, existingStartLevel)) {
       if (newStartLevel == null) {
         tmpSetInitialStartLevelOnBundles
-            .add(new BundleDataWithCurrentStartLevel(bundleData, existingStartLevel));
+            .add(new BundleLocationWithCurrentStartLevel(bundleData, existingStartLevel));
       } else if (existingStartLevel == null) {
         tmpSetStartLevelFromInitialBundles.add(bundleData);
       } else if (newStartLevel.compareTo(existingStartLevel) > 0) {
@@ -271,18 +282,25 @@ public class BundleExecutionPlan {
     }
   }
 
+  private Map<String, String> getArtifactPropertyMap(final ArtifactType artifact) {
+    PropertiesType properties = artifact.getProperties();
+    if (properties == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, String> result = new HashMap<>();
+    List<EntryType> propertyList = properties.getProperty();
+    for (EntryType propertyEntry : propertyList) {
+      result.put(propertyEntry.getKey(), propertyEntry.getValue());
+    }
+    return result;
+  }
+
   private Artifact resolveArtifact(final PredefinedRepoArtifactResolver artifactResolver,
-      final ArtifactType artifact, final ArtifactHandlerManager artifactHandlerManager)
+      final ArtifactType artifact)
       throws MojoExecutionException {
 
-    String artifactType = artifact.getType();
-    if (artifactType == null) {
-      artifactType = "jar";
-    }
-    String extension = artifactHandlerManager.getArtifactHandler(artifactType).getExtension();
     ArtifactRequest artifactRequest = new ArtifactRequest();
-    Artifact aetherArtifact = new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(),
-        artifact.getClassifier(), extension, artifact.getVersion());
+    Artifact aetherArtifact = new DefaultArtifact(artifact.getId());
     artifactRequest.setArtifact(aetherArtifact);
 
     Artifact resolvedArtifact = artifactResolver.resolve(artifactRequest);
