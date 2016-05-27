@@ -67,9 +67,8 @@ import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManagerProvider;
 import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.everit.osgi.dev.maven.util.BundleExecutionPlan;
-import org.everit.osgi.dev.maven.util.BundleExecutionPlan.BundleDataWithCurrentStartLevel;
-import org.everit.osgi.dev.maven.util.BundleExecutionPlan.BundleLocationWithCurrentStartLevel;
 import org.everit.osgi.dev.maven.util.DistUtil;
+import org.everit.osgi.dev.maven.util.DistributableArtifact;
 import org.everit.osgi.dev.maven.util.EnvironmentCleaner;
 import org.everit.osgi.dev.maven.util.FileManager;
 import org.everit.osgi.dev.maven.util.PluginUtil;
@@ -274,19 +273,23 @@ public class DistMojo extends AbstractEOSGiMojo {
     distributedEnvironmentDataCollection = new ArrayList<DistributedEnvironmenData>();
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
+    Map<String, DistributableArtifact> projectDistributableDependencies =
+        createDistributableArtifactsByGAVFromProjectDeps();
+
     for (EnvironmentConfiguration environment : environmentsToProcess) {
-      executeOnEnvironment(globalDistFolderFile, environment);
+      executeOnEnvironment(globalDistFolderFile, environment, projectDistributableDependencies);
     }
   }
 
   private void executeOnEnvironment(final File globalDistFolderFile,
-      final EnvironmentConfiguration environment)
+      final EnvironmentConfiguration environment,
+      final Map<String, DistributableArtifact> projectDistributableDependencies)
       throws MojoExecutionException, MojoFailureException {
 
     FileManager fileManager = new FileManager();
 
-    Collection<Artifact> processedArtifacts =
-        generateDistributableArtifacts(environment);
+    Collection<DistributableArtifact> processedArtifacts =
+        generateDistributableArtifactsForEnvironment(environment, projectDistributableDependencies);
 
     String environmentId = environment.getId();
 

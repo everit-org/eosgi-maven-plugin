@@ -26,24 +26,73 @@ import org.apache.maven.plugins.annotations.Parameter;
 public class EOSGiArtifact {
 
   @Parameter
-  private String id;
+  private String downloadURL;
+
+  /**
+   * The artifact coordinates in the format
+   * &lt;groupId&gt;:&lt;artifactId&gt;[:&lt;extension&gt;[:&lt;classifier&gt;]]: &lt;version&gt;,
+   * must not be null.
+   */
+  @Parameter(required = true)
+  private String gav;
+
+  @Parameter(defaultValue = "true")
+  private boolean overrideProjectDependency;
 
   @Parameter
   private Map<String, String> properties = new HashMap<String, String>();
 
-  public String getId() {
-    return id;
+  @Parameter
+  private String targetFile;
+
+  @Parameter
+  private String targetFolder;
+
+  public String getDownloadURL() {
+    return downloadURL;
+  }
+
+  public String getGav() {
+    return gav;
   }
 
   public Map<String, String> getProperties() {
     return properties;
   }
 
-  public void setId(final String id) {
-    this.id = id;
+  public String getTargetFile() {
+    return targetFile;
+  }
+
+  public String getTargetFolder() {
+    return targetFolder;
+  }
+
+  public boolean isOverrideProjectDependency() {
+    return overrideProjectDependency;
+  }
+
+  public void setDownloadURL(final String downloadURL) {
+    this.downloadURL = downloadURL;
+  }
+
+  public void setGav(final String gav) {
+    this.gav = gav;
+  }
+
+  public void setOverrideProjectDependency(final boolean overrideProjectDependency) {
+    this.overrideProjectDependency = overrideProjectDependency;
   }
 
   public void setProperties(final Map<String, String> properties) {
     this.properties = properties;
+  }
+
+  public void setTargetFile(final String targetFile) {
+    this.targetFile = targetFile;
+  }
+
+  public void setTargetFolder(final String targetFolder) {
+    this.targetFolder = targetFolder;
   }
 }

@@ -37,12 +37,12 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.osgi.service.resolver.BundleDescription;
 import org.eclipse.osgi.service.resolver.ImportPackageSpecification;
 import org.eclipse.osgi.service.resolver.PlatformAdmin;
 import org.eclipse.osgi.service.resolver.State;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.util.DistributableArtifact;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -140,13 +140,17 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
     EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
+    Map<String, DistributableArtifact> projectDistributableDependencies =
+        createDistributableArtifactsByGAVFromProjectDeps();
     for (EnvironmentConfiguration environment : environmentsToProcess) {
-      Collection<Artifact> distributableArtifacts;
-      distributableArtifacts = generateDistributableArtifacts(environment);
+      Collection<DistributableArtifact> distributableArtifacts;
+      distributableArtifacts =
+          generateDistributableArtifactsForEnvironment(environment,
+              projectDistributableDependencies);
 
       List<String> bundleLocations = new ArrayList<>();
-      for (Artifact distributableArtifact : distributableArtifacts) {
-        bundleLocations.add(resolveArtifactFileURI(distributableArtifact.getFile()));
+      for (DistributableArtifact distributableArtifact : distributableArtifacts) {
+        bundleLocations.add(resolveArtifactFileURI(distributableArtifact.file));
       }
       diagnose(bundleLocations.toArray(new String[bundleLocations.size()]));
     }

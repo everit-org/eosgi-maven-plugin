@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.eclipse.aether.artifact.Artifact;
@@ -48,19 +46,27 @@ import org.everit.osgi.dev.dist.util.configuration.schema.PropertiesType;
 public class BundleExecutionPlan {
 
   /**
-   * Data of bundle with the start level that is currently set with the existing configuration.
+   * Temporary data used for calculation.
    */
-  public static class BundleLocationWithCurrentStartLevel {
-    public String bundleLocation;
+  private static class TemporaryBundleMaps {
 
-    public int oldStartLevel;
+    Map<String, Integer> higherStartLevelOnBundles = new HashMap<>();
 
-    public BundleLocationWithCurrentStartLevel(final String bundleLocation,
-        final int oldStartLevel) {
-      this.bundleLocation = bundleLocation;
-      this.oldStartLevel = oldStartLevel;
-    }
+    Map<String, Integer> ifInitialChanges = new HashMap<>();
 
+    Map<String, Integer> installBundles = new HashMap<>();
+
+    Map<String, Integer> lowerStartLevelOnBundles = new HashMap<>();
+
+    Map<String, Integer> setInitialStartLevelOnBundles = new HashMap<>();
+
+    Map<String, Integer> setStartLevelFromInitialBundles = new HashMap<>();
+
+    Map<String, Integer> startStoppedBundles = new HashMap<>();
+
+    Map<String, Integer> stopStartedBundles = new HashMap<>();
+
+    Map<String, Integer> updateBundles = new HashMap<>();
   }
 
   public final Collection<String> changeStartLevelIfInitialBundleStartLevelChangesOnBundles;
@@ -77,7 +83,7 @@ public class BundleExecutionPlan {
    */
   public final Integer lowestStartLevel;
 
-  public final Collection<BundleLocationWithCurrentStartLevel> setInitialStartLevelOnBundles;
+  public final Collection<String> setInitialStartLevelOnBundles;
 
   public final Map<String, Integer> setStartLevelFromInitialBundles;
 
@@ -100,8 +106,6 @@ public class BundleExecutionPlan {
    *          The root folder of the environment where the artifacts will be copied.
    * @param artifactResolver
    *          Resolves the artifacts.
-   * @param artifactHandlerManager
-   *          Artifact resolver.
    * @throws MojoExecutionException
    *           If an exception happens during generating the execution plan.
    */
@@ -113,16 +117,7 @@ public class BundleExecutionPlan {
     Map<String, Map<String, String>> existingBundleLocationsWithProperties =
         createExistingBundleLocationWithArtifactProperties(existingDistributedEnvironment);
 
-    Set<String> tmpInstallBundles = new HashSet<>();
-
-    List<String> tmpUpdateBundles = new ArrayList<>();
-    List<String> tmpStopStartedBundles = new ArrayList<>();
-    List<String> tmpStartStoppedBundles = new ArrayList<>();
-    Map<String, Integer> tmpLowerStartLevelOnBundles = new HashMap<>();
-    Map<String, Integer> tmpHigherStartLevelOnBundles = new HashMap<>();
-    List<BundleLocationWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles = new ArrayList<>();
-    Map<String, Integer> tmpSetStartLevelFromInitialBundles = new HashMap<>();
-    List<String> tmpIfInitialChanges = new ArrayList<>();
+    TemporaryBundleMaps tmp = new TemporaryBundleMaps();
 
     for (ArtifactType newArtifact : newArtifacts.getArtifact()) {
       Map<String, String> newArtifactProperties = getArtifactPropertyMap(newArtifact);
@@ -130,46 +125,46 @@ public class BundleExecutionPlan {
       if (newBundleAction != null
           && !OSGiActionType.NONE.name().equalsIgnoreCase(newBundleAction)) {
         String bundleLocation = newArtifactProperties.get("bundle.location");
+        Integer newArtifactStartLevel = resolveStartLevel(newArtifactProperties);
         Map<String, String> existingArtifactProperties =
             existingBundleLocationsWithProperties.remove(bundleLocation);
         if (existingArtifactProperties == null) {
-          if (tmpInstallBundles.contains(bundleLocation)) {
+          if (tmp.installBundles.containsKey(bundleLocation)) {
             throw new MojoExecutionException(
                 "Bundle location '" + bundleLocation + "' exists twice in environment '"
                     + existingDistributedEnvironment.getId() + "'");
           }
-          tmpInstallBundles.add(bundleLocation);
+          tmp.installBundles.put(bundleLocation, newArtifactStartLevel);
         } else {
           if (bundleContentChanged(newArtifact, environmentRootFolder, artifactResolver)) {
-            tmpUpdateBundles.add(bundleLocation);
+            tmp.updateBundles.put(bundleLocation, newArtifactStartLevel);
           } else {
             if (bundleBecameStarted(existingArtifactProperties, newArtifactProperties)) {
-              tmpStartStoppedBundles.add(bundleLocation);
-            }
-
-            if (bundleBecameStopped(existingArtifactProperties, newArtifactProperties)) {
-              tmpStopStartedBundles.add(bundleLocation);
+              tmp.startStoppedBundles.put(bundleLocation, newArtifactStartLevel);
+            } else if (bundleBecameStopped(existingArtifactProperties, newArtifactProperties)) {
+              tmp.stopStartedBundles.put(bundleLocation, newArtifactStartLevel);
             }
           }
 
-          fillStartLevelChangeWhereNecessary(bundleData, existingBundle,
-              tmpSetInitialStartLevelOnBundles, tmpSetStartLevelFromInitialBundles,
-              tmpLowerStartLevelOnBundles, tmpHigherStartLevelOnBundles, tmpIfInitialChanges);
+          fillStartLevelChangeWhereNecessary(bundleLocation, newArtifactProperties,
+              existingArtifactProperties, tmp);
         }
       }
     }
 
     this.uninstallBundles = new HashSet<>(existingBundleLocationsWithProperties.keySet());
-    this.installBundles = tmpInstallBundles;
-    this.updateBundles = tmpUpdateBundles;
-    this.startStoppedBundles = tmpStartStoppedBundles;
-    this.stopStartedBundles = tmpStopStartedBundles;
-    this.lowerStartLevelOnBundles = tmpLowerStartLevelOnBundles;
-    this.higherStartLevelOnBundles = tmpHigherStartLevelOnBundles;
-    this.setInitialStartLevelOnBundles = tmpSetInitialStartLevelOnBundles;
-    this.setStartLevelFromInitialBundles = tmpSetStartLevelFromInitialBundles;
-    this.changeStartLevelIfInitialBundleStartLevelChangesOnBundles = tmpIfInitialChanges;
-    this.lowestStartLevel = resolveLowestStartLevel();
+    this.installBundles = new HashSet<>(tmp.installBundles.keySet());
+    this.updateBundles = new HashSet<>(tmp.updateBundles.keySet());
+    this.startStoppedBundles = new HashSet<>(tmp.startStoppedBundles.keySet());
+    this.stopStartedBundles = new HashSet<>(tmp.stopStartedBundles.keySet());
+    this.lowerStartLevelOnBundles = tmp.lowerStartLevelOnBundles;
+    this.higherStartLevelOnBundles = tmp.higherStartLevelOnBundles;
+    this.setInitialStartLevelOnBundles = new HashSet<>(tmp.setInitialStartLevelOnBundles.keySet());
+    this.setStartLevelFromInitialBundles = tmp.setStartLevelFromInitialBundles;
+    this.changeStartLevelIfInitialBundleStartLevelChangesOnBundles =
+        new HashSet<>(tmp.ifInitialChanges.keySet());
+
+    this.lowestStartLevel = resolveLowestStartLevel(tmp);
   }
 
   private boolean bundleBecameStarted(final Map<String, String> existingArtifactProperties,
@@ -256,29 +251,25 @@ public class BundleExecutionPlan {
     return result;
   }
 
-  private void fillStartLevelChangeWhereNecessary(final BundleDataType bundleData,
-      final BundleDataType existingBundle,
-      final List<BundleLocationWithCurrentStartLevel> tmpSetInitialStartLevelOnBundles,
-      final List<BundleDataType> tmpSetStartLevelFromInitialBundles,
-      final List<BundleDataType> tmpLowerStartLevelOnBundles,
-      final List<BundleDataType> tmpHigherStartLevelOnBundles,
-      final List<BundleDataType> tmpIfInitialChanges) {
+  private void fillStartLevelChangeWhereNecessary(final String bundleLocation,
+      final Map<String, String> newArtifactProperties,
+      final Map<String, String> existingArtifactProperties,
+      final TemporaryBundleMaps tmp) {
 
-    Integer newStartLevel = bundleData.getStartLevel();
-    Integer existingStartLevel = existingBundle.getStartLevel();
+    Integer newStartLevel = resolveStartLevel(newArtifactProperties);
+    Integer existingStartLevel = resolveStartLevel(existingArtifactProperties);
     if (!Objects.equals(newStartLevel, existingStartLevel)) {
       if (newStartLevel == null) {
-        tmpSetInitialStartLevelOnBundles
-            .add(new BundleLocationWithCurrentStartLevel(bundleData, existingStartLevel));
+        tmp.setInitialStartLevelOnBundles.put(bundleLocation, existingStartLevel);
       } else if (existingStartLevel == null) {
-        tmpSetStartLevelFromInitialBundles.add(bundleData);
+        tmp.setStartLevelFromInitialBundles.put(bundleLocation, newStartLevel);
       } else if (newStartLevel.compareTo(existingStartLevel) > 0) {
-        tmpHigherStartLevelOnBundles.add(bundleData);
+        tmp.higherStartLevelOnBundles.put(bundleLocation, newStartLevel);
       } else {
-        tmpLowerStartLevelOnBundles.add(bundleData);
+        tmp.lowerStartLevelOnBundles.put(bundleLocation, newStartLevel);
       }
     } else if (newStartLevel == null) {
-      tmpIfInitialChanges.add(bundleData);
+      tmp.ifInitialChanges.put(bundleLocation, null);
     }
   }
 
@@ -307,31 +298,41 @@ public class BundleExecutionPlan {
     return resolvedArtifact;
   }
 
-  private Integer resolveLowestStartLevel() {
-    Integer tmpLowestStartLevel = null;
-    tmpLowestStartLevel = resolveLowestStartLevel(this.installBundles, tmpLowestStartLevel);
-    tmpLowestStartLevel = resolveLowestStartLevel(this.uninstallBundles, tmpLowestStartLevel);
-    tmpLowestStartLevel = resolveLowestStartLevel(this.updateBundles, tmpLowestStartLevel);
-    tmpLowestStartLevel = resolveLowestStartLevel(this.startStoppedBundles, tmpLowestStartLevel);
-    tmpLowestStartLevel =
-        resolveLowestStartLevel(this.lowerStartLevelOnBundles, tmpLowestStartLevel);
-
-    tmpLowestStartLevel =
-        resolveLowestStartLevel(this.setStartLevelFromInitialBundles, tmpLowestStartLevel);
-
-    return tmpLowestStartLevel;
-  }
-
-  private Integer resolveLowestStartLevel(final Collection<BundleDataType> bundleDataCollection,
+  private Integer resolveLowestStartLevel(final Map<String, Integer> bundleMap,
       final Integer pLowestStartLevel) {
-    Integer tmpLowestStartLevel = pLowestStartLevel;
-    for (BundleDataType bundleData : bundleDataCollection) {
-      Integer startLevel = bundleData.getStartLevel();
-      if (startLevel != null
-          && (pLowestStartLevel == null || startLevel.compareTo(tmpLowestStartLevel) < 0)) {
-        tmpLowestStartLevel = startLevel;
+
+    Integer result = pLowestStartLevel;
+    Collection<Integer> startLevels = bundleMap.values();
+    for (Integer startLevel : startLevels) {
+      if (startLevel != null && (result == null || startLevel.compareTo(result) < 0)) {
+        result = startLevel;
       }
     }
-    return tmpLowestStartLevel;
+    return result;
+  }
+
+  private Integer resolveLowestStartLevel(final TemporaryBundleMaps tmp) {
+    Integer result = resolveLowestStartLevel(tmp.higherStartLevelOnBundles, null);
+    result = resolveLowestStartLevel(tmp.ifInitialChanges, null);
+    result = resolveLowestStartLevel(tmp.installBundles, null);
+    result = resolveLowestStartLevel(tmp.lowerStartLevelOnBundles, null);
+    result = resolveLowestStartLevel(tmp.setInitialStartLevelOnBundles, null);
+    result = resolveLowestStartLevel(tmp.setStartLevelFromInitialBundles, null);
+    result = resolveLowestStartLevel(tmp.startStoppedBundles, null);
+    result = resolveLowestStartLevel(tmp.stopStartedBundles, null);
+    result = resolveLowestStartLevel(tmp.updateBundles, null);
+    return result;
+  }
+
+  private Integer resolveStartLevel(final Map<String, String> artifactProperties) {
+    if (artifactProperties == null) {
+      return null;
+    }
+
+    String startLevelString = artifactProperties.get("bundle.startLevel");
+    if (startLevelString == null) {
+      return null;
+    }
+    return Integer.parseInt(startLevelString);
   }
 }
