@@ -50,10 +50,12 @@ import org.eclipse.aether.resolution.ArtifactRequest;
 import org.everit.osgi.dev.dist.util.configuration.DistributedEnvironmentConfigurationProvider;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactsType;
+import org.everit.osgi.dev.dist.util.configuration.schema.EntryType;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
 import org.everit.osgi.dev.dist.util.configuration.schema.OSGiActionType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ParsableType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ParsablesType;
+import org.everit.osgi.dev.dist.util.configuration.schema.PropertiesType;
 import org.everit.osgi.dev.dist.util.configuration.schema.TemplateEnginesType;
 import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
@@ -169,6 +171,31 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
+  /**
+   * On Equinox there is an exception if we do not wait 1-30 seconds with bundle update command
+   * after we overcopied the file. Therefore it is better to reinstall them.
+   *
+   * @param bundleExecutionPlan
+   *          The original execution plan that is modified.
+   */
+  private void convertBundleUpdatesToUninstallAndInstall(
+      final BundleExecutionPlan bundleExecutionPlan) {
+    for (DistributableArtifact updatableArtifact : bundleExecutionPlan.updateBundles) {
+      bundleExecutionPlan.uninstallBundles.add(updatableArtifact);
+      bundleExecutionPlan.installBundles.add(updatableArtifact);
+
+      bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles
+          .remove(updatableArtifact);
+      bundleExecutionPlan.higherStartLevelOnBundles.remove(updatableArtifact);
+      bundleExecutionPlan.lowerStartLevelOnBundles.remove(updatableArtifact);
+      bundleExecutionPlan.setInitialStartLevelOnBundles.remove(updatableArtifact);
+      bundleExecutionPlan.setStartLevelFromInitialBundles.remove(updatableArtifact);
+      bundleExecutionPlan.startStoppedBundles.remove(updatableArtifact);
+      bundleExecutionPlan.stopStartedBundles.remove(updatableArtifact);
+    }
+    bundleExecutionPlan.updateBundles.clear();
+  }
+
   private void copyDistFolderToTargetIfExists(final File environmentRootFolder,
       final FileManager fileManager)
 
@@ -181,13 +208,11 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private Map<String, BundleDataType> createJustStartedBundleByUniqueLabelMap(
-      final Set<BundleDataType> justStartedBundles) {
-    Map<String, BundleDataType> justStartedBundleByUniqueLabel = new HashMap<>();
-    for (BundleDataType bundleData : justStartedBundles) {
-      justStartedBundleByUniqueLabel.put(
-          createUniqueLabelForBundle(bundleData.getSymbolicName(), bundleData.getVersion()),
-          bundleData);
+  private Map<String, DistributableArtifact> createJustStartedBundleByUniqueLabelMap(
+      final Collection<DistributableArtifact> justStartedBundles) {
+    Map<String, DistributableArtifact> justStartedBundleByUniqueLabel = new HashMap<>();
+    for (DistributableArtifact dArtifact : justStartedBundles) {
+      justStartedBundleByUniqueLabel.put(toBundleLocation(dArtifact), dArtifact);
     }
     return justStartedBundleByUniqueLabel;
   }
@@ -224,40 +249,27 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   }
 
-  private Map<String, BundleDataType> createStartActionBundleByUniqueLabelMap(
-      final ArtifactsType artifacts) {
-    Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel = new HashMap<>();
-    for (ArtifactType artifact : artifacts.getArtifact()) {
-      BundleDataType bundleData = artifact.getBundle();
-      if (bundleData != null && OSGiActionType.START.equals(bundleData.getAction())) {
-        shouldBeActiveBundleByUniqueLabel.put(
-            createUniqueLabelForBundle(bundleData.getSymbolicName(), bundleData.getVersion()),
-            bundleData);
+  private Map<String, DistributableArtifact> createStartActionBundleByUniqueLabelMap(
+      final Collection<DistributableArtifact> distributedArtifacts) {
+    Map<String, DistributableArtifact> shouldBeActiveBundleByUniqueLabel = new HashMap<>();
+    for (DistributableArtifact artifact : distributedArtifacts) {
+      if (OSGiActionType.START.equals(resolveBundleAction(artifact))) {
+        shouldBeActiveBundleByUniqueLabel.put(toBundleLocation(artifact), artifact);
       }
     }
     return shouldBeActiveBundleByUniqueLabel;
   }
 
-  private String createUniqueLabelForBundle(final String symbolicName, final String version) {
-    return symbolicName + ":" + version;
-  }
-
   private void distributeArtifactFiles(final File envDistFolderFile,
-      final ArtifactsType artifactsType, final FileManager fileManager)
+      final Collection<DistributableArtifact> dArtifacts, final FileManager fileManager)
       throws MojoExecutionException {
 
-    if (artifactsType == null) {
-      return;
-    }
+    for (DistributableArtifact dArtifact : dArtifacts) {
 
-    List<ArtifactType> artifacts = artifactsType.getArtifact();
-
-    for (ArtifactType artifact : artifacts) {
-
-      Artifact mavenArtifact = resolveMavenArtifactByArtifactType(artifact);
+      Artifact mavenArtifact = resolveMavenArtifactByArtifactType(dArtifact);
 
       File targetFile =
-          PluginUtil.resolveArtifactAbsoluteFile(artifact, mavenArtifact, envDistFolderFile);
+          PluginUtil.resolveArtifactAbsoluteFile(dArtifact, mavenArtifact, envDistFolderFile);
 
       fileManager.overCopyFile(mavenArtifact.getFile(), targetFile);
     }
@@ -288,7 +300,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     FileManager fileManager = new FileManager();
 
-    Collection<DistributableArtifact> processedArtifacts =
+    Collection<DistributableArtifact> distributableArtifacts =
         generateDistributableArtifactsForEnvironment(environment, projectDistributableDependencies);
 
     String environmentId = environment.getId();
@@ -301,23 +313,27 @@ public class DistMojo extends AbstractEOSGiMojo {
         distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
             UseByType.PARSABLES);
 
+    Collection<DistributableArtifact> existingDistributedArtifacts =
+        processArtifacts(existingDistributedEnvironment);
+
     fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
     copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
 
-    processConfigurationTemplate(environmentRootFolder, processedArtifacts, environment,
+    processConfigurationTemplate(environmentRootFolder, distributableArtifacts, environment,
         fileManager);
 
     EnvironmentType distributedEnvironment =
         distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
             UseByType.PARSABLES);
 
-    ArtifactsType artifacts = distributedEnvironment.getArtifacts();
+    Collection<DistributableArtifact> newDistributedArtifacts =
+        processArtifacts(distributedEnvironment);
 
     BundleExecutionPlan bundleExecutionPlan =
-        new BundleExecutionPlan(existingDistributedEnvironment, artifacts, environmentRootFolder,
-            artifactResolver, artifactHandlerManager);
+        new BundleExecutionPlan(environment.getId(), existingDistributedArtifacts,
+            newDistributedArtifacts, environmentRootFolder, artifactResolver);
 
-    hackBundleExecutionPlanForEquinox(bundleExecutionPlan);
+    convertBundleUpdatesToUninstallAndInstall(bundleExecutionPlan);
 
     try (RemoteOSGiManager remoteOSGiManager =
         createRemoteOSGiManager(environmentId, environmentRootFolder,
@@ -341,26 +357,26 @@ public class DistMojo extends AbstractEOSGiMojo {
           remoteOSGiManager.setFrameworkStartLevel(frameworkStartLevelDuringUpdate);
         }
 
-        remoteOSGiManager.stopBundles(bundleExecutionPlan.updateBundles);
+        remoteOSGiManager.stopBundles(toBundleLocations(bundleExecutionPlan.updateBundles));
 
-        remoteOSGiManager.stopBundles(bundleExecutionPlan.stopStartedBundles);
+        remoteOSGiManager.stopBundles(toBundleLocations(bundleExecutionPlan.stopStartedBundles));
 
         higherBundleStartLevelWhereNecessary(bundleExecutionPlan, currentInitialBundleStartLevel,
             newInitialBundleStartLevel, remoteOSGiManager);
 
-        remoteOSGiManager.uninstallBundles(bundleExecutionPlan.uninstallBundles);
+        remoteOSGiManager.uninstallBundles(toBundleLocations(bundleExecutionPlan.uninstallBundles));
 
         if (newInitialBundleStartLevel != currentInitialBundleStartLevel) {
           remoteOSGiManager.setInitialBundleStartLevel(newInitialBundleStartLevel);
         }
 
-        distributeArtifactFiles(environmentRootFolder, artifacts, fileManager);
+        distributeArtifactFiles(environmentRootFolder, newDistributedArtifacts, fileManager);
 
-        remoteOSGiManager.installBundles(bundleExecutionPlan.installBundles);
+        remoteOSGiManager.installBundles(toBundleLocations(bundleExecutionPlan.installBundles));
 
         setStartLevelOnNewlyInstalledBundles(bundleExecutionPlan.installBundles, remoteOSGiManager);
 
-        remoteOSGiManager.updateBundles(bundleExecutionPlan.updateBundles);
+        remoteOSGiManager.updateBundles(toBundleLocations(bundleExecutionPlan.updateBundles));
 
         remoteOSGiManager.resolveAll();
         remoteOSGiManager.refresh();
@@ -370,11 +386,11 @@ public class DistMojo extends AbstractEOSGiMojo {
 
         parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
 
-        startBundlesWhereNecessary(bundleExecutionPlan, artifacts, remoteOSGiManager);
+        startBundlesWhereNecessary(bundleExecutionPlan, newDistributedArtifacts, remoteOSGiManager);
 
         distributedEnvironmentDataCollection.add(
             new DistributedEnvironmenData(environment, distributedEnvironment,
-                environmentRootFolder, processedArtifacts));
+                environmentRootFolder, newDistributedArtifacts));
 
         EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,
             fileManager);
@@ -387,41 +403,37 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private void hackBundleExecutionPlanForEquinox(final BundleExecutionPlan bundleExecutionPlan) {
-    for (String bundleLocation : bundleExecutionPlan.updateBundles) {
-      bundleExecutionPlan.uninstallBundles.add(bundleLocation);
-      bundleExecutionPlan.installBundles.add(bundleLocation);
-    }
-    bundleExecutionPlan.updateBundles.clear();
-  }
-
   private void higherBundleStartLevelWhereNecessary(final BundleExecutionPlan bundleExecutionPlan,
       final int currentInitialBundleStartLevel, final int newInitialBundleStartLevel,
       final RemoteOSGiManager remoteOSGiManager) {
 
     if (newInitialBundleStartLevel > currentInitialBundleStartLevel) {
-      for (String bundleLocation : bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles) { // CS_DISABLE_LINE_LENGTH
-        remoteOSGiManager.setBundleStartLevel(bundleLocation, newInitialBundleStartLevel);
-      }
-    }
-
-    for (Entry<String, Integer> bundleLocationWithStartLevel : bundleExecutionPlan.higherStartLevelOnBundles
-        .entrySet()) {
-      remoteOSGiManager.setBundleStartLevel(bundleLocationWithStartLevel.getKey(),
-          bundleLocationWithStartLevel.getValue());
-    }
-
-    for (BundleDataWithCurrentStartLevel bundleDataWithCurrentStartLevel : bundleExecutionPlan.setInitialStartLevelOnBundles) { // CS_DISABLE_LINE_LENGTH
-      int oldStartLevel = bundleDataWithCurrentStartLevel.oldStartLevel;
-      if (oldStartLevel < newInitialBundleStartLevel) {
-        remoteOSGiManager.setBundleStartLevel(bundleDataWithCurrentStartLevel.bundleData,
+      for (DistributableArtifact dArtifact : bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles) { // CS_DISABLE_LINE_LENGTH
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifact),
             newInitialBundleStartLevel);
       }
     }
 
-    for (BundleDataType bundleData : bundleExecutionPlan.setStartLevelFromInitialBundles) {
-      if (bundleData.getStartLevel().compareTo(newInitialBundleStartLevel) > 0) {
-        remoteOSGiManager.setBundleStartLevel(bundleData, bundleData.getStartLevel());
+    for (DistributableArtifact dArtifact : bundleExecutionPlan.higherStartLevelOnBundles) {
+      remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifact),
+          resolveStartLevel(dArtifact));
+    }
+
+    for (Entry<DistributableArtifact, Integer> artifactWithOldSL : bundleExecutionPlan.setInitialStartLevelOnBundles // CS_DISABLE_LINE_LENGTH
+        .entrySet()) {
+
+      int oldStartLevel = artifactWithOldSL.getValue();
+      if (oldStartLevel < newInitialBundleStartLevel) {
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(artifactWithOldSL.getKey()),
+            newInitialBundleStartLevel);
+      }
+    }
+
+    for (DistributableArtifact dArtifact : bundleExecutionPlan.setStartLevelFromInitialBundles) {
+
+      Integer startLevel = resolveStartLevel(dArtifact);
+      if (startLevel.compareTo(newInitialBundleStartLevel) > 0) {
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifact), startLevel);
       }
     }
   }
@@ -444,28 +456,31 @@ public class DistMojo extends AbstractEOSGiMojo {
       final RemoteOSGiManager remoteOSGiManager) {
 
     if (newInitialBundleStartLevel < currentInitialBundleStartLevel) {
-      for (BundleDataType bundleData : bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles) { // CS_DISABLE_LINE_LENGTH
-        remoteOSGiManager.setBundleStartLevel(bundleData, newInitialBundleStartLevel);
-      }
-    }
-
-    for (Entry<String, Integer> bundleLocationWithStartLevel : bundleExecutionPlan.lowerStartLevelOnBundles
-        .entrySet()) {
-      remoteOSGiManager.setBundleStartLevel(bundleLocationWithStartLevel.getKey(),
-          bundleLocationWithStartLevel.getValue());
-    }
-
-    for (BundleLocationWithCurrentStartLevel bundleDataWithCurrentStartLevel : bundleExecutionPlan.setInitialStartLevelOnBundles) { // CS_DISABLE_LINE_LENGTH
-      int oldStartLevel = bundleDataWithCurrentStartLevel.oldStartLevel;
-      if (oldStartLevel > newInitialBundleStartLevel) {
-        remoteOSGiManager.setBundleStartLevel(bundleDataWithCurrentStartLevel.bundleLocation,
+      for (DistributableArtifact dArtifact : bundleExecutionPlan.changeStartLevelIfInitialBundleStartLevelChangesOnBundles) { // CS_DISABLE_LINE_LENGTH
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifact),
             newInitialBundleStartLevel);
       }
     }
 
-    for (BundleDataType bundleData : bundleExecutionPlan.setStartLevelFromInitialBundles) {
-      if (bundleData.getStartLevel().compareTo(newInitialBundleStartLevel) < 0) {
-        remoteOSGiManager.setBundleStartLevel(bundleData, bundleData.getStartLevel());
+    for (DistributableArtifact dArtifact : bundleExecutionPlan.lowerStartLevelOnBundles) {
+      remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifact),
+          resolveStartLevel(dArtifact));
+    }
+
+    for (Entry<DistributableArtifact, Integer> dArtifactWithOldSL : bundleExecutionPlan.setInitialStartLevelOnBundles // CS_DISABLE_LINE_LENGTH
+        .entrySet()) {
+      int oldStartLevel = dArtifactWithOldSL.getValue();
+      if (oldStartLevel > newInitialBundleStartLevel) {
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifactWithOldSL.getKey()),
+            newInitialBundleStartLevel);
+      }
+    }
+
+    for (DistributableArtifact dArtifact : bundleExecutionPlan.setStartLevelFromInitialBundles) {
+
+      Integer startLevel = resolveStartLevel(dArtifact);
+      if (startLevel.compareTo(newInitialBundleStartLevel) < 0) {
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(dArtifact), startLevel);
       }
     }
   }
@@ -511,6 +526,40 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
+  private Collection<DistributableArtifact> processArtifacts(
+      final EnvironmentType environment) {
+
+    List<DistributableArtifact> result = new ArrayList<>();
+
+    if (environment == null) {
+      return result;
+    }
+
+    ArtifactsType artifacts = environment.getArtifacts();
+    if (artifacts == null) {
+      return result;
+    }
+
+    List<ArtifactType> artifactList = artifacts.getArtifact();
+    for (ArtifactType artifact : artifactList) {
+      DistributableArtifact distributableArtifact = new DistributableArtifact();
+      distributableArtifact.targetFile = artifact.getTargetFile();
+      distributableArtifact.targetFolder = artifact.getTargetFolder();
+      distributableArtifact.gav = artifact.getId();
+
+      // TODO resolve file and downloadURL if possible
+
+      PropertiesType properties = artifact.getProperties();
+      if (properties != null) {
+        for (EntryType entry : properties.getProperty()) {
+          distributableArtifact.properties.put(entry.getKey(), entry.getValue());
+        }
+      }
+      result.add(distributableArtifact);
+    }
+    return result;
+  }
+
   /**
    * Parses the configuration of a distribution package.
    *
@@ -519,7 +568,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    */
   private void processConfigurationTemplate(
       final File distFolderFile,
-      final Collection<Artifact> distributableArtifacts,
+      final Collection<DistributableArtifact> distributableArtifacts,
       final EnvironmentConfiguration environment, final FileManager fileManager)
       throws MojoExecutionException, MojoFailureException {
 
@@ -578,6 +627,14 @@ public class DistMojo extends AbstractEOSGiMojo {
       result.putAll(tmpProps);
     }
     return result;
+  }
+
+  private OSGiActionType resolveBundleAction(final DistributableArtifact dArtifact) {
+    String bundleActionString = dArtifact.properties.get("bundle.action");
+    if (bundleActionString == null) {
+      return null;
+    }
+    return OSGiActionType.fromValue(bundleActionString.toUpperCase());
   }
 
   private Artifact resolveDistPackage(final String frameworkArtifact)
@@ -639,14 +696,14 @@ public class DistMojo extends AbstractEOSGiMojo {
     return (frameworkStartLevel != null) ? frameworkStartLevel : originalFrameworkStartLevel;
   }
 
-  private Set<BundleDataType> resolveJustStartedActiveBundles(
+  private Set<DistributableArtifact> resolveJustStartedActiveBundles(
       final RemoteOSGiManager remoteOSGiManager,
-      final Map<String, BundleDataType> justStartedBundleByUniqueLabel) {
+      final Map<String, DistributableArtifact> justStartedBundleByUniqueLabel) {
     RuntimeBundleInfo[] runtimeBundleInfoArray = remoteOSGiManager.getRuntimeBundleInfoArray();
-    Set<BundleDataType> activeJustStartedBundleSet = new HashSet<>();
+    Set<DistributableArtifact> activeJustStartedBundleSet = new HashSet<>();
     for (RuntimeBundleInfo runtimeBundleInfo : runtimeBundleInfoArray) {
-      BundleDataType bundleData = justStartedBundleByUniqueLabel.get(
-          createUniqueLabelForBundle(runtimeBundleInfo.symbolicName, runtimeBundleInfo.version));
+      DistributableArtifact bundleData =
+          justStartedBundleByUniqueLabel.get(runtimeBundleInfo.location);
       if (runtimeBundleInfo.state == Bundle.ACTIVE && bundleData != null) {
         activeJustStartedBundleSet.add(bundleData);
       }
@@ -654,10 +711,10 @@ public class DistMojo extends AbstractEOSGiMojo {
     return activeJustStartedBundleSet;
   }
 
-  private Artifact resolveMavenArtifactByArtifactType(final ArtifactType artifact)
+  private Artifact resolveMavenArtifactByArtifactType(final DistributableArtifact artifact)
       throws MojoExecutionException {
 
-    return resolveArtifact(new DefaultArtifact(artifact.getId(), artifact.getProperties());
+    return resolveArtifact(new DefaultArtifact(artifact.gav, artifact.properties));
   }
 
   private int resolveNecessaryStartlevel(final BundleExecutionPlan bundleExecutionPlan,
@@ -681,14 +738,14 @@ public class DistMojo extends AbstractEOSGiMojo {
     return newStartLevel;
   }
 
-  private List<BundleDataType> resolveResolvedBundlesInJustStartedActiveBundleDependencyClosure(
-      final Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel,
+  private List<DistributableArtifact> resolveResolvedBundlesInJustStartedActiveBundleDependencyClosure(// CS_DISABLE_LINE_LENGTH
+      final Map<String, DistributableArtifact> shouldBeActiveBundleByUniqueLabel,
       final RuntimeBundleInfo[] dependencyClosure) {
-    List<BundleDataType> bundlesInClosureToStart = new ArrayList<>();
+    List<DistributableArtifact> bundlesInClosureToStart = new ArrayList<>();
     for (RuntimeBundleInfo runtimeBundleInfo : dependencyClosure) {
       if (runtimeBundleInfo.state == Bundle.RESOLVED) {
-        BundleDataType bundleData = shouldBeActiveBundleByUniqueLabel.get(
-            createUniqueLabelForBundle(runtimeBundleInfo.symbolicName, runtimeBundleInfo.version));
+        DistributableArtifact bundleData = shouldBeActiveBundleByUniqueLabel.get(
+            runtimeBundleInfo.location);
         if (bundleData != null) {
           bundlesInClosureToStart.add(bundleData);
         }
@@ -697,60 +754,89 @@ public class DistMojo extends AbstractEOSGiMojo {
     return bundlesInClosureToStart;
   }
 
-  private void setStartLevelOnNewlyInstalledBundles(final Collection<BundleDataType> installBundles,
+  private Integer resolveStartLevel(final DistributableArtifact distributableArtifact) {
+    String startLevelString = distributableArtifact.properties.get("bundle.startLevel");
+    if (startLevelString == null) {
+      return null;
+    }
+    return Integer.parseInt(startLevelString);
+  }
+
+  private void setStartLevelOnNewlyInstalledBundles(
+      final Collection<DistributableArtifact> installBundles,
       final RemoteOSGiManager remoteOSGiManager) {
-    for (BundleDataType bundleData : installBundles) {
-      if (bundleData.getStartLevel() != null) {
-        remoteOSGiManager.setBundleStartLevel(bundleData, bundleData.getStartLevel());
+    for (DistributableArtifact distributableArtifact : installBundles) {
+      Integer startLevelString = resolveStartLevel(distributableArtifact);
+      if (startLevelString != null) {
+        remoteOSGiManager.setBundleStartLevel(toBundleLocation(distributableArtifact),
+            startLevelString);
       }
     }
   }
 
   private void startBundlesWhereNecessary(final BundleExecutionPlan bundleExecutionPlan,
-      final ArtifactsType artifacts, final RemoteOSGiManager remoteOSGiManager) {
+      final Collection<DistributableArtifact> distributedArtifacts,
+      final RemoteOSGiManager remoteOSGiManager) {
 
-    Set<BundleDataType> bundlesToStart =
+    Set<DistributableArtifact> bundlesToStart =
         new LinkedHashSet<>(bundleExecutionPlan.startStoppedBundles);
 
-    for (BundleDataType bundleData : bundleExecutionPlan.updateBundles) {
-      if (OSGiActionType.START.equals(bundleData.getAction())) {
-        bundlesToStart.add(bundleData);
+    for (DistributableArtifact dArtifact : bundleExecutionPlan.updateBundles) {
+      if (OSGiActionType.START.equals(resolveBundleAction(dArtifact))) {
+        bundlesToStart.add(dArtifact);
       }
     }
 
-    for (BundleDataType bundleData : bundleExecutionPlan.installBundles) {
-      if (OSGiActionType.START.equals(bundleData.getAction())) {
-        bundlesToStart.add(bundleData);
+    for (DistributableArtifact dArtifact : bundleExecutionPlan.installBundles) {
+      if (OSGiActionType.START.equals(resolveBundleAction(dArtifact))) {
+        bundlesToStart.add(dArtifact);
       }
     }
 
-    remoteOSGiManager.startBundles(bundlesToStart.toArray(new BundleDataType[0]));
+    remoteOSGiManager.startBundles(toBundleLocations(bundlesToStart));
 
-    startResolvedBundlesOfJustStartedActiveBundlesDependencies(bundlesToStart, artifacts,
+    startResolvedBundlesOfJustStartedActiveBundlesDependencies(bundlesToStart, distributedArtifacts,
         remoteOSGiManager);
   }
 
   private void startResolvedBundlesOfJustStartedActiveBundlesDependencies(
-      final Set<BundleDataType> justStartedBundles,
-      final ArtifactsType artifacts, final RemoteOSGiManager remoteOSGiManager) {
+      final Collection<DistributableArtifact> justStartedBundles,
+      final Collection<DistributableArtifact> distributedArtifacts,
+      final RemoteOSGiManager remoteOSGiManager) {
 
-    Map<String, BundleDataType> justStartedBundleByUniqueLabel =
+    Map<String, DistributableArtifact> justStartedBundleByUniqueLabel =
         createJustStartedBundleByUniqueLabelMap(justStartedBundles);
 
-    Set<BundleDataType> activeJustStartedBundleSet =
+    Set<DistributableArtifact> activeJustStartedBundleSet =
         resolveJustStartedActiveBundles(remoteOSGiManager, justStartedBundleByUniqueLabel);
 
-    Map<String, BundleDataType> shouldBeActiveBundleByUniqueLabel =
-        createStartActionBundleByUniqueLabelMap(artifacts);
+    Map<String, DistributableArtifact> shouldBeActiveBundleByUniqueLabel =
+        createStartActionBundleByUniqueLabelMap(distributedArtifacts);
 
     RuntimeBundleInfo[] dependencyClosure = remoteOSGiManager
-        .getDependencyClosure(activeJustStartedBundleSet.toArray(new BundleDataType[0]));
+        .getDependencyClosure(toBundleLocations(activeJustStartedBundleSet));
 
-    List<BundleDataType> bundlesInClosureToStart =
+    List<DistributableArtifact> bundlesInClosureToStart =
         resolveResolvedBundlesInJustStartedActiveBundleDependencyClosure(
             shouldBeActiveBundleByUniqueLabel, dependencyClosure);
 
-    remoteOSGiManager.startBundles(bundlesInClosureToStart.toArray(new BundleDataType[0]));
+    remoteOSGiManager.startBundles(toBundleLocations(bundlesInClosureToStart));
+  }
+
+  private String toBundleLocation(final DistributableArtifact distributableArtifact) {
+    return distributableArtifact.properties.get("bundle.location");
+  }
+
+  private Collection<String> toBundleLocations(
+      final Collection<DistributableArtifact> distributableArtifacts) {
+
+    List<String> result = new ArrayList<>(distributableArtifacts.size());
+
+    for (DistributableArtifact distributableArtifact : distributableArtifacts) {
+      result.add(toBundleLocation(distributableArtifact));
+    }
+
+    return result;
   }
 
 }

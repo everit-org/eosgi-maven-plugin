@@ -143,8 +143,7 @@ public class AnalyzeMojo extends AbstractEOSGiMojo {
     Map<String, DistributableArtifact> projectDistributableDependencies =
         createDistributableArtifactsByGAVFromProjectDeps();
     for (EnvironmentConfiguration environment : environmentsToProcess) {
-      Collection<DistributableArtifact> distributableArtifacts;
-      distributableArtifacts =
+      Collection<DistributableArtifact> distributableArtifacts =
           generateDistributableArtifactsForEnvironment(environment,
               projectDistributableDependencies);
 

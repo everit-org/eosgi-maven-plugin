@@ -36,9 +36,6 @@ public class EOSGiArtifact {
   @Parameter(required = true)
   private String gav;
 
-  @Parameter(defaultValue = "true")
-  private boolean overrideProjectDependency;
-
   @Parameter
   private Map<String, String> properties = new HashMap<String, String>();
 
@@ -68,20 +65,12 @@ public class EOSGiArtifact {
     return targetFolder;
   }
 
-  public boolean isOverrideProjectDependency() {
-    return overrideProjectDependency;
-  }
-
   public void setDownloadURL(final String downloadURL) {
     this.downloadURL = downloadURL;
   }
 
   public void setGav(final String gav) {
     this.gav = gav;
-  }
-
-  public void setOverrideProjectDependency(final boolean overrideProjectDependency) {
-    this.overrideProjectDependency = overrideProjectDependency;
   }
 
   public void setProperties(final Map<String, String> properties) {

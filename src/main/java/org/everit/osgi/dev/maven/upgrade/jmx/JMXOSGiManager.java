@@ -136,9 +136,11 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     Long bundleId = (Long) compositeData.get(BundleStateMBean.IDENTIFIER);
     String symbolicName = (String) compositeData.get(BundleStateMBean.SYMBOLIC_NAME);
     String version = (String) compositeData.get(BundleStateMBean.VERSION);
+    String location = (String) compositeData.get(BundleStateMBean.LOCATION);
     String state = (String) compositeData.get(BundleStateMBean.STATE);
-    RuntimeBundleInfo runtimeBundleInfo = new RuntimeBundleInfo(bundleId, symbolicName, version,
-        convertStringToIntState(state));
+    RuntimeBundleInfo runtimeBundleInfo =
+        new RuntimeBundleInfo(bundleId, symbolicName, version, location,
+            convertStringToIntState(state));
     return runtimeBundleInfo;
   }
 

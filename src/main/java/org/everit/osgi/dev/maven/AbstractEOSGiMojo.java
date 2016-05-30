@@ -21,6 +21,7 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.Attributes;
@@ -132,39 +133,6 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
   @Parameter(property = "eosgi.analytics.skip", defaultValue = "false")
   private boolean skipAnalytics;
 
-  /**
-   * Appends artifacts that are defined within the environment to the distributable artifact map.
-   *
-   * @param environmentConfiguration
-   *          The configuration of the environment.
-   * @param distributableArtifacts
-   *          The distributable artifacts.
-   * @throws MojoExecutionException
-   *           if anything happens.
-   */
-  protected void appendEnvironmentArtifactsToDistributables(
-      final EnvironmentConfiguration environmentConfiguration,
-      final Map<EOSGiArtifact, org.eclipse.aether.artifact.Artifact> distributableArtifacts)
-      throws MojoExecutionException {
-
-    List<EOSGiArtifact> environmentDependencies = environmentConfiguration.getArtifacts();
-
-    if (environmentDependencies == null) {
-      return;
-    }
-
-    for (EOSGiArtifact eosgiArtifact : environmentDependencies) {
-      org.eclipse.aether.artifact.Artifact resolvedArtifact =
-          resolveArtifact(new DefaultArtifact(eosgiArtifact.getGav()));
-
-      DistributableArtifact distributableArtifact =
-          processArtifact(eosgiArtifact, resolvedArtifact.getFile());
-
-      distributableArtifacts.put(eosgiArtifact, distributableArtifact);
-    }
-
-  }
-
   private EOSGiArtifact convertMavenToEOSGiArtifact(final Artifact artifact) {
     EOSGiArtifact eosgiArtifact = new EOSGiArtifact();
     StringBuilder gav =
@@ -261,9 +229,34 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       final Map<String, DistributableArtifact> projectDistributableDependencies)
       throws MojoExecutionException {
 
-    appendEnvironmentArtifactsToDistributables(environmentConfiguration, result);
+    Collection<DistributableArtifact> distributableArtifacts =
+        new LinkedHashSet<>(projectDistributableDependencies.values());
 
-    return result.values();
+    List<EOSGiArtifact> environmentArtifacts = environmentConfiguration.getArtifacts();
+
+    if (environmentArtifacts == null) {
+      return distributableArtifacts;
+    }
+
+    for (EOSGiArtifact eosgiArtifact : environmentArtifacts) {
+      // Remove if available in project dependencies
+      DistributableArtifact projectDA =
+          projectDistributableDependencies.get(eosgiArtifact.getGav());
+
+      if (projectDA != null) {
+        distributableArtifacts.remove(projectDA);
+      }
+
+      // And add to the environment dependencies
+      org.eclipse.aether.artifact.Artifact resolvedArtifact =
+          resolveArtifact(new DefaultArtifact(eosgiArtifact.getGav()));
+
+      DistributableArtifact distributableArtifact =
+          processArtifact(eosgiArtifact, resolvedArtifact.getFile());
+
+      distributableArtifacts.add(distributableArtifact);
+    }
+    return distributableArtifacts;
   }
 
   /**

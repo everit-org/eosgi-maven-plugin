@@ -4,6 +4,9 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * An artifact that can be copied to the distributed environment.
+ */
 public class DistributableArtifact {
 
   public String downloadURL;

@@ -19,16 +19,16 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 
-import org.eclipse.aether.artifact.Artifact;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
+import org.everit.osgi.dev.maven.util.DistributableArtifact;
 
 /**
  * Metadata of a distributed environment.
  */
 public class DistributedEnvironmenData {
 
-  private Collection<Artifact> distributableArtifacts;
+  private Collection<DistributableArtifact> distributableArtifacts;
 
   private EnvironmentType distributedEnvironment;
 
@@ -44,14 +44,14 @@ public class DistributedEnvironmenData {
    */
   public DistributedEnvironmenData(final EnvironmentConfiguration environment,
       final EnvironmentType distributedEnvironment, final File distributionFolder,
-      final Collection<Artifact> bundleArtifacts) {
+      final Collection<DistributableArtifact> bundleArtifacts) {
     this.environment = environment;
     this.distributedEnvironment = distributedEnvironment;
     this.distributionFolder = distributionFolder;
     distributableArtifacts = bundleArtifacts;
   }
 
-  public Collection<Artifact> getDistributableArtifacts() {
+  public Collection<DistributableArtifact> getDistributableArtifacts() {
     return distributableArtifacts;
   }
 
@@ -67,7 +67,7 @@ public class DistributedEnvironmenData {
     return environment;
   }
 
-  public void setDistributableArtifacts(final List<Artifact> bundleArtifacts) {
+  public void setDistributableArtifacts(final List<DistributableArtifact> bundleArtifacts) {
     distributableArtifacts = bundleArtifacts;
   }
 

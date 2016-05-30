@@ -23,7 +23,6 @@ import java.util.Map.Entry;
 
 import org.apache.maven.plugin.MojoFailureException;
 import org.eclipse.aether.artifact.Artifact;
-import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
 
 /**
  * Util functions for every plugin in this library.
@@ -140,7 +139,7 @@ public final class PluginUtil {
    *          The root folder of the distributed environment.
    * @return The absolute file of the artifact in the distributed environment.
    */
-  public static File resolveArtifactAbsoluteFile(final ArtifactType artifact,
+  public static File resolveArtifactAbsoluteFile(final DistributableArtifact artifact,
       final Artifact mavenArtifact, final File environmentRootFolder) {
 
     File artifactRelativeFile = resolveArtifactRelativeFile(artifact, mavenArtifact);
@@ -148,14 +147,14 @@ public final class PluginUtil {
     return absoluteArtifactFile;
   }
 
-  private static File resolveArtifactRelativeFile(final ArtifactType artifactType,
+  private static File resolveArtifactRelativeFile(final DistributableArtifact artifact,
       final Artifact mavenArtifact) {
-    String targetFile = artifactType.getTargetFile();
+    String targetFile = artifact.targetFile;
     if (targetFile == null) {
       targetFile = mavenArtifact.getFile().getName();
     }
 
-    String targetFolder = artifactType.getTargetFolder();
+    String targetFolder = artifact.targetFolder;
     if (targetFolder != null) {
       File targetFolderFile = new File(targetFolder);
       return new File(targetFolderFile, targetFile);

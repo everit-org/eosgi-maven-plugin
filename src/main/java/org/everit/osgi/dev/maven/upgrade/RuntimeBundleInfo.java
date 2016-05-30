@@ -22,6 +22,8 @@ public class RuntimeBundleInfo {
 
   public long bundleId;
 
+  public String location;
+
   public int state;
 
   public String symbolicName;
@@ -37,14 +39,17 @@ public class RuntimeBundleInfo {
    *          The symbolic name of the bundle.
    * @param version
    *          The version of the bundle.
+   * @param location
+   *          The location of the bundle.
    * @param state
    *          The state of the bundle.
    */
   public RuntimeBundleInfo(final long bundleId, final String symbolicName, final String version,
-      final int state) {
+      final String location, final int state) {
     this.bundleId = bundleId;
     this.symbolicName = symbolicName;
     this.version = version;
+    this.location = location;
     this.state = state;
   }
 
