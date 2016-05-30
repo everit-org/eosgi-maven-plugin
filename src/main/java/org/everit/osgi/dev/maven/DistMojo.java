@@ -545,7 +545,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       DistributableArtifact distributableArtifact = new DistributableArtifact();
       distributableArtifact.targetFile = artifact.getTargetFile();
       distributableArtifact.targetFolder = artifact.getTargetFolder();
-      distributableArtifact.gav = artifact.getId();
+      distributableArtifact.gav = artifact.getGav();
 
       // TODO resolve file and downloadURL if possible
 
