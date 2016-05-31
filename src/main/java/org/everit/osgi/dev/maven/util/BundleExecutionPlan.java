@@ -31,7 +31,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
-import org.everit.osgi.dev.dist.util.configuration.schema.OSGiActionType;
+import org.everit.osgi.dev.maven.EOSGiConstants;
 
 /**
  * Creates a bundle execution plan on the OSGi container based on the old and new settings and the
@@ -121,7 +121,7 @@ public class BundleExecutionPlan {
     for (DistributableArtifact newArtifact : newArtifacts) {
       String newBundleAction = newArtifact.properties.get("bundle.action");
       if (newBundleAction != null
-          && !OSGiActionType.NONE.name().equalsIgnoreCase(newBundleAction)) {
+          && !EOSGiConstants.BUNDLE_ACTION_NONE.equalsIgnoreCase(newBundleAction)) {
         String bundleLocation = newArtifact.properties.get("bundle.location");
         DistributableArtifact existingArtifact =
             existingArtifactsByBundleLocation.remove(bundleLocation);
@@ -167,8 +167,8 @@ public class BundleExecutionPlan {
 
     String existingBundleAction = existingArtifactProperties.get("bundle.action");
     String newBundleAction = newArtifactProperties.get("bundle.action");
-    return OSGiActionType.INSTALL.name().equalsIgnoreCase(existingBundleAction)
-        && OSGiActionType.START.name().equalsIgnoreCase(newBundleAction);
+    return EOSGiConstants.BUNDLE_ACTION_INSTALL.equalsIgnoreCase(existingBundleAction)
+        && EOSGiConstants.BUNDLE_ACTION_START.equalsIgnoreCase(newBundleAction);
   }
 
   private boolean bundleBecameStopped(final Map<String, String> existingArtifactProperties,
@@ -176,8 +176,8 @@ public class BundleExecutionPlan {
 
     String existingBundleAction = existingArtifactProperties.get("bundle.action");
     String newBundleAction = newArtifactProperties.get("bundle.action");
-    return OSGiActionType.START.name().equalsIgnoreCase(existingBundleAction)
-        && OSGiActionType.INSTALL.name().equalsIgnoreCase(newBundleAction);
+    return EOSGiConstants.BUNDLE_ACTION_START.equalsIgnoreCase(existingBundleAction)
+        && EOSGiConstants.BUNDLE_ACTION_INSTALL.equalsIgnoreCase(newBundleAction);
   }
 
   private boolean bundleContentChanged(final DistributableArtifact newArtifact,
@@ -236,7 +236,7 @@ public class BundleExecutionPlan {
 
       String bundleAction = artifact.properties.get("bundle.action");
       if (bundleAction != null
-          && !OSGiActionType.NONE.name().equalsIgnoreCase(bundleAction)) {
+          && !EOSGiConstants.BUNDLE_ACTION_NONE.equalsIgnoreCase(bundleAction)) {
 
         String bundleLocation = artifact.properties.get("bundle.location");
         result.put(bundleLocation, artifact);
@@ -272,7 +272,7 @@ public class BundleExecutionPlan {
       throws MojoExecutionException {
 
     ArtifactRequest artifactRequest = new ArtifactRequest();
-    Artifact aetherArtifact = new DefaultArtifact(artifact.gav);
+    Artifact aetherArtifact = new DefaultArtifact(artifact.coordinates);
     artifactRequest.setArtifact(aetherArtifact);
 
     Artifact resolvedArtifact = artifactResolver.resolve(artifactRequest);

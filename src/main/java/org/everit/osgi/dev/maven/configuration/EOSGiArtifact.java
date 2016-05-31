@@ -34,7 +34,7 @@ public class EOSGiArtifact {
    * must not be null.
    */
   @Parameter(required = true)
-  private String gav;
+  private String coordinates;
 
   @Parameter
   private Map<String, String> properties = new HashMap<String, String>();
@@ -49,8 +49,8 @@ public class EOSGiArtifact {
     return downloadURL;
   }
 
-  public String getGav() {
-    return gav;
+  public String getCoordinates() {
+    return coordinates;
   }
 
   public Map<String, String> getProperties() {
@@ -69,8 +69,8 @@ public class EOSGiArtifact {
     this.downloadURL = downloadURL;
   }
 
-  public void setGav(final String gav) {
-    this.gav = gav;
+  public void setCoordinates(final String gav) {
+    this.coordinates = gav;
   }
 
   public void setProperties(final Map<String, String> properties) {

@@ -52,7 +52,6 @@ import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactsType;
 import org.everit.osgi.dev.dist.util.configuration.schema.EntryType;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
-import org.everit.osgi.dev.dist.util.configuration.schema.OSGiActionType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ParsableType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ParsablesType;
 import org.everit.osgi.dev.dist.util.configuration.schema.PropertiesType;
@@ -253,7 +252,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       final Collection<DistributableArtifact> distributedArtifacts) {
     Map<String, DistributableArtifact> shouldBeActiveBundleByUniqueLabel = new HashMap<>();
     for (DistributableArtifact artifact : distributedArtifacts) {
-      if (OSGiActionType.START.equals(resolveBundleAction(artifact))) {
+      if (EOSGiConstants.BUNDLE_ACTION_START.equals(resolveBundleAction(artifact))) {
         shouldBeActiveBundleByUniqueLabel.put(toBundleLocation(artifact), artifact);
       }
     }
@@ -545,7 +544,7 @@ public class DistMojo extends AbstractEOSGiMojo {
       DistributableArtifact distributableArtifact = new DistributableArtifact();
       distributableArtifact.targetFile = artifact.getTargetFile();
       distributableArtifact.targetFolder = artifact.getTargetFolder();
-      distributableArtifact.gav = artifact.getGav();
+      distributableArtifact.coordinates = artifact.getCoordinates();
 
       // TODO resolve file and downloadURL if possible
 
@@ -629,12 +628,15 @@ public class DistMojo extends AbstractEOSGiMojo {
     return result;
   }
 
-  private OSGiActionType resolveBundleAction(final DistributableArtifact dArtifact) {
-    String bundleActionString = dArtifact.properties.get("bundle.action");
+  private String resolveBundleAction(final DistributableArtifact dArtifact) {
+
+    String bundleActionString =
+        dArtifact.properties.get(EOSGiConstants.ARTIFACT_PROPERTY_BUNDLE_ACTION);
+
     if (bundleActionString == null) {
       return null;
     }
-    return OSGiActionType.fromValue(bundleActionString.toUpperCase());
+    return bundleActionString.toLowerCase();
   }
 
   private Artifact resolveDistPackage(final String frameworkArtifact)
@@ -714,7 +716,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   private Artifact resolveMavenArtifactByArtifactType(final DistributableArtifact artifact)
       throws MojoExecutionException {
 
-    return resolveArtifact(new DefaultArtifact(artifact.gav, artifact.properties));
+    return resolveArtifact(new DefaultArtifact(artifact.coordinates, artifact.properties));
   }
 
   private int resolveNecessaryStartlevel(final BundleExecutionPlan bundleExecutionPlan,
@@ -782,13 +784,13 @@ public class DistMojo extends AbstractEOSGiMojo {
         new LinkedHashSet<>(bundleExecutionPlan.startStoppedBundles);
 
     for (DistributableArtifact dArtifact : bundleExecutionPlan.updateBundles) {
-      if (OSGiActionType.START.equals(resolveBundleAction(dArtifact))) {
+      if (EOSGiConstants.BUNDLE_ACTION_START.equals(resolveBundleAction(dArtifact))) {
         bundlesToStart.add(dArtifact);
       }
     }
 
     for (DistributableArtifact dArtifact : bundleExecutionPlan.installBundles) {
-      if (OSGiActionType.START.equals(resolveBundleAction(dArtifact))) {
+      if (EOSGiConstants.BUNDLE_ACTION_START.equals(resolveBundleAction(dArtifact))) {
         bundlesToStart.add(dArtifact);
       }
     }

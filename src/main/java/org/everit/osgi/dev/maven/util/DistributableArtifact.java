@@ -28,7 +28,7 @@ public class DistributableArtifact {
 
   public File file;
 
-  public String gav;
+  public String coordinates;
 
   public Map<String, String> properties = new HashMap<>();
 

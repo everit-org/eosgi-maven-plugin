@@ -154,7 +154,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
     gav.append(artifact.getVersion());
 
-    eosgiArtifact.setGav(gav.toString());
+    eosgiArtifact.setCoordinates(gav.toString());
     return null;
   }
 
@@ -179,7 +179,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
         DistributableArtifact processedArtifact =
             processArtifact(eosgiArtifact, artifact.getFile());
 
-        distributableArtifacts.put(processedArtifact.gav, processedArtifact);
+        distributableArtifacts.put(processedArtifact.coordinates, processedArtifact);
       }
     }
     return distributableArtifacts;
@@ -241,7 +241,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     for (EOSGiArtifact eosgiArtifact : environmentArtifacts) {
       // Remove if available in project dependencies
       DistributableArtifact projectDA =
-          projectDistributableDependencies.get(eosgiArtifact.getGav());
+          projectDistributableDependencies.get(eosgiArtifact.getCoordinates());
 
       if (projectDA != null) {
         distributableArtifacts.remove(projectDA);
@@ -249,7 +249,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
       // And add to the environment dependencies
       org.eclipse.aether.artifact.Artifact resolvedArtifact =
-          resolveArtifact(new DefaultArtifact(eosgiArtifact.getGav()));
+          resolveArtifact(new DefaultArtifact(eosgiArtifact.getCoordinates()));
 
       DistributableArtifact distributableArtifact =
           processArtifact(eosgiArtifact, resolvedArtifact.getFile());
@@ -342,7 +342,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       final EOSGiArtifact eosgiArtifact, final File artifactFile) {
 
     DistributableArtifact distributableArtifact = new DistributableArtifact();
-    distributableArtifact.gav = eosgiArtifact.getGav();
+    distributableArtifact.coordinates = eosgiArtifact.getCoordinates();
     distributableArtifact.downloadURL = eosgiArtifact.getDownloadURL();
     distributableArtifact.targetFile = eosgiArtifact.getTargetFile();
     distributableArtifact.targetFolder = eosgiArtifact.getTargetFolder();
