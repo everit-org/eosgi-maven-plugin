@@ -155,7 +155,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
     gav.append(artifact.getVersion());
 
     eosgiArtifact.setCoordinates(gav.toString());
-    return null;
+    return eosgiArtifact;
   }
 
   /**

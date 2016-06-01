@@ -134,13 +134,15 @@ public class DistMojo extends AbstractEOSGiMojo {
   protected String sourceDistFolder;
 
   private void checkAndAddReservedLaunchConfigurationProperties(
-      final EnvironmentConfiguration environment, final LaunchConfig launchConfig)
-      throws MojoFailureException {
+      final EnvironmentConfiguration environment,
+      final LaunchConfig launchConfig) throws MojoFailureException {
 
     checkReservedSystemPropertyInVmArguments(launchConfig.getVmArguments());
     LaunchConfigOverride[] overrides = launchConfig.getOverrides();
-    for (LaunchConfigOverride launchConfigOverride : overrides) {
-      checkReservedSystemPropertyInVmArguments(launchConfigOverride.getVmArguments());
+    if (overrides != null) {
+      for (LaunchConfigOverride launchConfigOverride : overrides) {
+        checkReservedSystemPropertyInVmArguments(launchConfigOverride.getVmArguments());
+      }
     }
 
     launchConfig.getVmArguments().put(SYSPROP_ENVIRONMENT_ID,
@@ -217,8 +219,10 @@ public class DistMojo extends AbstractEOSGiMojo {
   }
 
   private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
-      final File distFolderFile, final BundleExecutionPlan bundleExecutionPlan,
-      final EnvironmentType existingDistributedEnvironment) throws MojoExecutionException {
+      final File distFolderFile,
+      final BundleExecutionPlan bundleExecutionPlan,
+      final EnvironmentType existingDistributedEnvironment)
+      throws MojoExecutionException {
 
     String jmxLocalURL =
         jMXOSGiManagerProvider.getJmxURLForEnvironment(environmentId, distFolderFile);
@@ -300,7 +304,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     FileManager fileManager = new FileManager();
 
     Collection<DistributableArtifact> distributableArtifacts =
-        generateDistributableArtifactsForEnvironment(environment, projectDistributableDependencies);
+        generateDistributableArtifactsForEnvironment(
+            environment, projectDistributableDependencies);
 
     String environmentId = environment.getId();
 
@@ -308,12 +313,11 @@ public class DistMojo extends AbstractEOSGiMojo {
     File distPackageFile = distPackageArtifact.getFile();
     File environmentRootFolder = new File(globalDistFolderFile, environmentId);
 
-    EnvironmentType existingDistributedEnvironment =
-        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
-            UseByType.PARSABLES);
+    EnvironmentType existingDistributedEnvironment = distEnvConfigProvider
+        .getOverriddenDistributedEnvironmentConfig(environmentRootFolder, UseByType.PARSABLES);
 
-    Collection<DistributableArtifact> existingDistributedArtifacts =
-        processArtifacts(existingDistributedEnvironment);
+    Collection<DistributableArtifact> existingDistributedArtifacts = processArtifacts(
+        existingDistributedEnvironment);
 
     fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
     copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
@@ -321,16 +325,15 @@ public class DistMojo extends AbstractEOSGiMojo {
     processConfigurationTemplate(environmentRootFolder, distributableArtifacts, environment,
         fileManager);
 
-    EnvironmentType distributedEnvironment =
-        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(environmentRootFolder,
-            UseByType.PARSABLES);
+    EnvironmentType distributedEnvironment = distEnvConfigProvider
+        .getOverriddenDistributedEnvironmentConfig(environmentRootFolder, UseByType.PARSABLES);
 
     Collection<DistributableArtifact> newDistributedArtifacts =
         processArtifacts(distributedEnvironment);
 
-    BundleExecutionPlan bundleExecutionPlan =
-        new BundleExecutionPlan(environment.getId(), existingDistributedArtifacts,
-            newDistributedArtifacts, environmentRootFolder, artifactResolver);
+    BundleExecutionPlan bundleExecutionPlan = new BundleExecutionPlan(environment.getId(),
+        existingDistributedArtifacts, newDistributedArtifacts, environmentRootFolder,
+        artifactResolver);
 
     convertBundleUpdatesToUninstallAndInstall(bundleExecutionPlan);
 
@@ -347,9 +350,8 @@ public class DistMojo extends AbstractEOSGiMojo {
       int newInitialBundleStartLevel = (distributedEnvironment.getInitialBundleStartLevel() != null)
           ? distributedEnvironment.getInitialBundleStartLevel() : currentInitialBundleStartLevel;
 
-      int frameworkStartLevelDuringUpdate =
-          resolveNecessaryStartlevel(bundleExecutionPlan,
-              originalFrameworkStartLevel, currentInitialBundleStartLevel);
+      int frameworkStartLevelDuringUpdate = resolveNecessaryStartlevel(bundleExecutionPlan,
+          originalFrameworkStartLevel, currentInitialBundleStartLevel);
 
       try {
         if (frameworkStartLevelDuringUpdate < originalFrameworkStartLevel) {
@@ -387,9 +389,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
         startBundlesWhereNecessary(bundleExecutionPlan, newDistributedArtifacts, remoteOSGiManager);
 
-        distributedEnvironmentDataCollection.add(
-            new DistributedEnvironmenData(environment, distributedEnvironment,
-                environmentRootFolder, newDistributedArtifacts));
+        distributedEnvironmentDataCollection.add(new DistributedEnvironmenData(environment,
+            distributedEnvironment, environmentRootFolder, newDistributedArtifacts));
 
         EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,
             fileManager);
@@ -488,8 +489,8 @@ public class DistMojo extends AbstractEOSGiMojo {
    * Parses and processes the files that are templates.
    */
   private void parseParsables(final File distFolderFile,
-      final EnvironmentType distributedEnvironment, final FileManager fileManager)
-      throws MojoExecutionException {
+      final EnvironmentType distributedEnvironment,
+      final FileManager fileManager) throws MojoExecutionException {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributedEnvironment", distributedEnvironment);
@@ -506,8 +507,9 @@ public class DistMojo extends AbstractEOSGiMojo {
         File parsableFile = new File(distFolderFile, path).getAbsoluteFile();
 
         if (!parsableFile.exists()) {
-          throw new MojoExecutionException("File that should be parsed does not exist: "
-              + "[" + parsableFile.getAbsolutePath() + "]");
+          throw new MojoExecutionException(
+              "File that should be parsed does not exist: " + "[" + parsableFile.getAbsolutePath()
+                  + "]");
         }
 
         try {
@@ -515,8 +517,8 @@ public class DistMojo extends AbstractEOSGiMojo {
           if (encoding == null) {
             encoding = "UTF8";
           }
-          fileManager.replaceFileWithParsed(parsableFile, vars, encoding,
-              p.getTemplateEngine(), false);
+          fileManager.replaceFileWithParsed(parsableFile, vars, encoding, p.getTemplateEngine(),
+              false);
         } catch (IOException e) {
           throw new MojoExecutionException(
               "Could not replace parsable with parsed content: [" + p.getPath() + "]", e);
@@ -525,8 +527,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  private Collection<DistributableArtifact> processArtifacts(
-      final EnvironmentType environment) {
+  private Collection<DistributableArtifact> processArtifacts(final EnvironmentType environment) {
 
     List<DistributableArtifact> result = new ArrayList<>();
 
@@ -565,22 +566,23 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoFailureException
    *           if anything wrong happen.
    */
-  private void processConfigurationTemplate(
-      final File distFolderFile,
+  private void processConfigurationTemplate(final File distFolderFile,
       final Collection<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment, final FileManager fileManager)
-      throws MojoExecutionException, MojoFailureException {
+      final EnvironmentConfiguration environment,
+      final FileManager fileManager) throws MojoExecutionException, MojoFailureException {
 
     File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
 
-    AutoResolveArtifactHolder jacocoAgentArtifact =
-        new AutoResolveArtifactHolder(
-            RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
-            artifactResolver);
+    AutoResolveArtifactHolder jacocoAgentArtifact = new AutoResolveArtifactHolder(
+        RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
+        artifactResolver);
 
-    LaunchConfig launchConfig = this.launchConfig.createLaunchConfigForEnvironment(
-        environment.getLaunchConfig(), environment.getId(),
-        reportFolder, jacocoAgentArtifact);
+    LaunchConfig launchConfig = environment.getLaunchConfig();
+    if (this.launchConfig != null) {
+      launchConfig =
+          this.launchConfig.createLaunchConfigForEnvironment(environment.getLaunchConfig(),
+              environment.getId(), reportFolder, jacocoAgentArtifact);
+    }
 
     checkAndAddReservedLaunchConfigurationProperties(environment, launchConfig);
 
@@ -596,7 +598,8 @@ public class DistMojo extends AbstractEOSGiMojo {
       fileManager.replaceFileWithParsed(configFile, vars, "UTF8", TemplateEnginesType.XML, true);
     } catch (IOException e) {
       throw new MojoExecutionException(
-          "Could not run velocity on configuration file: " + configFile.getName(), e);
+          "Could not run velocity on configuration file: " + configFile.getName(),
+          e);
     }
   }
 
@@ -609,8 +612,8 @@ public class DistMojo extends AbstractEOSGiMojo {
    *           if a read error occurs.
    */
   private Properties readDefaultFrameworkPops() throws IOException {
-    Enumeration<URL> resources =
-        this.getClass().getClassLoader().getResources("META-INF/eosgi-frameworks.properties");
+    Enumeration<URL> resources = this.getClass().getClassLoader()
+        .getResources("META-INF/eosgi-frameworks.properties");
     Properties result = new Properties();
     while (resources.hasMoreElements()) {
       URL resource = resources.nextElement();
@@ -648,8 +651,9 @@ public class DistMojo extends AbstractEOSGiMojo {
       throw new MojoExecutionException("Could not get distribution package", e);
     }
     ArtifactRequest artifactRequest = new ArtifactRequest();
-    artifactRequest.setArtifact(new DefaultArtifact(distPackageIdParts[0], distPackageIdParts[1],
-        "zip", distPackageIdParts[2]));
+    artifactRequest.setArtifact(
+        new DefaultArtifact(distPackageIdParts[0], distPackageIdParts[1], "zip",
+            distPackageIdParts[2]));
 
     return artifactResolver.resolve(artifactRequest);
   }
@@ -665,8 +669,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    *           if the distPackage expression configured for this plugin has wrong format.
    */
   private String[] resolveDistPackageId(final String frameworkArtifact)
-      throws IOException,
-      MojoExecutionException {
+      throws IOException, MojoExecutionException {
     String[] distPackageParts = frameworkArtifact.split("\\:");
     if (distPackageParts.length == 1) {
       Properties defaultFrameworkPops = readDefaultFrameworkPops();
@@ -680,9 +683,8 @@ public class DistMojo extends AbstractEOSGiMojo {
             "Could not find framework dist package [" + frameworkArtifact + "]");
       } else {
         distPackageParts = defaultFrameworkDistPackage.split("\\:");
-        getLog().info(
-            "Dist package definition '" + frameworkArtifact + "'  was resolved to be '"
-                + defaultFrameworkDistPackage + "'");
+        getLog().info("Dist package definition '" + frameworkArtifact + "'  was resolved to be '"
+            + defaultFrameworkDistPackage + "'");
       }
     }
     if (distPackageParts.length != MAVEN_ARTIFACT_ID_PART_NUM) {
@@ -746,8 +748,8 @@ public class DistMojo extends AbstractEOSGiMojo {
     List<DistributableArtifact> bundlesInClosureToStart = new ArrayList<>();
     for (RuntimeBundleInfo runtimeBundleInfo : dependencyClosure) {
       if (runtimeBundleInfo.state == Bundle.RESOLVED) {
-        DistributableArtifact bundleData = shouldBeActiveBundleByUniqueLabel.get(
-            runtimeBundleInfo.location);
+        DistributableArtifact bundleData =
+            shouldBeActiveBundleByUniqueLabel.get(runtimeBundleInfo.location);
         if (bundleData != null) {
           bundlesInClosureToStart.add(bundleData);
         }
@@ -807,13 +809,16 @@ public class DistMojo extends AbstractEOSGiMojo {
       final RemoteOSGiManager remoteOSGiManager) {
 
     Map<String, DistributableArtifact> justStartedBundleByUniqueLabel =
-        createJustStartedBundleByUniqueLabelMap(justStartedBundles);
+        createJustStartedBundleByUniqueLabelMap(
+            justStartedBundles);
 
     Set<DistributableArtifact> activeJustStartedBundleSet =
-        resolveJustStartedActiveBundles(remoteOSGiManager, justStartedBundleByUniqueLabel);
+        resolveJustStartedActiveBundles(remoteOSGiManager,
+            justStartedBundleByUniqueLabel);
 
     Map<String, DistributableArtifact> shouldBeActiveBundleByUniqueLabel =
-        createStartActionBundleByUniqueLabelMap(distributedArtifacts);
+        createStartActionBundleByUniqueLabelMap(
+            distributedArtifacts);
 
     RuntimeBundleInfo[] dependencyClosure = remoteOSGiManager
         .getDependencyClosure(toBundleLocations(activeJustStartedBundleSet));
