@@ -152,7 +152,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
       gav.append(':').append(classifier);
     }
 
-    gav.append(artifact.getVersion());
+    gav.append(':').append(artifact.getVersion());
 
     eosgiArtifact.setCoordinates(gav.toString());
     return eosgiArtifact;

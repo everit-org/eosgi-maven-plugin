@@ -123,27 +123,29 @@ public class BundleExecutionPlan {
       if (newBundleAction != null
           && !EOSGiConstants.BUNDLE_ACTION_NONE.equalsIgnoreCase(newBundleAction)) {
         String bundleLocation = newArtifact.properties.get("bundle.location");
-        DistributableArtifact existingArtifact =
-            existingArtifactsByBundleLocation.remove(bundleLocation);
-        if (existingArtifact == null) {
-          if (tmp.installBundles.containsKey(bundleLocation)) {
-            throw new MojoExecutionException(
-                "Bundle location '" + bundleLocation + "' exists twice in environment '"
-                    + environmentId + "'");
-          }
-          tmp.installBundles.put(bundleLocation, newArtifact);
-        } else {
-          if (bundleContentChanged(newArtifact, environmentRootFolder, artifactResolver)) {
-            tmp.updateBundles.add(newArtifact);
-          } else {
-            if (bundleBecameStarted(existingArtifact.properties, newArtifact.properties)) {
-              tmp.startStoppedBundles.add(newArtifact);
-            } else if (bundleBecameStopped(existingArtifact.properties, newArtifact.properties)) {
-              tmp.stopStartedBundles.add(newArtifact);
+        if (bundleLocation != null) {
+          DistributableArtifact existingArtifact =
+              existingArtifactsByBundleLocation.remove(bundleLocation);
+          if (existingArtifact == null) {
+            if (tmp.installBundles.containsKey(bundleLocation)) {
+              throw new MojoExecutionException(
+                  "Bundle location '" + bundleLocation + "' exists twice in environment '"
+                      + environmentId + "'");
             }
-          }
+            tmp.installBundles.put(bundleLocation, newArtifact);
+          } else {
+            if (bundleContentChanged(newArtifact, environmentRootFolder, artifactResolver)) {
+              tmp.updateBundles.add(newArtifact);
+            } else {
+              if (bundleBecameStarted(existingArtifact.properties, newArtifact.properties)) {
+                tmp.startStoppedBundles.add(newArtifact);
+              } else if (bundleBecameStopped(existingArtifact.properties, newArtifact.properties)) {
+                tmp.stopStartedBundles.add(newArtifact);
+              }
+            }
 
-          fillStartLevelChangeWhereNecessary(newArtifact, existingArtifact, tmp);
+            fillStartLevelChangeWhereNecessary(newArtifact, existingArtifact, tmp);
+          }
         }
       }
     }

@@ -385,7 +385,8 @@ public class DistMojo extends AbstractEOSGiMojo {
         lowerBundleStartLevelWhereNecessary(bundleExecutionPlan, currentInitialBundleStartLevel,
             newInitialBundleStartLevel, remoteOSGiManager);
 
-        parseParsables(environmentRootFolder, distributedEnvironment, fileManager);
+        parseParsables(environmentRootFolder, distributedEnvironment, newDistributedArtifacts,
+            fileManager);
 
         startBundlesWhereNecessary(bundleExecutionPlan, newDistributedArtifacts, remoteOSGiManager);
 
@@ -487,13 +488,18 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   /**
    * Parses and processes the files that are templates.
+   *
+   * @param distributedArtifacts
+   *          The artifacts that are newly distributed to the system.
    */
   private void parseParsables(final File distFolderFile,
       final EnvironmentType distributedEnvironment,
+      final Collection<DistributableArtifact> distributedArtifacts,
       final FileManager fileManager) throws MojoExecutionException {
 
     Map<String, Object> vars = new HashMap<>();
     vars.put("distributedEnvironment", distributedEnvironment);
+    vars.put("distributedArtifacts", distributedArtifacts);
     vars.put(VAR_DIST_UTIL, new DistUtil());
 
     ParsablesType parsables = distributedEnvironment.getParsables();
