@@ -47,6 +47,9 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
+import org.everit.osgi.dev.dist.util.DistConstants;
+import org.everit.osgi.dev.dist.util.attach.EnvironmentRuntimeInfo;
+import org.everit.osgi.dev.dist.util.attach.VirtualMachineManager;
 import org.everit.osgi.dev.dist.util.configuration.DistributedEnvironmentConfigurationProvider;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactsType;
@@ -65,7 +68,6 @@ import org.everit.osgi.dev.maven.upgrade.NoopRemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RuntimeBundleInfo;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
-import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManagerProvider;
 import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.everit.osgi.dev.maven.util.BundleExecutionPlan;
 import org.everit.osgi.dev.maven.util.DistUtil;
@@ -87,11 +89,6 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private static final int MAVEN_ARTIFACT_ID_PART_NUM = 3;
 
-  /**
-   * Additional system property that is applied to each environment automatically.
-   */
-  public static final String SYSPROP_ENVIRONMENT_ID = "org.everit.osgi.dev.environmentId";
-
   private static final String VAR_DIST_UTIL = "distUtil";
 
   protected DistributedEnvironmentConfigurationProvider distEnvConfigProvider =
@@ -106,8 +103,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   protected String distFolder;
 
   protected List<DistributedEnvironmenData> distributedEnvironmentDataCollection;
-
-  private JMXOSGiManagerProvider jMXOSGiManagerProvider;
 
   @Parameter(defaultValue = "${localRepository}")
   protected ArtifactRepository localRepository;
@@ -133,6 +128,8 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.sourceDistFolder", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistFolder;
 
+  private VirtualMachineManager virtualMachineManager;
+
   private void checkAndAddReservedLaunchConfigurationProperties(
       final EnvironmentConfiguration environment,
       final LaunchConfig launchConfig) throws MojoFailureException {
@@ -145,8 +142,8 @@ public class DistMojo extends AbstractEOSGiMojo {
       }
     }
 
-    launchConfig.getVmArguments().put(SYSPROP_ENVIRONMENT_ID,
-        "-D" + SYSPROP_ENVIRONMENT_ID + "=" + environment.getId());
+    launchConfig.getVmArguments().put(DistConstants.SYSPROP_ENVIRONMENT_ID,
+        "-D" + DistConstants.SYSPROP_ENVIRONMENT_ID + "=" + environment.getId());
   }
 
   private void checkReservedSystemPropertyInVmArguments(final Map<String, String> vmArguments)
@@ -155,18 +152,18 @@ public class DistMojo extends AbstractEOSGiMojo {
       return;
     }
 
-    String environmentIdSyspropPrefix = "-D" + SYSPROP_ENVIRONMENT_ID + "=";
+    String environmentIdSyspropPrefix = "-D" + DistConstants.SYSPROP_ENVIRONMENT_ID + "=";
     Set<Entry<String, String>> entrySet = vmArguments.entrySet();
 
     for (Entry<String, String> entry : entrySet) {
-      if (SYSPROP_ENVIRONMENT_ID.equals(entry.getKey())) {
-        throw new MojoFailureException("'" + SYSPROP_ENVIRONMENT_ID
+      if (DistConstants.SYSPROP_ENVIRONMENT_ID.equals(entry.getKey())) {
+        throw new MojoFailureException("'" + DistConstants.SYSPROP_ENVIRONMENT_ID
             + "' cannot be specified as the key of a VM argument manually"
             + " as it is a reserved word.");
       }
       String value = entry.getValue();
       if (value != null && value.trim().startsWith(environmentIdSyspropPrefix)) {
-        throw new MojoFailureException("'" + SYSPROP_ENVIRONMENT_ID
+        throw new MojoFailureException("'" + DistConstants.SYSPROP_ENVIRONMENT_ID
             + "' cannot be specified as a system property manually as it is a reserved word.");
       }
     }
@@ -224,30 +221,60 @@ public class DistMojo extends AbstractEOSGiMojo {
       final EnvironmentType existingDistributedEnvironment)
       throws MojoExecutionException {
 
-    String jmxLocalURL =
-        jMXOSGiManagerProvider.getJmxURLForEnvironment(environmentId, distFolderFile);
+    Set<EnvironmentRuntimeInfo> runtimeInformations =
+        virtualMachineManager.getRuntimeInformations(environmentId, distFolderFile);
 
-    if (jmxLocalURL == null) {
+    if (runtimeInformations.isEmpty()) {
       return new NoopRemoteOSGiManager();
     }
+
+    if (runtimeInformations.size() > 1) {
+
+      StringBuilder sb = new StringBuilder();
+      for (EnvironmentRuntimeInfo environmentRuntimeInfo : runtimeInformations) {
+        if (sb.length() > 0) {
+          sb.append(',');
+        }
+        sb.append(environmentRuntimeInfo.virtualMachineId);
+      }
+
+      throw new MojoExecutionException(
+          "Found multiple running JVMs that belong to the environment."
+              + " Live upgrade is supported only on one running JVM:'" + environmentId
+              + "', virtualMachines = '" + sb.toString() + "'");
+    }
+
+    EnvironmentRuntimeInfo runtimeInfo = runtimeInformations.iterator().next();
 
     if (existingDistributedEnvironment == null) {
       throw new MojoExecutionException(
           "Found JVM that belongs to Environment, but there is no distributed environment in the"
               + " file system. Try stopping the Environment JVM before runnign the distribution"
-              + " upgrade.");
+              + " upgrade: [environmentId = '" + environmentId + "', virtualMachines = '"
+              + runtimeInfo.virtualMachineId + "'");
     }
 
     if (isBundleExecutionPlanEmpty(bundleExecutionPlan)) {
       return new NoopRemoteOSGiManager();
     }
 
+    String jmxServiceURL = runtimeInfo.jmxServiceURL;
+
+    if (jmxServiceURL == null) {
+      throw new MojoExecutionException("Bundle changes cannot be applied on the running OSGi"
+          + " container as JMX service URL is not available: [environmentId = '" + environmentId
+          + "', virtualMachines = '" + runtimeInfo.virtualMachineId + "'");
+    }
+
     try {
-      return new JMXOSGiManager(jmxLocalURL, getLog());
+      return new JMXOSGiManager(jmxServiceURL, getLog());
     } catch (IOException | InstanceNotFoundException | IntrospectionException
         | ReflectionException e) {
 
-      throw new RuntimeException(e);
+      throw new MojoExecutionException(
+          "Could not connect to JVM that belongs to environment:  [environmentId = '"
+              + environmentId + "', virtualMachines = '" + runtimeInfo.virtualMachineId + "'",
+          e);
     }
 
   }
@@ -281,7 +308,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
 
-    jMXOSGiManagerProvider = new JMXOSGiManagerProvider(getLog());
+    virtualMachineManager = new VirtualMachineManager();
 
     File globalDistFolderFile = new File(distFolder);
 
