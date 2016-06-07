@@ -48,8 +48,8 @@ import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.everit.osgi.dev.dist.util.DistConstants;
+import org.everit.osgi.dev.dist.util.attach.EOSGiVMManager;
 import org.everit.osgi.dev.dist.util.attach.EnvironmentRuntimeInfo;
-import org.everit.osgi.dev.dist.util.attach.VirtualMachineManager;
 import org.everit.osgi.dev.dist.util.configuration.DistributedEnvironmentConfigurationProvider;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactsType;
@@ -128,7 +128,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.sourceDistFolder", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistFolder;
 
-  private VirtualMachineManager virtualMachineManager;
+  private EOSGiVMManager virtualMachineManager;
 
   private void checkAndAddReservedLaunchConfigurationProperties(
       final EnvironmentConfiguration environment,
@@ -308,7 +308,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
 
-    virtualMachineManager = new VirtualMachineManager();
+    virtualMachineManager = new EOSGiVMManager();
 
     File globalDistFolderFile = new File(distFolder);
 
