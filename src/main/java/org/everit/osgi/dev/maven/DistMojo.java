@@ -89,7 +89,15 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   private static final int MAVEN_ARTIFACT_ID_PART_NUM = 3;
 
+  private static final Set<String> RESERVED_SYSPROPS;
+
   private static final String VAR_DIST_UTIL = "distUtil";
+
+  static {
+    RESERVED_SYSPROPS = new HashSet<>();
+    RESERVED_SYSPROPS.add(DistConstants.SYSPROP_ENVIRONMENT_ID);
+    RESERVED_SYSPROPS.add(DistConstants.SYSPROP_LAUNCH_UNIQUE_ID);
+  }
 
   protected DistributedEnvironmentConfigurationProvider distEnvConfigProvider =
       new DistributedEnvironmentConfigurationProvider();
@@ -152,19 +160,25 @@ public class DistMojo extends AbstractEOSGiMojo {
       return;
     }
 
-    String environmentIdSyspropPrefix = "-D" + DistConstants.SYSPROP_ENVIRONMENT_ID + "=";
-    Set<Entry<String, String>> entrySet = vmArguments.entrySet();
-
-    for (Entry<String, String> entry : entrySet) {
-      if (DistConstants.SYSPROP_ENVIRONMENT_ID.equals(entry.getKey())) {
-        throw new MojoFailureException("'" + DistConstants.SYSPROP_ENVIRONMENT_ID
+    for (Entry<String, String> entry : vmArguments.entrySet()) {
+      if (RESERVED_SYSPROPS.contains(entry.getKey())) {
+        throw new MojoFailureException("'" + entry.getKey()
             + "' cannot be specified as the key of a VM argument manually"
             + " as it is a reserved word.");
       }
       String value = entry.getValue();
-      if (value != null && value.trim().startsWith(environmentIdSyspropPrefix)) {
-        throw new MojoFailureException("'" + DistConstants.SYSPROP_ENVIRONMENT_ID
-            + "' cannot be specified as a system property manually as it is a reserved word.");
+      if (value != null) {
+        if (value.startsWith("-D")) {
+          value = value.substring(2);
+        }
+        int indexOfEqual = value.indexOf('=');
+        if (indexOfEqual >= 0) {
+          value = value.substring(0, indexOfEqual);
+        }
+        if (RESERVED_SYSPROPS.contains(value)) {
+          throw new MojoFailureException("'" + value
+              + "' cannot be specified as a system property manually as it is a reserved word.");
+        }
       }
     }
   }

@@ -43,6 +43,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.everit.osgi.dev.dist.util.DistConstants;
 import org.everit.osgi.dev.dist.util.configuration.LaunchConfigurationDTO;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
 import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
@@ -166,7 +167,7 @@ public class IntegrationTestMojo extends DistMojo {
   /**
    * Skipping the integration tests, only execute the dist goal.
    */
-  @Parameter(property = "eosgi.distOnly", defaultValue = "false")
+  @Parameter(property = DistConstants.PLUGIN_PROPERTY_DIST_ONLY, defaultValue = "false")
   protected boolean distOnly = false;
 
   /**
