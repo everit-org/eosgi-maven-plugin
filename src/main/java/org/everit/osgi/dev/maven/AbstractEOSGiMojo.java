@@ -43,6 +43,7 @@ import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
+import org.everit.osgi.dev.dist.util.DistConstants;
 import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingService;
 import org.everit.osgi.dev.maven.analytics.GoogleAnalyticsTrackingServiceImpl;
 import org.everit.osgi.dev.maven.configuration.EOSGiArtifact;
@@ -57,8 +58,6 @@ import org.osgi.framework.Constants;
  * Mojos that extend this class can use the environment information defined for the plugin.
  */
 public abstract class AbstractEOSGiMojo extends AbstractMojo {
-
-  private static final String DEFAULT_ENVIRONMENT = "equinox";
 
   /**
    * The name of the referer that means who execute goal (example: eosgi-maven-plugin or
@@ -162,7 +161,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Appends the artifacts of the project to the distributable artifact map.
    */
   protected Map<String, DistributableArtifact> createDistributableArtifactsByGAVFromProjectDeps() {
-    List<Artifact> availableArtifacts = new ArrayList<Artifact>(project.getArtifacts());
+    List<Artifact> availableArtifacts = new ArrayList<>(project.getArtifacts());
 
     Map<String, DistributableArtifact> distributableArtifacts = new HashMap<>();
 
@@ -267,12 +266,12 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    */
   protected EnvironmentConfiguration getDefaultEnvironment() {
 
-    getLog().info("There is no environment specified in the project. "
-        + "Creating " + DEFAULT_ENVIRONMENT + " environment with default settings");
+    getLog().info("There is no environment specified in the project. Creating "
+        + DistConstants.DEFAULT_ENVIRONMENT_ID + " environment with default settings");
 
     EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
-    defaultEnvironment.setId(DEFAULT_ENVIRONMENT);
-    defaultEnvironment.setFramework(DEFAULT_ENVIRONMENT);
+    defaultEnvironment.setId(DistConstants.DEFAULT_ENVIRONMENT_ID);
+    defaultEnvironment.setFramework(DistConstants.DEFAULT_ENVIRONMENT_ID);
     return defaultEnvironment;
   }
 
@@ -308,7 +307,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
       EnvironmentConfiguration[] tmpEnvironments = getEnvironments();
 
-      List<EnvironmentConfiguration> result = new ArrayList<EnvironmentConfiguration>();
+      List<EnvironmentConfiguration> result = new ArrayList<>();
       for (EnvironmentConfiguration tmpEnvironment : tmpEnvironments) {
         boolean found = false;
         int j = 0;

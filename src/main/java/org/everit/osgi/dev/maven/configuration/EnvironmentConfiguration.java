@@ -19,13 +19,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.maven.plugins.annotations.Parameter;
+import org.everit.osgi.dev.dist.util.DistConstants;
 
 /**
  * The OSGI environment that is specified in the pom.xml for the plugin.
  */
 public class EnvironmentConfiguration {
-
-  private static final int DEFAULT_SHUTDOWN_TIMEOUT = 30000;
 
   private static final int DEFAULT_TEST_RUN_TIMEOUT = 180000;
 
@@ -82,8 +81,8 @@ public class EnvironmentConfiguration {
    * The amount of time in milliseconds until the plugin waits for the environment to stop after a
    * CTRL+C was sent. Default value is half a minute.
    */
-  @Parameter(defaultValue = "30000")
-  private final int shutdownTimeout = DEFAULT_SHUTDOWN_TIMEOUT;
+  @Parameter(defaultValue = "" + DistConstants.DEFAULT_SHUTDOWN_TIMEOUT)
+  private final int shutdownTimeout = DistConstants.DEFAULT_SHUTDOWN_TIMEOUT;
 
   /**
    * The timeout in milliseconds after the Tests should be finished for sure. The environment will
