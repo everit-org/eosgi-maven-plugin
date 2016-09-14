@@ -16,6 +16,7 @@
 package org.everit.osgi.dev.maven.upgrade;
 
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * An implementation that does nothing.
@@ -28,7 +29,7 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public RuntimeBundleInfo[] getDependencyClosure(final Collection<String> bundleLocations) {
+  public RuntimeBundleInfo[] getDependencyClosure(final Collection<BundleSNV> bundleSNVs) {
     return new RuntimeBundleInfo[0];
   }
 
@@ -48,9 +49,8 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void installBundles(final Collection<String> bundleLocations) {
+  public void installBundles(final Map<BundleSNV, String> bundleSNVAndLocationMap) {
     // Do nothing
-
   }
 
   @Override
@@ -64,7 +64,7 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void setBundleStartLevel(final String bundleLocation, final int newlevel) {
+  public void setBundleStartLevel(final BundleSNV bundleSNV, final int newlevel) {
     // Do nothing
   }
 
@@ -79,22 +79,22 @@ public class NoopRemoteOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void startBundles(final Collection<String> bundleLocations) {
+  public void startBundles(final Collection<BundleSNV> bundleSNVs) {
     // Do nothing
   }
 
   @Override
-  public void stopBundles(final Collection<String> bundleLocations) {
+  public void stopBundles(final Collection<BundleSNV> bundleSNVs) {
     // Do nothing
   }
 
   @Override
-  public void uninstallBundles(final Collection<String> bundleLocations) {
+  public void uninstallBundles(final Collection<BundleSNV> bundleSNVs) {
     // Do nothing
   }
 
   @Override
-  public void updateBundles(final Collection<String> bundleLocations) {
+  public void updateBundles(final Collection<BundleSNV> bundleSNVs) {
     // Do nothing
   }
 

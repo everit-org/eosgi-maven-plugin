@@ -17,6 +17,7 @@ package org.everit.osgi.dev.maven.upgrade;
 
 import java.io.Closeable;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * Interface to manage an OSGi Framework remotely.
@@ -26,7 +27,7 @@ public interface RemoteOSGiManager extends Closeable {
   @Override
   void close();
 
-  RuntimeBundleInfo[] getDependencyClosure(Collection<String> bundleLocations);
+  RuntimeBundleInfo[] getDependencyClosure(Collection<BundleSNV> bundleSNVs);
 
   int getFrameworkStartLevel();
 
@@ -34,23 +35,23 @@ public interface RemoteOSGiManager extends Closeable {
 
   RuntimeBundleInfo[] getRuntimeBundleInfoArray();
 
-  void installBundles(Collection<String> bundleLocations);
+  void installBundles(Map<BundleSNV, String> bundleSNVAndLocationMap);
 
   void refresh();
 
   void resolveAll();
 
-  void setBundleStartLevel(String bundleLocation, int newlevel);
+  void setBundleStartLevel(BundleSNV bundleSNV, int newlevel);
 
   void setFrameworkStartLevel(int startLevel);
 
   void setInitialBundleStartLevel(int startLevel);
 
-  void startBundles(Collection<String> bundleLocations);
+  void startBundles(Collection<BundleSNV> bundleSNVs);
 
-  void stopBundles(Collection<String> bundleLocations);
+  void stopBundles(Collection<BundleSNV> bundleSNVs);
 
-  void uninstallBundles(Collection<String> bundleLocations);
+  void uninstallBundles(Collection<BundleSNV> bundleSNVs);
 
-  void updateBundles(Collection<String> bundleLocations);
+  void updateBundles(Collection<BundleSNV> bundleSNVs);
 }

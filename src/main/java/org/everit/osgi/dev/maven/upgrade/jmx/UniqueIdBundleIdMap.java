@@ -23,21 +23,17 @@ import java.util.Map;
  * unique string for this mapping, but it must be unique. E.g.: A concatenation of symbolic name and
  * version.
  */
-public class UniqueIdBundleIdMap {
+public class UniqueIdBundleIdMap<I> {
 
-  private final Map<String, Long> bundleIdByUniqueId = new HashMap<>();
+  private final Map<I, Long> bundleIdByUniqueId = new HashMap<>();
 
-  private final Map<Long, String> uniqueIdByBundleId = new HashMap<>();
+  private final Map<Long, I> uniqueIdByBundleId = new HashMap<>();
 
-  public Long getBundleId(final String uniqueId) {
+  public Long getBundleId(final I uniqueId) {
     return bundleIdByUniqueId.get(uniqueId);
   }
 
-  public String getUniqueId(final Long bundleId) {
-    return uniqueIdByBundleId.get(bundleId);
-  }
-
-  public void put(final String uniqueId, final Long bundleId) {
+  public void put(final I uniqueId, final Long bundleId) {
     bundleIdByUniqueId.put(uniqueId, bundleId);
     uniqueIdByBundleId.put(bundleId, uniqueId);
   }
@@ -48,10 +44,10 @@ public class UniqueIdBundleIdMap {
    * @param uniqueId
    *          The unique id of the map.
    */
-  public void removeByUniqueId(final String uniqueId) {
-    Long bundleId = bundleIdByUniqueId.remove(uniqueId);
-    if (bundleId != null) {
-      uniqueIdByBundleId.remove(bundleId);
+  public void removeByBundleId(final Long bundleId) {
+    I uniqueId = uniqueIdByBundleId.remove(bundleId);
+    if (uniqueId != null) {
+      bundleIdByUniqueId.remove(uniqueId);
     }
   }
 }

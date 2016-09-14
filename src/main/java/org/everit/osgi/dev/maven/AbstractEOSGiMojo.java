@@ -382,7 +382,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
         Map<String, String> properties = distributableArtifact.properties;
         properties.put("bundle.symbolicName", symbolicName);
-        properties.put("bundle.version", symbolicName);
+        properties.put("bundle.version", version);
         putIfNotNull(properties, "bundle.fragmentHost", fragmentHost);
         putIfNotNull(properties, "bundle.importPackage", importPackage);
         putIfNotNull(properties, "bundle.exportPackage", exportPackage);

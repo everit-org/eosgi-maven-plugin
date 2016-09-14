@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.management.InstanceNotFoundException;
@@ -37,6 +39,7 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
 import org.apache.maven.plugin.logging.Log;
+import org.everit.osgi.dev.maven.upgrade.BundleSNV;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RuntimeBundleInfo;
 import org.osgi.framework.Bundle;
@@ -61,7 +64,7 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     }
   }
 
-  private final UniqueIdBundleIdMap bundleIdByLocation;
+  private final UniqueIdBundleIdMap<BundleSNV> bundleIdByLocation;
 
   private final BundleStateMBean bundleStateMBean;
 
@@ -171,9 +174,9 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     return result;
   }
 
-  private UniqueIdBundleIdMap getBundleIdByLocationMap() {
+  private UniqueIdBundleIdMap<BundleSNV> getBundleIdByLocationMap() {
 
-    UniqueIdBundleIdMap result = new UniqueIdBundleIdMap();
+    UniqueIdBundleIdMap<BundleSNV> result = new UniqueIdBundleIdMap<>();
 
     TabularData tabularData;
     try {
@@ -187,18 +190,19 @@ public class JMXOSGiManager implements RemoteOSGiManager {
 
       CompositeData compositeData = (CompositeData) value;
 
-      String bundleLocation = (String) compositeData.get(BundleStateMBean.LOCATION);
+      String symbolicName = (String) compositeData.get(BundleStateMBean.SYMBOLIC_NAME);
+      String version = (String) compositeData.get(BundleStateMBean.VERSION);
       Long bundleIdentifier = (Long) compositeData.get(BundleStateMBean.IDENTIFIER);
 
-      result.put(bundleLocation, bundleIdentifier);
+      result.put(new BundleSNV(symbolicName, version), bundleIdentifier);
     }
 
     return result;
   }
 
   @Override
-  public RuntimeBundleInfo[] getDependencyClosure(final Collection<String> bundleLocations) {
-    long[] bundleIds = resolveBundleIdentifiers(bundleLocations, "getDependencyClosure");
+  public RuntimeBundleInfo[] getDependencyClosure(final Collection<BundleSNV> bundleSNVs) {
+    long[] bundleIds = resolveBundleIdentifiers(bundleSNVs, "getDependencyClosure");
 
     try {
       long[] dependencyClosure = frameworkMBean.getDependencyClosure(bundleIds);
@@ -266,16 +270,16 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void installBundles(final Collection<String> bundleLocations) {
+  public void installBundles(final Map<BundleSNV, String> bundleSNVLocationMap) {
 
-    if ((bundleLocations == null) || (bundleLocations.size() == 0)) {
+    if ((bundleSNVLocationMap == null) || (bundleSNVLocationMap.size() == 0)) {
       return;
     }
 
     try {
-      for (String bundleLocation : bundleLocations) {
-        long bundleIdentifier = frameworkMBean.installBundle(bundleLocation);
-        bundleIdByLocation.put(bundleLocation, bundleIdentifier);
+      for (Entry<BundleSNV, String> bundleSNVAndLocation : bundleSNVLocationMap.entrySet()) {
+        long bundleIdentifier = frameworkMBean.installBundle(bundleSNVAndLocation.getValue());
+        bundleIdByLocation.put(bundleSNVAndLocation.getKey(), bundleIdentifier);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -300,34 +304,34 @@ public class JMXOSGiManager implements RemoteOSGiManager {
     }
   }
 
-  private long[] resolveBundleIdentifiers(final Collection<String> bundleLocations,
+  private long[] resolveBundleIdentifiers(final Collection<BundleSNV> bundleSNVs,
       final String actionNameForMessages) {
-    long[] bundleIdentifierArray = new long[bundleLocations.size()];
+    long[] bundleIdentifierArray = new long[bundleSNVs.size()];
     int i = 0;
 
-    for (String bundleLocation : bundleLocations) {
+    for (BundleSNV bundleSNV : bundleSNVs) {
       Long bundleIdentifier =
-          bundleIdByLocation.getBundleId(bundleLocation);
+          bundleIdByLocation.getBundleId(bundleSNV);
       if (bundleIdentifier != null) {
         bundleIdentifierArray[i] = bundleIdentifier;
         i++;
       } else {
         log.warn("'" + actionNameForMessages
             + "' action cannot be executed on bundle as it is not found on the container: "
-            + bundleLocation);
+            + bundleSNV);
       }
     }
 
-    return (i == bundleLocations.size()) ? bundleIdentifierArray
+    return (i == bundleSNVs.size()) ? bundleIdentifierArray
         : Arrays.copyOf(bundleIdentifierArray, i);
   }
 
   @Override
-  public void setBundleStartLevel(final String bundleLocation, final int newlevel) {
-    Long bundleIdentifier = bundleIdByLocation.getBundleId(bundleLocation);
+  public void setBundleStartLevel(final BundleSNV bundleSNV, final int newlevel) {
+    Long bundleIdentifier = bundleIdByLocation.getBundleId(bundleSNV);
     if (bundleIdentifier == null) {
       log.warn("Cannot set bundle start level as it is not found in the container: "
-          + bundleLocation);
+          + bundleSNV);
     } else {
       try {
         frameworkMBean.setBundleStartLevel(bundleIdentifier, newlevel);
@@ -359,8 +363,8 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void startBundles(final Collection<String> bundleLocations) {
-    long[] bundleIdentifiers = resolveBundleIdentifiers(bundleLocations, "start");
+  public void startBundles(final Collection<BundleSNV> bundleSNVs) {
+    long[] bundleIdentifiers = resolveBundleIdentifiers(bundleSNVs, "start");
     if (bundleIdentifiers.length > 0) {
       try {
         frameworkMBean.startBundles(bundleIdentifiers);
@@ -371,8 +375,8 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void stopBundles(final Collection<String> bundleLocations) {
-    long[] bundleIdentifiers = resolveBundleIdentifiers(bundleLocations, "stop");
+  public void stopBundles(final Collection<BundleSNV> bundleSNVs) {
+    long[] bundleIdentifiers = resolveBundleIdentifiers(bundleSNVs, "stop");
     if (bundleIdentifiers.length > 0) {
       try {
         frameworkMBean.stopBundles(bundleIdentifiers);
@@ -383,20 +387,20 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void uninstallBundles(final Collection<String> bundleLocations) {
-    if ((bundleLocations == null) || (bundleLocations.size() == 0)) {
+  public void uninstallBundles(final Collection<BundleSNV> bundleSNVs) {
+    if ((bundleSNVs == null) || (bundleSNVs.size() == 0)) {
       return;
     }
 
     try {
-      for (String bundleLocation : bundleLocations) {
-        Long bundleIdentifier = bundleIdByLocation.getBundleId(bundleLocation);
+      for (BundleSNV bundleSNV : bundleSNVs) {
+        Long bundleIdentifier = bundleIdByLocation.getBundleId(bundleSNV);
         if (bundleIdentifier == null) {
           throw new RuntimeException("Could not uninstall bundle as it does not exist: "
-              + bundleLocation);
+              + bundleSNV);
         }
         frameworkMBean.uninstallBundle(bundleIdentifier);
-        bundleIdByLocation.removeByUniqueId(bundleLocation);
+        bundleIdByLocation.removeByBundleId(bundleIdentifier);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -404,8 +408,8 @@ public class JMXOSGiManager implements RemoteOSGiManager {
   }
 
   @Override
-  public void updateBundles(final Collection<String> bundleLocations) {
-    long[] bundleIdentifiers = resolveBundleIdentifiers(bundleLocations, "stop");
+  public void updateBundles(final Collection<BundleSNV> bundleSNVs) {
+    long[] bundleIdentifiers = resolveBundleIdentifiers(bundleSNVs, "stop");
     if (bundleIdentifiers.length > 0) {
       try {
         frameworkMBean.updateBundles(bundleIdentifiers);
