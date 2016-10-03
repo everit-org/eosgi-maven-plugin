@@ -81,7 +81,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * Comma separated list of the id of the environments that should be processed. Default is * that
    * means all environments.
    */
-  @Parameter(name = "environmentId", property = "eosgi.environmentId", defaultValue = "*")
+  @Parameter(name = "environmentId", property = DistConstants.PLUGIN_PROPERTY_ENVIRONMENT_ID,
+      defaultValue = "*")
   protected String environmentIdsToProcess = "*";
 
   /**
