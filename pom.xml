@@ -231,7 +231,7 @@
     <dependency>
       <groupId>org.everit.osgi.dev</groupId>
       <artifactId>org.everit.osgi.dev.dist.util</artifactId>
-      <version>4.0.0-201610022146</version>
+      <version>4.0.0-201610050026</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
