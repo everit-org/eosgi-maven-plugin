@@ -26,13 +26,6 @@ import org.apache.maven.plugins.annotations.Parameter;
 public abstract class AbstractLaunchConfig {
 
   /**
-   * The Jacoco code coverage generation settings. To see the possible settings see
-   * {@link JacocoConfiguration}.
-   */
-  @Parameter
-  private JacocoSettings jacoco;
-
-  /**
    * The program arguments that will be applied during starting the OSGI Container.
    */
   @Parameter
@@ -53,22 +46,10 @@ public abstract class AbstractLaunchConfig {
   /**
    * Constructor.
    */
-  AbstractLaunchConfig(final JacocoSettings jacoco, final Map<String, String> programArguments,
+  AbstractLaunchConfig(final Map<String, String> programArguments,
       final Map<String, String> vmArguments) {
-    super();
-    this.jacoco = jacoco;
     this.programArguments = programArguments;
     this.vmArguments = vmArguments;
-  }
-
-  /**
-   * Returns the configured jacoco settings as a map.
-   */
-  protected Map<String, String> getJacocoSettingsMap() {
-    if (jacoco == null) {
-      return null;
-    }
-    return jacoco.toMap();
   }
 
   public Map<String, String> getProgramArguments() {

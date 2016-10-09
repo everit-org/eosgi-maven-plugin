@@ -25,7 +25,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.everit.osgi.dev.dist.util.configuration.MergeUtil;
 import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
-import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 
 /**
  * The configuration of the launched OSGi Container.
@@ -42,10 +41,9 @@ public class LaunchConfig extends AbstractLaunchConfig {
     super();
   }
 
-  LaunchConfig(final JacocoSettings jacoco, final Map<String, String> programArguments,
-      final Map<String, String> vmArguments,
+  LaunchConfig(final Map<String, String> programArguments, final Map<String, String> vmArguments,
       final LaunchConfigOverride[] overrides) {
-    super(jacoco, programArguments, vmArguments);
+    super(programArguments, vmArguments);
     this.overrides = overrides;
   }
 
@@ -70,15 +68,12 @@ public class LaunchConfig extends AbstractLaunchConfig {
    * Merges the <code>this</code> {@link LaunchConfig} to the {@link LaunchConfig} of the
    * environment and returns a new {@link LaunchConfig}.
    */
-  public LaunchConfig createLaunchConfigForEnvironment(final LaunchConfig environmentLaunchConfig,
-      final String environmentId, final String reportFolder,
-      final AutoResolveArtifactHolder jacocoAgentArtifact)
+  public LaunchConfig createLaunchConfigForEnvironment(final LaunchConfig environmentLaunchConfig)
       throws MojoExecutionException {
 
     LaunchConfig rval = new LaunchConfig();
 
-    mergeDefaults(rval, environmentLaunchConfig,
-        environmentId, reportFolder, jacocoAgentArtifact);
+    mergeDefaults(rval, environmentLaunchConfig);
 
     checkForDuplicateOverrides(
         overrides);
@@ -99,8 +94,7 @@ public class LaunchConfig extends AbstractLaunchConfig {
         }
 
         LaunchConfigOverride mergedLaunchConfigOverride =
-            createMergedLaunchConfigOverride(o1, environmentLaunchConfig, o2,
-                environmentId, reportFolder, jacocoAgentArtifact, useBy);
+            createMergedLaunchConfigOverride(o1, environmentLaunchConfig, o2, useBy);
 
         rvalOverrides.add(mergedLaunchConfigOverride);
 
@@ -117,8 +111,7 @@ public class LaunchConfig extends AbstractLaunchConfig {
         if (!processedUseBys.contains(useBy)) {
 
           LaunchConfigOverride mergedLaunchConfigOverride =
-              createMergedLaunchConfigOverride(null, environmentLaunchConfig,
-                  o2, environmentId, reportFolder, jacocoAgentArtifact, useBy);
+              createMergedLaunchConfigOverride(null, environmentLaunchConfig, o2, useBy);
 
           rvalOverrides.add(mergedLaunchConfigOverride);
 
@@ -131,13 +124,9 @@ public class LaunchConfig extends AbstractLaunchConfig {
     return rval;
   }
 
-  private LaunchConfigOverride createMergedLaunchConfigOverride(
-      final LaunchConfigOverride o1,
-      final LaunchConfig d2,
-      final LaunchConfigOverride o2,
-      final String environmentId, final String reportFolder,
-      final AutoResolveArtifactHolder jacocoAgentArtifact,
-      final UseByType useBy) throws MojoExecutionException {
+  private LaunchConfigOverride createMergedLaunchConfigOverride(final LaunchConfigOverride o1,
+      final LaunchConfig d2, final LaunchConfigOverride o2, final UseByType useBy)
+      throws MojoExecutionException {
 
     LaunchConfigOverride mergedLaunchConfigOverride = new LaunchConfigOverride();
     mergedLaunchConfigOverride.useBy = useBy;
@@ -150,17 +139,6 @@ public class LaunchConfig extends AbstractLaunchConfig {
         getProgramArgumentsIfAvailable(o1),
         getProgramArgumentsIfAvailable(d2),
         getProgramArgumentsIfAvailable(o2));
-
-    Map<String, String> jacocoSettingsMap = MergeUtil.mergeDefaults(
-        o1 == null ? null : o1.getJacocoSettingsMap(),
-        o2 == null ? null : o2.getJacocoSettingsMap());
-
-    String jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
-        jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
-    if (jacocoAgentVmArgument != null) {
-      mergedLaunchConfigOverride.vmArguments.put(
-          JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
-    }
 
     return mergedLaunchConfigOverride;
   }
@@ -197,9 +175,8 @@ public class LaunchConfig extends AbstractLaunchConfig {
     return abstractLaunchConfig.vmArguments;
   }
 
-  private void mergeDefaults(final LaunchConfig rval, final LaunchConfig environmentLaunchConfig,
-      final String environmentId, final String reportFolder,
-      final AutoResolveArtifactHolder jacocoAgentArtifact) throws MojoExecutionException {
+  private void mergeDefaults(final LaunchConfig rval, final LaunchConfig environmentLaunchConfig)
+      throws MojoExecutionException {
 
     rval.vmArguments = MergeUtil.mergeDefaults(
         vmArguments,
@@ -207,18 +184,6 @@ public class LaunchConfig extends AbstractLaunchConfig {
     rval.programArguments = MergeUtil.mergeDefaults(
         programArguments,
         environmentLaunchConfig == null ? null : environmentLaunchConfig.programArguments);
-
-    Map<String, String> jacocoSettingsMap = MergeUtil.mergeDefaults(
-        getJacocoSettingsMap(),
-        environmentLaunchConfig == null ? null : environmentLaunchConfig.getJacocoSettingsMap());
-
-    String jacocoAgentVmArgument = JacocoSettings.getJacocoAgentVmArgument(
-        jacocoSettingsMap, environmentId, reportFolder, jacocoAgentArtifact);
-    if (jacocoAgentVmArgument != null) {
-      rval.vmArguments.put(
-          JacocoSettings.VM_ARG_JACOCO, jacocoAgentVmArgument);
-    }
-
   }
 
 }

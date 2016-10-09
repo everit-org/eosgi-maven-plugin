@@ -37,7 +37,6 @@ import javax.management.InstanceNotFoundException;
 import javax.management.IntrospectionException;
 import javax.management.ReflectionException;
 
-import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -72,7 +71,6 @@ import org.everit.osgi.dev.maven.upgrade.NoopRemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RuntimeBundleInfo;
 import org.everit.osgi.dev.maven.upgrade.jmx.JMXOSGiManager;
-import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.everit.osgi.dev.maven.util.BundleExecutionPlan;
 import org.everit.osgi.dev.maven.util.DistUtil;
 import org.everit.osgi.dev.maven.util.DistributableArtifact;
@@ -640,15 +638,10 @@ public class DistMojo extends AbstractEOSGiMojo {
       final EnvironmentConfiguration environment, final FileManager fileManager)
       throws MojoExecutionException, MojoFailureException {
 
-    AutoResolveArtifactHolder jacocoAgentArtifact = new AutoResolveArtifactHolder(
-        RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
-        artifactResolver);
-
     LaunchConfig launchConfig = environment.getLaunchConfig();
     if (this.launchConfig != null) {
       launchConfig =
-          this.launchConfig.createLaunchConfigForEnvironment(launchConfig, environment.getId(),
-              reportFolder, jacocoAgentArtifact);
+          this.launchConfig.createLaunchConfigForEnvironment(launchConfig);
     }
 
     if (launchConfig == null) {

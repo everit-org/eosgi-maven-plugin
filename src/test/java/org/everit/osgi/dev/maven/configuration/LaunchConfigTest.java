@@ -15,7 +15,6 @@
  */
 package org.everit.osgi.dev.maven.configuration;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -23,29 +22,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.maven.plugin.MojoExecutionException;
-import org.eclipse.aether.artifact.DefaultArtifact;
 import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
-import org.everit.osgi.dev.maven.util.AutoResolveArtifactHolder;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class LaunchConfigTest {
 
   private static final String ENVIRONMENT_ID = "test";
-
-  private static final AutoResolveArtifactHolder JACOCO_AGENT_ARTIFACT =
-      new AutoResolveArtifactHolder(new DefaultArtifact(
-          "org.jacoco", "org.jacoco.agent", null, "0.7.5.201505241946")
-              .setFile(new File("jacoco.jar") {
-
-                private static final long serialVersionUID = 1L;
-
-                @Override
-                public String getAbsolutePath() {
-                  return "jacoco.jar";
-                };
-              }),
-          null);
 
   private static final String REPORT_FOLDER = "reportFolder";
 
@@ -69,12 +52,7 @@ public class LaunchConfigTest {
       String expectedValue = e.getValue();
       String actualValue = actual.get(expectedKey);
 
-      if (expectedKey.equals(JacocoSettings.VM_ARG_JACOCO)) {
-        Assert.assertEquals(
-            cleanEnvironmentSpecValues(expectedValue),
-            cleanEnvironmentSpecValues(actualValue));
-
-      } else if (((expectedValue == null) && (actualValue != null))
+      if (((expectedValue == null) && (actualValue != null))
           || ((expectedValue != null) && !expectedValue.equals(actualValue))) {
         Assert.fail("key value pair does not match: " + "expected key [" + expectedKey
             + "] value [" + expectedValue + "] actual value [" + actualValue + "]\n"
@@ -96,13 +74,6 @@ public class LaunchConfigTest {
         actualClone.isEmpty());
   }
 
-  private String cleanEnvironmentSpecValues(final String jacocoAgent) {
-    if (jacocoAgent == null) {
-      return null;
-    }
-    return jacocoAgent.substring(0, jacocoAgent.indexOf("destfile"));
-  }
-
   private Map<String, String> convertKeyValuesPairsToMap(final String... keyValuePairs) {
 
     if ((keyValuePairs.length % 2) != 0) {
@@ -120,12 +91,6 @@ public class LaunchConfigTest {
 
   @Test
   public void testCreateLaunchConfigForEnvironment() throws MojoExecutionException {
-
-    JacocoSettings defaultJacoco = new JacocoSettings(
-        "defaultAddress", true, true, "defaultExcludes", "defaultIncludes", "defaultOutput", 1);
-    JacocoSettings ideJacoco = null;
-    JacocoSettings parsablesJacoco = new JacocoSettings(
-        null, true, true, null, null, "parsablesOutput", null);
 
     Map<String, String> defaultPA = new HashMap<>();
     defaultPA.put("pa1", "pa1v1default");
@@ -146,18 +111,11 @@ public class LaunchConfigTest {
     Map<String, String> parsablesVMA = new HashMap<>();
 
     LaunchConfigOverride[] defaultOverrides = new LaunchConfigOverride[] {
-        new LaunchConfigOverride(UseByType.IDE,
-            ideJacoco, idePA, ideVMA),
-        new LaunchConfigOverride(UseByType.PARSABLES,
-            parsablesJacoco, parsablesPA, parsablesVMA),
+        new LaunchConfigOverride(UseByType.IDE, idePA, ideVMA),
+        new LaunchConfigOverride(UseByType.PARSABLES, parsablesPA, parsablesVMA),
     };
 
-    LaunchConfig launchConfig =
-        new LaunchConfig(defaultJacoco, defaultPA, defaultVMA, defaultOverrides);
-
-    JacocoSettings envDefaultJacoco = null;
-    JacocoSettings envIdeJacoco = new JacocoSettings(
-        "envIdeAddress", false, false, null, "envIdeIncludes", "envIdeOutput", null);
+    LaunchConfig launchConfig = new LaunchConfig(defaultPA, defaultVMA, defaultOverrides);
 
     Map<String, String> envDefaultPA = new HashMap<>();
     envDefaultPA.put("pa3", "pa3v1default");
@@ -170,15 +128,14 @@ public class LaunchConfigTest {
     envIdeVMA.put("vma2", "vma2v1ide");
 
     LaunchConfigOverride[] envDefaultOverrides = new LaunchConfigOverride[] {
-        new LaunchConfigOverride(UseByType.IDE,
-            envIdeJacoco, envIdePA, envIdeVMA),
+        new LaunchConfigOverride(UseByType.IDE, envIdePA, envIdeVMA),
     };
 
-    LaunchConfig environmentLaunchConfig = new LaunchConfig(
-        envDefaultJacoco, envDefaultPA, envDefaultVMA, envDefaultOverrides);
+    LaunchConfig environmentLaunchConfig =
+        new LaunchConfig(envDefaultPA, envDefaultVMA, envDefaultOverrides);
 
-    LaunchConfig deDefaultLC = launchConfig.createLaunchConfigForEnvironment(
-        environmentLaunchConfig, ENVIRONMENT_ID, REPORT_FOLDER, JACOCO_AGENT_ARTIFACT);
+    LaunchConfig deDefaultLC =
+        launchConfig.createLaunchConfigForEnvironment(environmentLaunchConfig);
 
     Assert.assertNotNull(deDefaultLC);
 
@@ -187,12 +144,6 @@ public class LaunchConfigTest {
         "pa2", "pa2v1default",
         "pa3", "pa3v1default",
         "pa4", "pa4v1default");
-    assertMap(deDefaultLC.getVmArguments(),
-        JacocoSettings.VM_ARG_JACOCO, "-javaagent:jacoco.jar="
-            + "append=true,dumponexit=true,"
-            + "includes=defaultIncludes,excludes=defaultExcludes,"
-            + "output=defaultOutput,address=defaultAddress,port=1,"
-            + "destfile=IGNORED,sessionid=IGNORED");
     Assert.assertNotNull(deDefaultLC.getOverrides());
 
     Map<UseByType, LaunchConfigOverride> deDefaultLCOs = new HashMap<>();
@@ -211,12 +162,7 @@ public class LaunchConfigTest {
         "pa4", null);
     assertMap(deIdeLCO.getVmArguments(),
         "vma1", "vma1v1ide",
-        "vma2", "vma2v1ide",
-        JacocoSettings.VM_ARG_JACOCO, "-javaagent:jacoco.jar="
-            + "append=false,dumponexit=false,"
-            + "includes=envIdeIncludes,"
-            + "output=envIdeOutput,address=envIdeAddress,"
-            + "destfile=IGNORED,sessionid=IGNORED");
+        "vma2", "vma2v1ide");
 
     LaunchConfigOverride deParsablesLCO = deDefaultLCOs.get(UseByType.PARSABLES);
     Assert.assertNotNull(deParsablesLCO);
@@ -225,11 +171,6 @@ public class LaunchConfigTest {
     assertMap(deParsablesLCO.getProgramArguments(),
         "pa1", "",
         "pa2", "pa2v2parsables");
-    assertMap(deParsablesLCO.getVmArguments(),
-        JacocoSettings.VM_ARG_JACOCO, "-javaagent:jacoco.jar="
-            + "append=true,dumponexit=true,"
-            + "output=parsablesOutput,"
-            + "destfile=IGNORED,sessionid=IGNORED");
   }
 
   @Test
@@ -237,7 +178,7 @@ public class LaunchConfigTest {
     LaunchConfig launchConfig = new LaunchConfig();
     LaunchConfig environmentLaunchConfig = new LaunchConfig();
     LaunchConfig deDefaultLC = launchConfig.createLaunchConfigForEnvironment(
-        environmentLaunchConfig, ENVIRONMENT_ID, REPORT_FOLDER, JACOCO_AGENT_ARTIFACT);
+        environmentLaunchConfig);
 
     Assert.assertNotNull(deDefaultLC);
 
