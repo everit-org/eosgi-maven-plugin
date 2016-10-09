@@ -272,7 +272,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
     EnvironmentConfiguration defaultEnvironment = new EnvironmentConfiguration();
     defaultEnvironment.setId(DistConstants.DEFAULT_ENVIRONMENT_ID);
-    defaultEnvironment.setFramework(DistConstants.DEFAULT_ENVIRONMENT_ID);
+    defaultEnvironment.setFramework(DistConstants.DEFAULT_ENVIRONMENT_FRAMEWORK);
     return defaultEnvironment;
   }
 

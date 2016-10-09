@@ -18,6 +18,7 @@ package org.everit.osgi.dev.maven;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -147,8 +148,8 @@ public class DistMojo extends AbstractEOSGiMojo {
   private EOSGiVMManager virtualMachineManager;
 
   private void checkAndAddReservedLaunchConfigurationProperties(
-      final EnvironmentConfiguration environment,
-      final LaunchConfig launchConfig) throws MojoFailureException {
+      final EnvironmentConfiguration environment, final LaunchConfig launchConfig)
+      throws MojoFailureException {
 
     checkReservedSystemPropertyInVmArguments(launchConfig.getVmArguments());
     LaunchConfigOverride[] overrides = launchConfig.getOverrides();
@@ -362,20 +363,29 @@ public class DistMojo extends AbstractEOSGiMojo {
     File distPackageFile = distPackageArtifact.getFile();
     File environmentRootFolder = new File(globalDistFolderFile, environmentId);
 
+    File environmentConfigurationFile =
+        new File(environmentRootFolder, DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
+
     EnvironmentType existingDistributedEnvironment = distEnvConfigProvider
-        .getOverriddenDistributedEnvironmentConfig(environmentRootFolder, UseByType.PARSABLES);
+        .getOverriddenDistributedEnvironmentConfig(environmentConfigurationFile,
+            UseByType.PARSABLES);
 
     Collection<DistributableArtifact> existingDistributedArtifacts = processArtifacts(
         existingDistributedEnvironment);
 
-    fileManager.unpackZipFile(distPackageFile, environmentRootFolder);
-    copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
+    File environmentConfigurationTempFile =
+        unpackDistConfigFileToNewTempFile(distPackageFile, fileManager);
 
-    processConfigurationTemplate(environmentRootFolder, distributableArtifacts, environment,
-        fileManager);
+    processConfigurationTemplate(environmentConfigurationTempFile, distributableArtifacts,
+        environment, fileManager);
 
     EnvironmentType distributedEnvironment = distEnvConfigProvider
-        .getOverriddenDistributedEnvironmentConfig(environmentRootFolder, UseByType.PARSABLES);
+        .getOverriddenDistributedEnvironmentConfig(environmentConfigurationTempFile,
+            UseByType.PARSABLES);
+
+    fileManager.unpackZipFile(distPackageFile, environmentRootFolder,
+        DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
+    copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
 
     Collection<DistributableArtifact> newDistributedArtifacts =
         processArtifacts(distributedEnvironment);
@@ -383,6 +393,9 @@ public class DistMojo extends AbstractEOSGiMojo {
     BundleExecutionPlan bundleExecutionPlan = new BundleExecutionPlan(environment.getId(),
         existingDistributedArtifacts, newDistributedArtifacts, environmentRootFolder,
         artifactResolver);
+
+    fileManager.overCopyFile(environmentConfigurationTempFile, environmentConfigurationFile);
+    environmentConfigurationTempFile.delete();
 
     convertBundleUpdatesToUninstallAndInstall(bundleExecutionPlan);
 
@@ -622,12 +635,10 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoFailureException
    *           if anything wrong happen.
    */
-  private void processConfigurationTemplate(final File distFolderFile,
+  private void processConfigurationTemplate(final File configFile,
       final Collection<DistributableArtifact> distributableArtifacts,
-      final EnvironmentConfiguration environment,
-      final FileManager fileManager) throws MojoExecutionException, MojoFailureException {
-
-    File configFile = new File(distFolderFile, "/.eosgi.dist.xml");
+      final EnvironmentConfiguration environment, final FileManager fileManager)
+      throws MojoExecutionException, MojoFailureException {
 
     AutoResolveArtifactHolder jacocoAgentArtifact = new AutoResolveArtifactHolder(
         RepositoryUtils.toArtifact(pluginArtifactMap.get("org.jacoco:org.jacoco.agent")),
@@ -636,8 +647,12 @@ public class DistMojo extends AbstractEOSGiMojo {
     LaunchConfig launchConfig = environment.getLaunchConfig();
     if (this.launchConfig != null) {
       launchConfig =
-          this.launchConfig.createLaunchConfigForEnvironment(environment.getLaunchConfig(),
-              environment.getId(), reportFolder, jacocoAgentArtifact);
+          this.launchConfig.createLaunchConfigForEnvironment(launchConfig, environment.getId(),
+              reportFolder, jacocoAgentArtifact);
+    }
+
+    if (launchConfig == null) {
+      launchConfig = new LaunchConfig();
     }
 
     checkAndAddReservedLaunchConfigurationProperties(environment, launchConfig);
@@ -734,8 +749,12 @@ public class DistMojo extends AbstractEOSGiMojo {
    * @throws MojoExecutionException
    *           if the distPackage expression configured for this plugin has wrong format.
    */
-  private String[] resolveDistPackageId(final String frameworkArtifact)
+  private String[] resolveDistPackageId(final String pFrameworkArtifact)
       throws IOException, MojoExecutionException {
+
+    String frameworkArtifact = (pFrameworkArtifact != null) ? pFrameworkArtifact
+        : DistConstants.DEFAULT_ENVIRONMENT_FRAMEWORK;
+
     String[] distPackageParts = frameworkArtifact.split("\\:");
     if (distPackageParts.length == 1) {
       Properties defaultFrameworkPops = readDefaultFrameworkPops();
@@ -926,6 +945,22 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
 
     return result;
+  }
+
+  private File unpackDistConfigFileToNewTempFile(final File distPackageFile,
+      final FileManager fileManager) {
+    try {
+      File environmentConfigurationTempFile =
+          File.createTempFile("eosgi", DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
+
+      fileManager.unpackZipEntry(distPackageFile, environmentConfigurationTempFile,
+          DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
+
+      return environmentConfigurationTempFile;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+
   }
 
 }

@@ -263,7 +263,7 @@ public class IntegrationTestMojo extends DistMojo {
     process.setWorkingDir(workingDir);
     getLog().info("[" + title + "] Working dir: " + workingDir);
 
-    Map<String, String> envMap = new HashMap<String, String>(System.getenv());
+    Map<String, String> envMap = new HashMap<>(System.getenv());
     envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
     envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
 
@@ -338,8 +338,8 @@ public class IntegrationTestMojo extends DistMojo {
     File stdOutFile = new File(resultFolder, "system-out.txt");
     File stdErrFile = new File(resultFolder, "system-error.txt");
 
-    List<OutputStream> stdOuts = new ArrayList<OutputStream>();
-    List<OutputStream> stdErrs = new ArrayList<OutputStream>();
+    List<OutputStream> stdOuts = new ArrayList<>();
+    List<OutputStream> stdErrs = new ArrayList<>();
 
     defineStandardOutputs(stdOutFile, stdOuts);
     defineStandardOutputs(stdErrFile, stdErrs);
@@ -502,7 +502,8 @@ public class IntegrationTestMojo extends DistMojo {
       throws MojoFailureException {
 
     EnvironmentType distributedEnvironment =
-        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(distFolderFile,
+        distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(
+            new File(distFolderFile, DistConstants.FILE_NAME_EOSGI_DIST_CONFIG),
             UseByType.INTEGRATION_TEST);
 
     LaunchConfigurationDTO environmentConfigurationDTO =

@@ -48,7 +48,6 @@ public abstract class AbstractLaunchConfig {
    * Default constructor.
    */
   public AbstractLaunchConfig() {
-    super();
   }
 
   /**

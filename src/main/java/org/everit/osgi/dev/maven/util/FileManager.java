@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -31,11 +32,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.ZipException;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipFile;
@@ -351,35 +354,58 @@ public class FileManager {
     return result;
   }
 
+  private void unpackEntry(final File destFile, final ZipFile zipFile, final ZipArchiveEntry entry)
+      throws IOException, ZipException {
+    if (entry.isDirectory()) {
+      touchedFiles.add(destFile);
+      destFile.mkdirs();
+    } else if (!isSameFile(destFile, entry.getSize(),
+        entry.getLastModifiedDate().getTime())) {
+      File parentFolder = destFile.getParentFile();
+      parentFolder.mkdirs();
+      InputStream inputStream = zipFile.getInputStream(entry);
+      overCopyFile(Channels.newChannel(inputStream), entry.getSize(),
+          entry.getLastModifiedDate().getTime(), destFile);
+      FileManager.setPermissionsOnFile(destFile, entry);
+    }
+  }
+
+  public void unpackZipEntry(final File zipFile, final File destinationFile, final String entry) {
+
+    try (ZipFile zipFileObj = new ZipFile(zipFile)) {
+      ZipArchiveEntry zipEntry = zipFileObj.getEntry(entry);
+      unpackEntry(destinationFile, zipFileObj, zipEntry);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Could not uncompress distribution package file entry "
+          + zipFile.getAbsolutePath() + " to target folder " + destinationFile.getAbsolutePath(),
+          e);
+    }
+  }
+
   /**
    * Unpacks a ZIP file to the destination directory.
    *
    * @throws MojoExecutionException
    *           if something goes wrong during unpacking the files.
    */
-  public void unpackZipFile(final File file, final File destinationDirectory)
-      throws MojoExecutionException {
+  public void unpackZipFile(final File file, final File destinationDirectory,
+      final String... exclusions) {
+
+    Set<String> exclusionSet = new HashSet<>(Arrays.asList(exclusions));
 
     try (ZipFile zipFile = new ZipFile(file)) {
       Enumeration<? extends ZipArchiveEntry> entries = zipFile.getEntries();
       while (entries.hasMoreElements()) {
         ZipArchiveEntry entry = entries.nextElement();
         String name = entry.getName();
-        File destFile = new File(destinationDirectory, name);
-        if (entry.isDirectory()) {
-          touchedFiles.add(destFile);
-          destFile.mkdirs();
-        } else if (!isSameFile(destFile, entry.getSize(), entry.getLastModifiedDate().getTime())) {
-          File parentFolder = destFile.getParentFile();
-          parentFolder.mkdirs();
-          InputStream inputStream = zipFile.getInputStream(entry);
-          overCopyFile(Channels.newChannel(inputStream), entry.getSize(),
-              entry.getLastModifiedDate().getTime(), destFile);
-          FileManager.setPermissionsOnFile(destFile, entry);
+
+        if (!exclusionSet.contains(name)) {
+          File destFile = new File(destinationDirectory, entry.getName());
+          unpackEntry(destFile, zipFile, entry);
         }
       }
     } catch (IOException e) {
-      throw new MojoExecutionException("Could not uncompress distribution package file "
+      throw new UncheckedIOException("Could not uncompress distribution package file "
           + file.getAbsolutePath() + " to target folder " + destinationDirectory.getAbsolutePath(),
           e);
     }
