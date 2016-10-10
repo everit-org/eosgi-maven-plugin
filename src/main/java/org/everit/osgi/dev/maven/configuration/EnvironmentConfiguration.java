@@ -26,8 +26,6 @@ import org.everit.osgi.dev.dist.util.DistConstants;
  */
 public class EnvironmentConfiguration {
 
-  private static final int DEFAULT_TEST_RUN_TIMEOUT = 180000;
-
   @Parameter
   private List<EOSGiArtifact> artifacts;
 
@@ -82,14 +80,14 @@ public class EnvironmentConfiguration {
    * CTRL+C was sent. Default value is half a minute.
    */
   @Parameter(defaultValue = "" + DistConstants.DEFAULT_SHUTDOWN_TIMEOUT)
-  private final int shutdownTimeout = DistConstants.DEFAULT_SHUTDOWN_TIMEOUT;
+  private int shutdownTimeout;
 
   /**
    * The timeout in milliseconds after the Tests should be finished for sure. The environment will
    * be stopped when this exceeds. Default value is five minutes.
    */
   @Parameter(defaultValue = "180000")
-  private final int timeout = DEFAULT_TEST_RUN_TIMEOUT;
+  private int timeout;
 
   public List<EOSGiArtifact> getArtifacts() {
     return artifacts;

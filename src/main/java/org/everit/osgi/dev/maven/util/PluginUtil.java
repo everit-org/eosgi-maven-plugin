@@ -163,6 +163,25 @@ public final class PluginUtil {
     }
   }
 
+  /**
+   * Creates the file instance of a sub-folder.
+   * 
+   * @param parent
+   *          The parent folder that the folder structure is relative to.
+   * @param folderNames
+   *          The names of the sub-folders. The first one is the one that is the direct sub-folder
+   *          of the parent folder, and the following sub folders are always the direct sub-folders
+   *          of the previous ones.
+   * @return The file instance of the sub-folder.
+   */
+  public static File subFolderFile(final File parent, final String... folderNames) {
+    File result = parent;
+    for (String folderName : folderNames) {
+      result = new File(result, folderName);
+    }
+    return result;
+  }
+
   private PluginUtil() {
   }
 }

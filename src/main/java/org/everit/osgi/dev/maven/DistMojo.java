@@ -79,8 +79,6 @@ import org.everit.osgi.dev.maven.util.FileManager;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.osgi.framework.Bundle;
 
-import com.sun.tools.attach.VirtualMachine;
-
 /**
  * Creates a distribution package for the project. Distribution packages may be provided as
  * Environment parameters or 'equinox', the default option, -may also be used. The structure of the
@@ -111,7 +109,7 @@ public class DistMojo extends AbstractEOSGiMojo {
    * overridden if the files with same name already exist.
    *
    */
-  @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
+  @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi/dist")
   protected String distFolder;
 
   protected List<DistributedEnvironmenData> distributedEnvironmentDataCollection;
@@ -125,14 +123,6 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(defaultValue = "${plugin.artifactMap}", required = true, readonly = true)
   protected Map<String, org.apache.maven.artifact.Artifact> pluginArtifactMap;
 
-  /**
-   * The folder where the integration test reports will be placed. Please note that the content of
-   * this folder will be deleted before running the tests.
-   */
-  @Parameter(property = "eosgi.testReportFolder",
-      defaultValue = "${project.build.directory}/eosgi-report")
-  protected String reportFolder;
-
   @Parameter(defaultValue = "${session}", readonly = true)
   protected MavenSession session;
 
@@ -142,8 +132,6 @@ public class DistMojo extends AbstractEOSGiMojo {
    */
   @Parameter(property = "eosgi.sourceDistFolder", defaultValue = "${basedir}/src/dist/")
   protected String sourceDistFolder;
-
-  private EOSGiVMManager virtualMachineManager;
 
   private void checkAndAddReservedLaunchConfigurationProperties(
       final EnvironmentConfiguration environment, final LaunchConfig launchConfig)
@@ -227,6 +215,10 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
+  protected EOSGiVMManager createEOSGiVMManager() {
+    return new EOSGiVMManager(resolveAttachAPIClassLoader());
+  }
+
   private Map<BundleSNV, DistributableArtifact> createJustStartedBundleByUniqueLabelMap(
       final Collection<DistributableArtifact> justStartedBundles) {
     Map<BundleSNV, DistributableArtifact> justStartedBundleByUniqueLabel = new HashMap<>();
@@ -239,7 +231,8 @@ public class DistMojo extends AbstractEOSGiMojo {
   private RemoteOSGiManager createRemoteOSGiManager(final String environmentId,
       final File distFolderFile,
       final BundleExecutionPlan bundleExecutionPlan,
-      final EnvironmentType existingDistributedEnvironment)
+      final EnvironmentType existingDistributedEnvironment,
+      final EOSGiVMManager virtualMachineManager)
       throws MojoExecutionException {
 
     Set<EnvironmentRuntimeInfo> runtimeInformations =
@@ -329,24 +322,27 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
 
-    virtualMachineManager = new EOSGiVMManager(resolveAttachAPIClassLoader());
+    try (EOSGiVMManager virtualMachineManager = createEOSGiVMManager()) {
 
-    File globalDistFolderFile = new File(distFolder);
+      File globalDistFolderFile = new File(distFolder);
 
-    distributedEnvironmentDataCollection = new ArrayList<>();
-    EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
+      distributedEnvironmentDataCollection = new ArrayList<>();
+      EnvironmentConfiguration[] environmentsToProcess = getEnvironmentsToProcess();
 
-    Map<String, DistributableArtifact> projectDistributableDependencies =
-        createDistributableArtifactsByGAVFromProjectDeps();
+      Map<String, DistributableArtifact> projectDistributableDependencies =
+          createDistributableArtifactsByGAVFromProjectDeps();
 
-    for (EnvironmentConfiguration environment : environmentsToProcess) {
-      executeOnEnvironment(globalDistFolderFile, environment, projectDistributableDependencies);
+      for (EnvironmentConfiguration environment : environmentsToProcess) {
+        executeOnEnvironment(globalDistFolderFile, environment, projectDistributableDependencies,
+            virtualMachineManager);
+      }
     }
   }
 
   private void executeOnEnvironment(final File globalDistFolderFile,
       final EnvironmentConfiguration environment,
-      final Map<String, DistributableArtifact> projectDistributableDependencies)
+      final Map<String, DistributableArtifact> projectDistributableDependencies,
+      final EOSGiVMManager virtualMachineManager)
       throws MojoExecutionException, MojoFailureException {
 
     FileManager fileManager = new FileManager();
@@ -399,7 +395,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     try (RemoteOSGiManager remoteOSGiManager =
         createRemoteOSGiManager(environmentId, environmentRootFolder,
-            bundleExecutionPlan, existingDistributedEnvironment)) {
+            bundleExecutionPlan, existingDistributedEnvironment, virtualMachineManager)) {
 
       int originalFrameworkStartLevel = remoteOSGiManager.getFrameworkStartLevel();
 
@@ -702,7 +698,7 @@ public class DistMojo extends AbstractEOSGiMojo {
     if (classLoaderObj != null) {
       return (ClassLoader) classLoaderObj;
     }
-    return VirtualMachine.class.getClassLoader();
+    return DistMojo.class.getClassLoader();
   }
 
   private String resolveBundleAction(final DistributableArtifact dArtifact) {

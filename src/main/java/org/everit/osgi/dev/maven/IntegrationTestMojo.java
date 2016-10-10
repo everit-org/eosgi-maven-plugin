@@ -26,12 +26,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.logging.Logger;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -44,6 +43,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.everit.osgi.dev.dist.util.DistConstants;
+import org.everit.osgi.dev.dist.util.attach.EOSGiVMManager;
 import org.everit.osgi.dev.dist.util.configuration.LaunchConfigurationDTO;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
 import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
@@ -52,11 +52,6 @@ import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
 import org.everit.osgi.dev.maven.util.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
-import org.rzo.yajsw.os.OperatingSystem;
-import org.rzo.yajsw.os.Process;
-import org.rzo.yajsw.os.ProcessManager;
-import org.rzo.yajsw.os.ms.win.w32.WindowsXPProcess;
-import org.rzo.yajsw.os.posix.bsd.BSDProcess;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -79,14 +74,17 @@ public class IntegrationTestMojo extends DistMojo {
 
     private final int shutdownTimeout;
 
-    ShutdownHook(final Process process, final int shutdownTimeout) {
+    private final String uniqueLaunchId;
+
+    ShutdownHook(final Process process, final String uniqueLaunchId, final int shutdownTimeout) {
       this.process = process;
+      this.uniqueLaunchId = uniqueLaunchId;
       this.shutdownTimeout = shutdownTimeout;
     }
 
     @Override
     public void run() {
-      shutdownProcess(process, shutdownTimeout, 0);
+      shutdownProcess(process, uniqueLaunchId, shutdownTimeout, 0);
     }
   }
 
@@ -171,6 +169,14 @@ public class IntegrationTestMojo extends DistMojo {
   protected boolean distOnly = false;
 
   /**
+   * The folder where the integration test reports will be placed. Please note that the content of
+   * this folder will be deleted before running the tests.
+   */
+  @Parameter(property = "eosgi.reportFolder",
+      defaultValue = "${project.build.directory}/eosgi/report")
+  protected String reportFolder;
+
+  /**
    * Skipping this plugin.
    */
   @Parameter(property = "eosgi.test.skip", defaultValue = "false")
@@ -178,7 +184,7 @@ public class IntegrationTestMojo extends DistMojo {
 
   private void checkExitCode(final Process process, final String environmentId)
       throws MojoExecutionException {
-    int exitCode = process.getExitCode();
+    int exitCode = process.exitValue();
     if (exitCode != 0) {
       throw new MojoExecutionException("Test Process of environment " + environmentId
           + " finished with exit code " + exitCode);
@@ -218,61 +224,27 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private File createTempFolder(final String environmentId) throws IOException {
-    File tmpPath = File.createTempFile("eosgi-" + environmentId, "-tmp");
-    tmpPath.delete();
-    tmpPath.mkdir();
-    return tmpPath;
-  }
-
-  private Process createTestProcess(final String environmentId, final File workingDirFile,
-      final String[] command, final File resultFolder, final File tmpPathFile) {
+  private ProcessBuilder createTestProcessBuilder(final String environmentId,
+      final File workingDirFile, final String[] command, final File testResultFolder) {
     String title = "EOSGi TestProcess - " + environmentId;
 
-    OperatingSystem operatingSystem = OperatingSystem.instance();
-    getLog().info("[" + title + "] Operating system is "
-        + operatingSystem.getOperatingSystemName());
+    ProcessBuilder processBuilder = new ProcessBuilder(command);
+    processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
+    processBuilder.redirectError(ProcessBuilder.Redirect.PIPE);
+    processBuilder.redirectInput(ProcessBuilder.Redirect.PIPE);
 
-    String lowerCaseOperatingSystemName =
-        operatingSystem.getOperatingSystemName().toLowerCase(Locale.getDefault());
-
-    Process process;
-    if (lowerCaseOperatingSystemName.contains("linux")
-        || lowerCaseOperatingSystemName.startsWith("mac os x")) {
-      getLog().info("[" + title + "] Starting BSD process");
-      process = new BSDProcess();
-    } else {
-      ProcessManager processManager = operatingSystem.processManagerInstance();
-      process = processManager.createProcess();
-    }
-    process.setTitle(title);
-
-    process.setCommand(command);
-    getLog().info("[" + title + "] Command: " + Arrays.deepToString(command));
-
-    String tmpPath = tmpPathFile.getAbsolutePath();
-    process.setTmpPath(tmpPath);
-    getLog().info("[" + title + "] Tmp path: " + tmpPath);
-
-    process.setVisible(false);
-    process.setTeeName(null);
-    process.setPipeStreams(true, false);
-    process.setLogger(Logger.getLogger("eosgi"));
-
-    String workingDir = workingDirFile.getAbsolutePath();
-    process.setWorkingDir(workingDir);
-    getLog().info("[" + title + "] Working dir: " + workingDir);
+    processBuilder.directory(workingDirFile);
+    getLog().info("[" + title + "] Working dir: " + workingDirFile);
 
     Map<String, String> envMap = new HashMap<>(System.getenv());
     envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
-    envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, resultFolder.getAbsolutePath());
+    envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, testResultFolder.getAbsolutePath());
 
-    List<String[]> env = PluginUtil.convertMapToList(envMap);
-    process.setEnvironment(env);
-    getLog().info("[" + title + "] Environment: "
-        + Arrays.deepToString(env.toArray(new String[][] {})));
+    processBuilder.environment().putAll(envMap);
 
-    return process;
+    getLog().info("[" + title + "] Environment: " + processBuilder.environment());
+
+    return processBuilder;
   }
 
   private void defineStandardOutputs(final File stdOutFile, final List<OutputStream> stdOuts)
@@ -306,7 +278,7 @@ public class IntegrationTestMojo extends DistMojo {
 
     getLog().info("OSGi Integrations tests running started");
 
-    File testReportFolderFile = initializeReportFolder();
+    File reportFolderFile = initializeReportFolder();
 
     TestResult testResultSum = new TestResult();
     List<TestResult> testResults = new ArrayList<>();
@@ -321,7 +293,7 @@ public class IntegrationTestMojo extends DistMojo {
       int timeout = environment.getTimeout();
 
       TestResult testResult = runIntegrationTestsOnEnvironment(
-          environmentId, distFolderFile, testReportFolderFile, shutdownTimeout, timeout);
+          environmentId, distFolderFile, reportFolderFile, shutdownTimeout, timeout);
 
       testResults.add(testResult);
       testResultSum.addToSum(testResult);
@@ -404,14 +376,14 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private File initializeReportFolder() {
-    File testReportFolderFile = new File(reportFolder);
-    getLog().info("Integration test output directory: " + testReportFolderFile.getAbsolutePath());
+    File reportFolderFile = new File(reportFolder);
+    getLog().info("Integration test output directory: " + reportFolderFile.getAbsolutePath());
 
-    if (testReportFolderFile.exists()) {
-      PluginUtil.deleteFolderRecurse(testReportFolderFile);
+    if (reportFolderFile.exists()) {
+      PluginUtil.deleteFolderRecurse(reportFolderFile);
     }
-    testReportFolderFile.mkdirs();
-    return testReportFolderFile;
+    reportFolderFile.mkdirs();
+    return reportFolderFile;
   }
 
   private void printEnvironmentProcessStartToLog(final String environemntId) {
@@ -451,7 +423,7 @@ public class IntegrationTestMojo extends DistMojo {
     getLog().info(sb.toString());
   }
 
-  private void processResults(final File resultFolder, final TestResult results)
+  private void processResults(final File testResultFolder, final TestResult results)
       throws MojoFailureException {
     DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
     DocumentBuilder documentBuilder = null;
@@ -461,8 +433,8 @@ public class IntegrationTestMojo extends DistMojo {
       throw new MojoFailureException("Failed to process test results", e);
     }
 
-    if (resultFolder.exists() && resultFolder.isDirectory()) {
-      File[] files = resultFolder.listFiles();
+    if (testResultFolder.exists() && testResultFolder.isDirectory()) {
+      File[] files = testResultFolder.listFiles();
       for (File resultFile : files) {
         if (resultFile.getName().endsWith(".xml")) {
           processResultXML(results, documentBuilder, resultFile);
@@ -498,7 +470,8 @@ public class IntegrationTestMojo extends DistMojo {
     }
   }
 
-  private String[] resolveCommandForEnvironment(final File distFolderFile)
+  private String[] resolveCommandForEnvironment(final File distFolderFile,
+      final String uniqueLaunchId)
       throws MojoFailureException {
 
     EnvironmentType distributedEnvironment =
@@ -521,6 +494,8 @@ public class IntegrationTestMojo extends DistMojo {
 
     command.addAll(environmentConfigurationDTO.vmArguments);
 
+    command.add("-D" + DistConstants.SYSPROP_LAUNCH_UNIQUE_ID + "=" + uniqueLaunchId);
+
     command.add(environmentConfigurationDTO.mainClass);
 
     command.addAll(environmentConfigurationDTO.programArguments);
@@ -529,67 +504,60 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private TestResult runIntegrationTestsOnEnvironment(final String environmentId,
-      final File distFolderFile, final File testReportFolderFile, final int shutdownTimeout,
-      final int timeout)
+      final File distFolderFile, final File reportFolderFile, final int shutdownTimeout,
+      final int testRunTimeout)
       throws MojoFailureException, MojoExecutionException {
 
     printEnvironmentProcessStartToLog(environmentId);
 
     TestResult testResult = new TestResult();
 
-    String[] command = resolveCommandForEnvironment(distFolderFile);
+    String uniqueLaunchId = UUID.randomUUID().toString();
+    String[] command = resolveCommandForEnvironment(distFolderFile, uniqueLaunchId);
 
     try {
 
-      File resultFolder = new File(testReportFolderFile, environmentId);
-      resultFolder.mkdirs();
-      File tmpPath = createTempFolder(environmentId);
+      File testResultFolder = PluginUtil.subFolderFile(reportFolderFile, environmentId, "tests");
+      testResultFolder.mkdirs();
 
-      Process process = createTestProcess(
-          environmentId, distFolderFile, command, resultFolder, tmpPath);
+      ProcessBuilder processBuilder = createTestProcessBuilder(
+          environmentId, distFolderFile, command, testResultFolder);
+
+      Process process = processBuilder.start();
 
       boolean timeoutHappened = false;
 
-      ShutdownHook shutdownHook = new ShutdownHook(process, shutdownTimeout);
-      Runtime.getRuntime().addShutdownHook(shutdownHook);
+      File outputFolderFile = PluginUtil.subFolderFile(reportFolderFile, environmentId, "output");
+      outputFolderFile.mkdirs();
 
-      boolean started = process.start();
-      if (!started) {
-        throw new MojoFailureException(
-            "Could not start environment with command " + process.getCommand()
-                + " in working dir " + process.getWorkingDir());
-      }
+      ShutdownHook shutdownHook = new ShutdownHook(process, uniqueLaunchId, shutdownTimeout);
+      Runtime runtime = Runtime.getRuntime();
+      runtime.addShutdownHook(shutdownHook);
 
-      AutoCloseable redirectionCloseable = doStreamRedirections(process, resultFolder);
-      try {
-        waitForProcess(process, timeout);
+      try (Closeable redirectionCloseable = doStreamRedirections(process,
+          outputFolderFile)) {
+        waitForProcess(process, testRunTimeout);
 
-        if (process.isRunning()) {
+        if (process.isAlive()) {
           getLog().warn("Test running process did not stop until timeout. Forcing to stop it...");
           timeoutHappened = true;
-          shutdownProcess(process, shutdownTimeout, -1);
+          shutdownProcess(process, uniqueLaunchId, shutdownTimeout, -1);
         }
       } finally {
-        try {
-          redirectionCloseable.close();
-        } catch (Exception e) {
-          throw new MojoExecutionException("Could not close stream redirectors", e);
-        }
+        runtime.removeShutdownHook(shutdownHook);
       }
-
-      PluginUtil.deleteFolderRecurse(tmpPath);
 
       if (timeoutHappened) {
         throw new MojoExecutionException("Test process of environment "
             + "[" + environmentId + "] did not finish within timeout");
       }
 
-      checkExitError(resultFolder, environmentId);
+      checkExitError(testResultFolder, environmentId);
       checkExitCode(process, environmentId);
 
       getLog().info("Analyzing test results...");
 
-      processResults(resultFolder, testResult);
+      processResults(testResultFolder, testResult);
 
       printTestResultsOfEnvironment(environmentId, testResult);
     } catch (IOException e) {
@@ -599,30 +567,33 @@ public class IntegrationTestMojo extends DistMojo {
     return testResult;
   }
 
-  private void shutdownProcess(final Process process, final int shutdownTimeout, final int code) {
+  private void shutdownProcess(final Process process, final String uniqueLaunchId,
+      final int shutdownTimeout, final int code) {
 
-    getLog().warn("Stopping test process: " + process.getPid());
-
-    if (!process.isRunning()) {
+    getLog().warn("Stopping test process: " + process);
+    if (!process.isAlive()) {
       return;
     }
 
-    if (process instanceof WindowsXPProcess) {
-      // In case of windows xp process we must kill the process with a command as there is no
-      // visible window and kill tree command of YAJSW does not work. Hopefully this is a temporary
-      // solution.
-      OperatingSystem operatingSystem = OperatingSystem.instance();
-      ProcessManager processManagerInstance = operatingSystem.processManagerInstance();
-      Process killProcess = processManagerInstance.createProcess();
-      String killCommand = "taskkill /F /T /PID " + process.getPid();
-      getLog().warn("Killing windows process with command: " + killCommand + "");
-      killProcess.setCommand(killCommand);
-      killProcess.setVisible(false);
-      killProcess.start();
-      process.waitFor(shutdownTimeout);
-    } else {
-      process.stop(shutdownTimeout, code);
+    try (EOSGiVMManager vmManager = createEOSGiVMManager()) {
+      String virtualMachineId = vmManager.getVirtualMachineIdByIUniqueLaunchId(uniqueLaunchId);
+      vmManager.shutDownVirtualMachine(virtualMachineId, code, null);
+    } catch (Exception e) {
+      getLog().error("Could not stop VM via Attach. Shutting it down forcibly", e);
+      process.destroyForcibly();
+      return;
     }
+
+    try {
+      process.waitFor(shutdownTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      // Do nothing
+    }
+
+    if (process.isAlive()) {
+      process.destroyForcibly();
+    }
+
   }
 
   private void throwExceptionsBasedOnTestResultsIfNecesssary(final TestResult resultSum)
@@ -639,7 +610,7 @@ public class IntegrationTestMojo extends DistMojo {
     long latestEndTime = startTime + timeout;
     long currentTime = startTime;
 
-    while (process.isRunning() && (currentTime < latestEndTime)) {
+    while (process.isAlive() && (currentTime < latestEndTime)) {
       try {
         Thread.sleep(TIMEOUT_CHECK_INTERVAL);
       } catch (InterruptedException e) {
