@@ -172,9 +172,9 @@ public class IntegrationTestMojo extends DistMojo {
    * The folder where the integration test reports will be placed. Please note that the content of
    * this folder will be deleted before running the tests.
    */
-  @Parameter(property = "eosgi.reportFolder",
-      defaultValue = "${project.build.directory}/eosgi/report")
-  protected String reportFolder;
+  @Parameter(property = "eosgi.integration-test.targetFolder",
+      defaultValue = "${project.build.directory}/eosgi/integration-test")
+  protected String integrationTestTargetFolder;
 
   /**
    * Skipping this plugin.
@@ -376,7 +376,7 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private File initializeReportFolder() {
-    File reportFolderFile = new File(reportFolder);
+    File reportFolderFile = new File(integrationTestTargetFolder);
     getLog().info("Integration test output directory: " + reportFolderFile.getAbsolutePath());
 
     if (reportFolderFile.exists()) {
@@ -517,7 +517,8 @@ public class IntegrationTestMojo extends DistMojo {
 
     try {
 
-      File testResultFolder = PluginUtil.subFolderFile(reportFolderFile, environmentId, "tests");
+      File testResultFolder =
+          PluginUtil.subFolderFile(reportFolderFile, environmentId, "test-result");
       testResultFolder.mkdirs();
 
       ProcessBuilder processBuilder = createTestProcessBuilder(
@@ -527,7 +528,8 @@ public class IntegrationTestMojo extends DistMojo {
 
       boolean timeoutHappened = false;
 
-      File outputFolderFile = PluginUtil.subFolderFile(reportFolderFile, environmentId, "output");
+      File outputFolderFile =
+          PluginUtil.subFolderFile(reportFolderFile, environmentId, "console-output");
       outputFolderFile.mkdirs();
 
       ShutdownHook shutdownHook = new ShutdownHook(process, uniqueLaunchId, shutdownTimeout);
