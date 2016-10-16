@@ -65,7 +65,7 @@ import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
 import org.everit.osgi.dev.maven.configuration.LaunchConfig;
 import org.everit.osgi.dev.maven.configuration.LaunchConfigOverride;
-import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironmentData;
 import org.everit.osgi.dev.maven.upgrade.BundleSNV;
 import org.everit.osgi.dev.maven.upgrade.NoopRemoteOSGiManager;
 import org.everit.osgi.dev.maven.upgrade.RemoteOSGiManager;
@@ -112,7 +112,7 @@ public class DistMojo extends AbstractEOSGiMojo {
   @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi/dist")
   protected String distFolder;
 
-  protected List<DistributedEnvironmenData> distributedEnvironmentDataCollection;
+  protected List<DistributedEnvironmentData> distributedEnvironmentDataCollection;
 
   @Parameter(defaultValue = "${localRepository}")
   protected ArtifactRepository localRepository;
@@ -447,7 +447,7 @@ public class DistMojo extends AbstractEOSGiMojo {
 
         startBundlesWhereNecessary(bundleExecutionPlan, newDistributedArtifacts, remoteOSGiManager);
 
-        distributedEnvironmentDataCollection.add(new DistributedEnvironmenData(environment,
+        distributedEnvironmentDataCollection.add(new DistributedEnvironmentData(environment,
             distributedEnvironment, environmentRootFolder, newDistributedArtifacts));
 
         EnvironmentCleaner.cleanEnvironmentFolder(distributedEnvironment, environmentRootFolder,

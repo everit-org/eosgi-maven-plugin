@@ -48,7 +48,7 @@ import org.everit.osgi.dev.dist.util.configuration.LaunchConfigurationDTO;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
 import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 import org.everit.osgi.dev.maven.configuration.EnvironmentConfiguration;
-import org.everit.osgi.dev.maven.dto.DistributedEnvironmenData;
+import org.everit.osgi.dev.maven.dto.DistributedEnvironmentData;
 import org.everit.osgi.dev.maven.util.DaemonStreamRedirector;
 import org.everit.osgi.dev.maven.util.PluginUtil;
 import org.everit.osgi.dev.testrunner.TestRunnerConstants;
@@ -283,7 +283,7 @@ public class IntegrationTestMojo extends DistMojo {
     TestResult testResultSum = new TestResult();
     List<TestResult> testResults = new ArrayList<>();
 
-    for (DistributedEnvironmenData distributedEnvironmentData : distributedEnvironmentDataCollection) { // CS_DISABLE_LINE_LENGTH
+    for (DistributedEnvironmentData distributedEnvironmentData : distributedEnvironmentDataCollection) { // CS_DISABLE_LINE_LENGTH
 
       EnvironmentConfiguration environment = distributedEnvironmentData.getEnvironment();
 

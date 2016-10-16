@@ -26,7 +26,7 @@ import org.everit.osgi.dev.maven.util.DistributableArtifact;
 /**
  * Metadata of a distributed environment.
  */
-public class DistributedEnvironmenData {
+public class DistributedEnvironmentData {
 
   private Collection<DistributableArtifact> distributableArtifacts;
 
@@ -36,13 +36,13 @@ public class DistributedEnvironmenData {
 
   private EnvironmentConfiguration environment;
 
-  public DistributedEnvironmenData() {
+  public DistributedEnvironmentData() {
   }
 
   /**
    * Constructor.
    */
-  public DistributedEnvironmenData(final EnvironmentConfiguration environment,
+  public DistributedEnvironmentData(final EnvironmentConfiguration environment,
       final EnvironmentType distributedEnvironment, final File distributionFolder,
       final Collection<DistributableArtifact> bundleArtifacts) {
     this.environment = environment;

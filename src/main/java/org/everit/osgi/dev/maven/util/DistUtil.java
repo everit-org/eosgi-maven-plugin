@@ -15,6 +15,12 @@
  */
 package org.everit.osgi.dev.maven.util;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.TreeMap;
+
 import org.unbescape.properties.PropertiesEscape;
 
 /**
@@ -31,6 +37,45 @@ public final class DistUtil {
         .replace("=", "\\=")
         .replace(" ", "\\ ")
         .replace(";", "\\;"); // mac osx command line escaping
+  }
+
+  /**
+   * Creates an ordered map that is sorted by the start level of the bundles that should be
+   * installed.
+   *
+   * @param artifacts
+   *          The OSGi bundle artifacts.
+   * @param defaultStartLevel
+   *          The default startlevel of the OSGi environment.
+   * @param osgiAction
+   *          Additional action for the bundle.
+   * @return The ordered map.
+   */
+  public TreeMap<Integer, List<DistributableArtifact>> getBundleArtifactsOrderedByStartLevel(
+      final Collection<DistributableArtifact> artifacts, final int defaultStartLevel,
+      final String osgiAction) {
+
+    TreeMap<Integer, List<DistributableArtifact>> result = new TreeMap<>();
+    for (DistributableArtifact artifact : artifacts) {
+      String bundleAction = artifact.properties.get("bundle.action");
+      if (Objects.equals(osgiAction, bundleAction)) {
+        int startLevel;
+        String startLevelProperty = artifact.properties.get("bundle.startLevel");
+        if (startLevelProperty != null) {
+          startLevel = Integer.parseInt(startLevelProperty);
+        } else {
+          startLevel = defaultStartLevel;
+        }
+
+        List<DistributableArtifact> bundleArtifacts = result.get(startLevel);
+        if (bundleArtifacts == null) {
+          bundleArtifacts = new ArrayList<>();
+          result.put(startLevel, bundleArtifacts);
+        }
+        bundleArtifacts.add(artifact);
+      }
+    }
+    return result;
   }
 
   public String propertyKey(final String key) {
