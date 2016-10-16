@@ -17,6 +17,10 @@ package org.everit.osgi.dev.maven.upgrade;
 
 import javax.annotation.Generated;
 
+/**
+ * Data holder of Bundle-SymbolicName and Version that implements {@link #equals(Object)} and
+ * {@link #hashCode()} functions.
+ */
 public class BundleSNV {
 
   public final String symbolicName;

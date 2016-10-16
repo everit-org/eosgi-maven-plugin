@@ -165,7 +165,7 @@ public final class PluginUtil {
 
   /**
    * Creates the file instance of a sub-folder.
-   * 
+   *
    * @param parent
    *          The parent folder that the folder structure is relative to.
    * @param folderNames

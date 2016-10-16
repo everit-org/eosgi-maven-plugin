@@ -22,6 +22,9 @@ import java.util.Map;
  * A mapping of bundle unique ids and bundle ids. It is up to the caller library how to generate a
  * unique string for this mapping, but it must be unique. E.g.: A concatenation of symbolic name and
  * version.
+ *
+ * @param <I>
+ *          Type of the unique id.
  */
 public class UniqueIdBundleIdMap<I> {
 
@@ -41,8 +44,8 @@ public class UniqueIdBundleIdMap<I> {
   /**
    * Removes an entry by the unique id of the map.
    *
-   * @param uniqueId
-   *          The unique id of the map.
+   * @param bundleId
+   *          The id of the bundle.
    */
   public void removeByBundleId(final Long bundleId) {
     I uniqueId = uniqueIdByBundleId.remove(bundleId);

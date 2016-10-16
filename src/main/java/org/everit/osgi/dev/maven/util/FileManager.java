@@ -367,9 +367,21 @@ public class FileManager {
       overCopyFile(Channels.newChannel(inputStream), entry.getSize(),
           entry.getLastModifiedDate().getTime(), destFile);
       FileManager.setPermissionsOnFile(destFile, entry);
+    } else {
+      touchedFiles.add(destFile);
     }
   }
 
+  /**
+   * Unpacks one entry from the zip file.
+   *
+   * @param zipFile
+   *          The zip file.
+   * @param destinationFile
+   *          The destination file where the file should be copied to.
+   * @param entry
+   *          The entry that should be unpacked from the zip file.
+   */
   public void unpackZipEntry(final File zipFile, final File destinationFile, final String entry) {
 
     try (ZipFile zipFileObj = new ZipFile(zipFile)) {
