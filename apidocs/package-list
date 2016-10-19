@@ -1,5 +1,8 @@
 org.everit.osgi.dev.maven
-org.everit.osgi.dev.maven.jaxb.dist.definition
+org.everit.osgi.dev.maven.analytics
+org.everit.osgi.dev.maven.configuration
+org.everit.osgi.dev.maven.dto
 org.everit.osgi.dev.maven.result
-org.everit.osgi.dev.maven.statistic
+org.everit.osgi.dev.maven.upgrade
+org.everit.osgi.dev.maven.upgrade.jmx
 org.everit.osgi.dev.maven.util
