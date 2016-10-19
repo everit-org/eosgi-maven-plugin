@@ -579,7 +579,9 @@ public class IntegrationTestMojo extends DistMojo {
 
     try (EOSGiVMManager vmManager = createEOSGiVMManager()) {
       String virtualMachineId = vmManager.getVirtualMachineIdByIUniqueLaunchId(uniqueLaunchId);
-      vmManager.shutDownVirtualMachine(virtualMachineId, code, null);
+      if (virtualMachineId != null) {
+        vmManager.shutDownVirtualMachine(virtualMachineId, code, null);
+      }
     } catch (Exception e) {
       getLog().error("Could not stop VM via Attach. Shutting it down forcibly", e);
       process.destroyForcibly();
