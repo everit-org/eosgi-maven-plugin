@@ -159,7 +159,7 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   /**
    * Appends the artifacts of the project to the distributable artifact map.
-   * 
+   *
    * @return A map where the key is the GAV and the value is the distributable artifact.
    */
   protected Map<String, DistributableArtifact> createDistributableArtifactsByGAVFromProjectDeps() {

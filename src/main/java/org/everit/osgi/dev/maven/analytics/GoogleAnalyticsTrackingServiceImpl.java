@@ -95,7 +95,10 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
         post.setEntity(entity);
         httpClient.execute(post);
       } catch (IOException e) {
-        throw new RuntimeException(e);
+        log.warn("Sending anonymous usage statistics failed: " + e.getMessage());
+        if (log.isDebugEnabled()) {
+          log.debug(e);
+        }
       }
     }
 
