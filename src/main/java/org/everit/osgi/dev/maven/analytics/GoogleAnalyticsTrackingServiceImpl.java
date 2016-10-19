@@ -15,6 +15,7 @@
  */
 package org.everit.osgi.dev.maven.analytics;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.NetworkInterface;
@@ -166,17 +167,23 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
   private String getMacAddressHash() {
     try {
       Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
-      if (networkInterfaces.hasMoreElements()) {
+      ByteArrayOutputStream bout = new ByteArrayOutputStream();
+      while (networkInterfaces.hasMoreElements()) {
         NetworkInterface network = networkInterfaces.nextElement();
         byte[] macAddress = network.getHardwareAddress();
-        MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-        messageDigest.update(macAddress);
-        byte[] macAddressHash = messageDigest.digest();
-        byte[] encodedMacAddressHash = Base64.encodeBase64(macAddressHash);
-        return new String(encodedMacAddressHash, StandardCharsets.UTF_8);
-      } else {
+        if (macAddress != null) {
+          bout.write(macAddress, 0, macAddress.length);
+        }
+      }
+      if (bout.size() == 0) {
         return UNKNOWN_MAC_ADDRESS;
       }
+
+      MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
+      messageDigest.update(bout.toByteArray());
+      byte[] macAddressHash = messageDigest.digest();
+      byte[] encodedMacAddressHash = Base64.encodeBase64(macAddressHash);
+      return new String(encodedMacAddressHash, StandardCharsets.UTF_8);
     } catch (SocketException | NoSuchAlgorithmException e) {
       return UNKNOWN_MAC_ADDRESS;
     }
