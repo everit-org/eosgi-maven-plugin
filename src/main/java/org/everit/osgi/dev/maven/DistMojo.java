@@ -543,12 +543,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
-  /**
-   * Parses and processes the files that are templates.
-   *
-   * @param distributedArtifacts
-   *          The artifacts that are newly distributed to the system.
-   */
   private void parseParsables(final File distFolderFile,
       final EnvironmentType distributedEnvironment,
       final Collection<DistributableArtifact> distributedArtifacts,
@@ -623,12 +617,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     return result;
   }
 
-  /**
-   * Parses the configuration of a distribution package.
-   *
-   * @throws MojoFailureException
-   *           if anything wrong happen.
-   */
   private void processConfigurationTemplate(final File configFile,
       final Collection<DistributableArtifact> distributableArtifacts,
       final EnvironmentConfiguration environment, final FileManager fileManager)

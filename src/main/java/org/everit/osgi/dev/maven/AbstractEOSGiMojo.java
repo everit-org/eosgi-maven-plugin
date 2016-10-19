@@ -17,7 +17,6 @@ package org.everit.osgi.dev.maven;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -160,6 +159,8 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
 
   /**
    * Appends the artifacts of the project to the distributable artifact map.
+   * 
+   * @return A map where the key is the GAV and the value is the distributable artifact.
    */
   protected Map<String, DistributableArtifact> createDistributableArtifactsByGAVFromProjectDeps() {
     List<Artifact> availableArtifacts = new ArrayList<>(project.getArtifacts());
@@ -221,8 +222,6 @@ public abstract class AbstractEOSGiMojo extends AbstractMojo {
    * @return The list of dependencies that are OSGI bundles but do not have the scope "provided"
    * @throws MojoExecutionException
    *           if anything happens
-   * @throws MalformedURLException
-   *           if the URL for the artifact is broken.
    */
   protected Collection<DistributableArtifact> generateDistributableArtifactsForEnvironment(
       final EnvironmentConfiguration environmentConfiguration,

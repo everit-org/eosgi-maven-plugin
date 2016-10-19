@@ -1,18 +1,3 @@
-#*
- * Copyright (C) 2011 Everit Kft. (http://everit.org)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *         http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *#
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html
   PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -21,25 +6,28 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <body>
   <h1>Introduction</h1>
-    <p>The aim of the maven plugin is to speed up development by means of an OSGi environment. It runs integration
-    tests as a life-cycle phase of the compilation and supports creation of custom OSGi distribution packages.</p>
+  <p>The aim of the maven plugin is to speed up development by means of an OSGi environment. It
+    supports creating custom distribution packages and run integration tests on them.</p>
   <h1>Usage</h1>
   <h2 id="dependency_collection">Dependency collection</h2>
-  <p>In case of dist or integration-test goals the plugin checks the project which the goal was started with all of
-    it's dependencies, except for the provided scope if they are OSGi bundles. The OSGi bundles will be deployed to the
-    generated environment where the checks ran successfully. A dependency is an OSGi bundle if it has the
-    Bundle-SymbolicName and the Bundle-Version manifest headers defined.</p>
+  <p>In case of dist or integration-test goals the plugin checks the project which the goal was
+    started with all of it's dependencies, except for the provided scope if they are OSGi bundles.
+    The OSGi bundles will be deployed to the generated environment where the checks ran
+    successfully. A dependency is an OSGi bundle if it has the Bundle-SymbolicName and the
+    Bundle-Version manifest headers defined.</p>
   <h2 id="distribution_packages">Distribution packages</h2>
-  <p>In the goals this plugin uses distribution packages. A distribution package is a simple ZIP file available in a
-    maven repository with the dependencies and configuration files of the framework. By default, there is an Equinox
-    based distribution package. To see how to create your own distribution package, check one of the existing ones and
-    the the documentation in the XSD that is available in the source of this plugin.</p>
+  <p>In the goals, this plugin uses distribution packages. A distribution package is a simple
+    ZIP file available in a maven repository with the dependencies and configuration files of the
+    framework. By default, there is an Equinox based distribution package. To see how to create your
+    own distribution package, check one of the existing ones and the documentation in the XSD that
+    is available in the source of this plugin.</p>
 
   <h2 id="environments">Environments</h2>
 
-  <p>In the configuration part of the maven plugin, it is possible to define multiple environments. An environment
-    is based on a framework, which is basically a link to a distribution package. If no environment is configured for
-    the plugin, the default Equinox environment with the id 'equinox' is used.</p>
+  <p>In the configuration part of the maven plugin, it is possible to define multiple
+    environments. An environment is based on a framework, which is basically a link to a
+    distribution package. If no environment is configured for the plugin, the default Equinox
+    environment with the id 'equinox' is used.</p>
   <h3 id="default_configuration">Default configuration</h3>
   <p>In the following, most simple configuration, where no custom environment is defined:</p>
   <div class="source">
@@ -68,8 +56,8 @@
 &lt;/plugin&gt;</pre>
   </div>
   <h3 id="environment_settings">Environment settings</h3>
-  <p>A plugin configuration may contain multiple environment configurations. The environment can be configured
-    deeply. Here is the list of entries that can be used inside an environment:</p>
+  <p>A plugin configuration may contain multiple environment configurations. The environment can
+    be configured deeply. Here is the list of entries that can be used inside an environment:</p>
   <table>
     <thead>
       <tr>
@@ -80,113 +68,165 @@
     <tbody>
       <tr>
         <td><p>id</p></td>
-        <td><p>The id of the environment. This must be unique in the pom.xml. Sub-folders are created for each
-            environment during the run of the dist or the integration-test goals. Therefore, the id should have a value
-            that is valid for creating a folder, so it is not a good idea to use spaces or special characters inside.</p></td>
+        <td><p>The id of the environment. This must be unique in the pom.xml. Sub-folders
+            are created for each environment during the run of the dist or the integration-test
+            goals. Therefore, the id should have a value that is valid for creating a folder, so it
+            is not a good idea to use spaces or special characters inside.</p></td>
       </tr>
       <tr>
         <td><p>framework</p></td>
-        <td><p>The distribution package name we should work with. Based on this value the plugin will get a
-            maven dependency. To define a framework, you can use one of the formats below:</p>
+        <td><p>The distribution package name we should work with. Based on this value the
+            plugin will get a maven dependency. To define a framework, you can use one of the
+            formats below:</p>
           <ul>
             <li style="with: 100%;"><p>
-                <span style="font-weight: bold;">Full:</span> You can define the maven dependency with the
-                "groupId:artifactId:version". With this format maven will search for a dependency with the type zip.
+                <span style="font-weight: bold;">Full:</span> You can define the maven dependency
+                with the "groupId:artifactId:version". With this format, maven will search for a
+                dependency with the type zip.
               </p></li>
             <li style="width: 100%;"><p>
-                <span style="font-weight: bold;">Short:</span>The plugin searches it's classpath to find all of the
-                META-INF/eosgi-framework.properties files. You can find a sample file like this in the jar file of the
-                plugin. These properties files contain short-name=full-name entries. A typical short name is 'equinox',
-                that is also defined in the plugin jar.
+                <span style="font-weight: bold;">Short:</span>The plugin searches its classpath to
+                find all of the META-INF/eosgi-framework.properties files. You can find a sample
+                file like this in the jar file of the plugin. These properties files contain
+                short-name=full-name entries. A typical short name is 'equinox', that is also
+                defined in the plugin jar.
               </p></li>
           </ul></td>
       </tr>
       <tr>
-        <td><p>timeout</p></td>
-        <td><p>This setting is only used when the environment is started with the integration-test goal. The
-            plugin will wait until all of the tests run in the test environment. It may happen that due to an error the
-            test OSGi framework never runs the tests (missing dependencies, wiring issues, etc.). In this case, the
-            plugin kills the environment when reaching the defined timeout. The timeout should be specified in
+        <td><p>testRunningTimeout</p></td>
+        <td><p>This setting is only used when the environment is started with the
+            integration-test goal. The plugin will wait until all of the tests run in the test
+            environment. It may happen that due to an error the test OSGi framework never runs the
+            tests (missing dependencies, wiring issues, etc.). In this case, the plugin kills the
+            environment when reaching the defined timeout. The timeout should be specified in
             milliseconds. The default value is five minutes that is 300000 milliseconds.</p></td>
       </tr>
       <tr>
         <td><p>frameworkStartLevel</p></td>
-        <td><p>The start level of the OSGi framework. Optional</p></td>
+        <td><p>The start-level of the OSGi framework. Optional</p></td>
       </tr>
       <tr>
-        <td><p>bundleStartLevel</p></td>
-        <td><p>The default start level of the installed bundles. Optional</p></td>
+        <td><p>initialBundleStartLevel</p></td>
+        <td><p>The default start-level of the installed bundles. Optional</p></td>
       </tr>
       <tr>
-        <td><p>bundleSettings</p></td>
-        <td><p>It is possible to add special information to bundles, like the startLevel. Explained later.</p></td>
-      </tr>
-      <tr>
-        <td><p>bundleSettings</p></td>
+        <td><p>artifacts</p></td>
         <td>
-          <p>Currently, only the startLevel can be set to the bundle as a special property. To be able to add a
-            special setting to a bundle, insert the following snippet to any environment:</p>
+          <p>It is possible to add new artifacts to the dependency list or override the settings
+            of existing dependencies that will be used during the environment distribution. If an
+            artifact is already in the dependency tree, another version can be added here, so there
+            will be multiple version of the same artifacts in the environment.</p>
+
           <div class="source" style="width: 100%;">
             <pre>
 &lt;environment&gt;
     ...
-    &lt;bundleSettings&gt;
-        &lt;bundle&gt;
-            &lt;symbolicName&gt;mybundle&lt;/symbolicName&gt;
-            &lt;version&gt;1.0.0&lt;/version&gt;
-            &lt;startLevel&gt;3&lt;/startLevel&gt;
-        &lt;/bundle&gt;
-    &lt;/bundleSettings&gt;
+    &lt;artifacts&gt;
+        &lt;artifact&gt;
+            &lt;coordinates&gt;groupId:artifactId:version&lt;/coordinates&gt;
+        &lt;/artifact&gt;
+    &lt;/artifacts&gt;
 &lt;/environment&gt;</pre>
           </div>
-          <p>The version element is optional. If it is not set, the setting will be applied to all versions of the
-            bundles with the identical symbolic names.</p>
+          <p>Whether an artifact is an OSGi bundle or not, it is possible to specify a
+            targetFolder and targetFile element. In case one of those elements are specified, the
+            artifact will be copied to the target place. E.g.:</p> <pre>
+&lt;environment&gt;
+    ...
+    &lt;artifacts&gt;
+        &lt;artifact&gt;
+            &lt;coordinates&gt;groupId:artifactId:version&lt;/coordinates&gt;
+            &lt;targetFolder&gt;subFolder1/subFolder2&lt;/targetFolder&gt;
+            &lt;targetFile&gt;somefileName&lt;/targetFile&gt;
+        &lt;/artifact&gt;
+    &lt;/artifacts&gt;
+&lt;/environment&gt;</pre>
+          <p>Additional properties can be specified for the artifact that the distribution
+            environment supports.</p> <pre>
+&lt;environment&gt;
+    ...
+    &lt;artifacts&gt;
+        &lt;artifact&gt;
+            &lt;coordinates&gt;groupId:artifactId:version&lt;/coordinates&gt;
+            &lt;bundle.startLevel&gt;20&lt;/bundle.startLevel&gt;
+            &lt;bundle.action&gt;start/install/none&lt;/bundle.action&gt;
+        &lt;/artifact&gt;
+    &lt;/artifacts&gt;
+&lt;/environment&gt;</pre>
         </td>
       </tr>
       <tr>
-        <td><p>systemProperties</p></td>
-        <td><p>Java system properties that will be passed to the OSGi container. There should be one or more
-            xml elements inside, where the name of the element will be the name of the system property, and the value of
-            the element will be the value of the system property. An example:</p>
-          <div class="source" style="width: 100%;">
-            <pre>
-&lt;environment&gt;
-	...
-	&lt;systemProperties&gt;
-		&lt;jetty.port&gt;8081&lt;/jetty.port&gt;
-		&lt;file.encoding&gt;UTF8&lt;/file.encoding&gt;
-	&lt;/systemProperties&gt;
-&lt;/environment&gt;</pre>
-          </div>
-          <p>The definition will define two system properties the same way one would define "-Djetty.port=8081
-            -Dfile.encoding=UTF8" when you start a java application from the command line.</p></td>
-      </tr>
-      <tr>
-        <td><p>vmOptions</p></td>
+        <td><p>launchConfig</p></td>
         <td>
-          <p>It is possible to specify arguments that will be passed to the JVM. An example:</p>
+          <p>The configuration how the environment should be launched. There is a basic
+            definition about the main class/jar in the distributed environment package normally, it
+            is possible to specify additional VM and program arguments here.</p>
           <div class="source">
             <pre>
 &lt;environment&gt;
-	...
-	&lt;vmOptions&gt;
-		&lt;option&gt;-XX:MaxPermSize=64m&lt;/option&gt;
-		&lt;option&gt;-Xmx512m&lt;/option&gt;
-	&lt;/vmOptions&gt;
+  ...
+  &lt;launchConfig&gt;
+    &lt;vmArguments&gt;
+      &lt;minHeap&gt;-Xms20m&lt;/minHeap&gt;
+      &lt;maxheap&gt;-Xmx200m&lt;/maxheap&gt;
+      &lt;someSystemProp&gt;-Dkey=value&lt;/someSystemProp&gt;
+    &lt;/vmArguments&gt;
+    &lt;programArguments&gt;
+      &lt;console&gt;-console&lt;/console&gt;
+    &lt;/programArguments&gt;
+  &lt;/launchConfig&gt;
 &lt;/environment&gt;</pre>
           </div>
+          <p>It is possible to override the default launch configuration settings depending how
+            the environment is launched:</p>
+          <ul>
+            <li><strong>IDE:</strong> The environemnt is launched by an IDE (like the EOSGi
+              Eclipse plugin)</li>
+            <li><strong>INTEGRATION_TEST: </strong> The environment is launched by the
+              integration-test goal of eosgi-maven-plugin.</li>
+            <li><strong>PARSABLES:</strong> The configuration is used when parsable files are
+              replaced in the distribution package.</li>
+          </ul>
+          <p>An example:</p> <pre>
+&lt;environment&gt;
+  ...
+  &lt;launchConfig&gt;
+    &lt;vmArguments&gt;
+      &lt;minHeap&gt;-Xms20m&lt;/minHeap&gt;
+      &lt;maxheap&gt;-Xmx200m&lt;/maxheap&gt;
+    &lt;/vmArguments&gt;
+    &lt;overrides&gt;
+      &lt;override&gt;
+        &lt;useBy&gt;PARSABLES&lt;/useBy&gt;
+        &lt;vmArguments&gt;
+          &lt;!-- Having the same key overrides a value in the arguments --&gt;
+          &lt;minHeap&gt;-Xms100m&lt;/minHeap&gt;
+          
+          &lt;!-- It is possible to add new arguments, too --&gt;
+          &lt;debug&gt;-agentlib:jdwp=transport=dt_socket,server=y,address=8000,suspend=n&lt;/debug&gt;
+        &lt;/vmArguments&gt;
+        &lt;programArguments&gt;
+          &lt;!-- Removing an argument from the defaults can be done by adding it with no value --&gt;
+          &lt;console /&gt;
+        &lt;/programArguments&gt;
+      &lt;/override&gt;
+    &lt;/overrides&gt;
+  &lt;/launchConfig&gt;
+&lt;/environment&gt;</pre>
         </td>
       </tr>
     </tbody>
   </table>
-  <p>There are additional settings that can be defined for the goals. To see them, please check the documentation of
-    the goal you want to run!</p>
-  <h2 id="integrate_tests_as_maven_compilation_lifecycle">Integrate tests as a maven compilation lifecycle</h2>
+  <p>There are additional settings that can be defined for the goals. To see them, please check
+    the documentation of the goal you want to run!</p>
+  <h2 id="integrate_tests_as_maven_compilation_lifecycle">Running integration tests in maven
+    compilation lifecycle</h2>
   <h3 id="integrate_tests_additional_dependencies">Additional dependencies of the project</h3>
-  <p>To be able to run tests with the maven plugin, the started OSGi containers must contain the osgi-testrunner
-    bundle and at least one Test Engine bundle. At the moment there is one Test Engine implementation that makes it
-    possible to run tests with JUnit4. To have all necessary bundles within the environment, add the following
-    dependency to the project:</p>
+  <p>To be able to run tests with the maven plugin, the started OSGi containers must contain the
+    osgi-testrunner bundle and at least one Test Engine implementation. At the moment there is one
+    Test Engine implementation that makes it possible to run tests with JUnit4. To have all
+    necessary bundles within the environment, add the following dependency to the project:</p>
   <div class="source">
     <pre>
 &lt;dependency&gt;
@@ -195,9 +235,10 @@
   &lt;version&gt;3.0.3&lt;/version&gt;
 &lt;/dependency&gt;</pre>
   </div>
+  <p>See the documentation of the testrunner for more information!</p>
   <h3 id="integrate_tests_configuration">Configuration of the maven plugin</h3>
-  <p>In order to run the integration-test goal at the integration phase of maven you can use the following
-    configuration snippet:</p>
+  <p>In order to run the integration-test goal at the integration phase of maven you can use the
+    following configuration snippet:</p>
   <div class="source">
     <pre>
 &lt;plugin&gt;
@@ -215,118 +256,68 @@
     &lt;/executions&gt;
 &lt;/plugin&gt;</pre>
   </div>
-  <p>The configuration of the plugin (with the environments) can go on the plugin level or on the execution level.</p>
-  <h3 id="integrate_tests_number_of_tests">Defining the number of expected tests</h3>
-  <p>When the integration-test goal runs, it will be successful if the number of successful tests is equal to the
-    amount defined in the bundle headers. When an OSGi bundle dependency or the current header has the manifest header
-    "EOSGi-TestNum", it adds the value of this header entry to the total number of expected test count. Normally, you
-    define this header in your bundle project with the maven-bundle-plugin like below:</p>
-  <div class="source">
-    <pre>
-&lt;plugin&gt;
-    &lt;groupId&gt;org.apache.felix&lt;/groupId&gt;
-    &lt;artifactId&gt;maven-bundle-plugin&lt;/artifactId&gt;
-    &lt;extensions&gt;true&lt;/extensions&gt;
-    &lt;configuration&gt;
-        &lt;instructions&gt;
-            &lt;Bundle-SymbolicName&gt;${project.artifactId}&lt;/Bundle-SymbolicName&gt;
-            &lt;Import-Package&gt;
-                *
-            &lt;/Import-Package&gt;
-			...
-            &lt;EOSGi-TestNum&gt;2&lt;/EOSGi-TestNum&gt;
-        &lt;/instructions&gt;
-    &lt;/configuration&gt;
-&lt;/plugin&gt;</pre>
-  </div>
-  <p>The snippet above means that the bundle has two expected test results. Please note that in a large project this
-    header does not have to be defined in the same project as the one containing your test classes. It can happen that
-    one of the bundles contains the test code but the OSGi test services are provided by another bundle multiple times.
-    In that case, it is better to define the manifest header in the bundle, where we know how many test services will be
-    provided exactly.</p>
-  <h2 id="jacoco_configuration">Jacoco configuration</h2>
-  <p>There is a possibility to add coverage results to projects. To do that, insert the following to the plugin
-    configuration:</p>
-  <div class="source">
-    <pre>
-&lt;plugin&gt;
-    &lt;groupId&gt;org.everit.osgi.dev&lt;/groupId&gt;
-    &lt;artifactId&gt;eosgi-maven-plugin&lt;/artifactId&gt;
-    &lt;version&gt;${project.version}&lt;/version&gt;
-    &lt;configuration&gt;
-        &lt;jacoco&gt;
-            &lt;append&gt;true&lt;/append&gt;
-            &lt;dumponexit&gt;true&lt;/dumponexit&gt;
-            &lt;includes&gt;...&lt;/includes&gt;
-            &lt;excludes&gt;...&lt;/excludes&gt;
-            &lt;output&gt;...&lt;/output&gt;
-            &lt;address&gt;...&lt;/address&gt;
-            &lt;port&gt;...&lt;/port&gt;
-        &lt;/jacoco&gt;
-    &lt;/configuration&gt;
-&lt;/plugin&gt;</pre>
-  </div>
-  <p>
-    All settings of jacoco are optional. To get more information about the settings, read the <a
-      href="http://www.eclemma.org/jacoco/trunk/doc/agent.html">Jacoco java agent documentation</a> as the parameters
-    are passed directly to the agent. The output is set to the target/eosgi-reports/environmentId/jacoco.exec file.
-  </p>
-  <h3 id="jacoco_trick_different_output_mode">Trick: Use different output mode based on starting environment</h3>
-  <p>With the default distribution packages it is possible to use expression in the settings. It is possible to
-    define that Jacoco should dump the results into file if a full compilation is done while it should work as a
-    TCPServer if the test environment is started in the console. To achieve this goal, the following should be defined
-    in the configuration of the plugin:</p>
-  <div class="source">
-    <pre>
-&lt;jacoco&gt;
-  &lt;includes&gt;com.foo.*&lt;/includes&gt;
-  &lt;output&gt;$${ if (System.getenv("EOSGI_STOP_AFTER_TESTS").equals("true")) "file"; else "tcpserver"; }&lt;/output&gt;
-&lt;/jacoco&gt;</pre>
-  </div>
+  <p>The configuration of the plugin (with the environments) can go on the plugin level or on
+    the execution level.</p>
 
-  <h2 id="incremental_update">Incremental update</h2>
-  It is possible to run incremental updates on distributions. To carry out an update, simply run the following command:
+  <h2 id="incremental_update">Incremental and live update</h2>
+  It is possible to run incremental updates on distributions. To carry out an update, simply run the
+  following command:
   <div class="source">
-    <pre>mvn eosgi:dist</pre>
+    <pre>mvn package eosgi:dist</pre>
   </div>
-  <p>By running the command, all extracted environments will be updated. In case there is an incremental update, the
-    copy mode of the original distribution is used. It is important to either stop all environments before an
-    incremental update is carried out or to specify their service ports.</p>
-  <h2 id="changing_bundles_without_restart">Changing bundles in the OSGi container without a restart</h2>
   <p>
-    In case <a href="https://github.com/everit-org/osgi-richconsole">Everit OSGi RichConsole</a> is deployed, it listens
-    on a specific TCP port. The port is displayed in the deployer window and also in the log. For more information about
-    the configuration possibilities, please see the documentation of RichConsole.
-  </p>
-  <p>
-    Since version 2.0.0, eosgi-maven-plugin supports service port callings. To define these ports, the <a
-      href="dist-mojo.html#servicePort">eosgi.servicePort</a> system property must be defined. An example command:
-    <div class="source">
-      <pre>mvn eosgi:dist -Deosgi.servicePort=33532,33432</pre>
-      In the above example, two environments are running when the incremental update command is called.
-    </div>
-  </p>
-
-  <h2 id="google_analytics_tracking">Google Analytics tracking</h2>
-  <p>
-    The eosgi-maven-plugin collects anonym usage statistics. The collected statistics are used to get budget for further development.
-    Collected data are:
+    By running the command, all extracted environments will be updated. If the target environment is
+    running, eosgi-maven-plugin will try to update it using <a
+      href="http://docs.oracle.com/javase/7/docs/technotes/guides/attach/">Java Attach API</a> and <i>OSGi
+      JMX Management Model Specification</i>. The <i>dist</i> or <i>integration-test</i> goal of <i>eosgi-maven-plugin</i>
+    will fail if
   </p>
   <ul>
-    <li>analytics referer:  the eosgi-maven-plugin or other plugin. Example eclipse-e4-plugin, which is under development now.</li>
-    <li>executed goal: the executed goal. Available values (goals) are: 
+    <li>the target environment is started more than once (multiple running processes)</li>
+    <li>the target environment is started once, but the <i>OSGi JMX Management Model
+        Specification</i> is not available via JMX.
+    </li>
+  </ul>
+  <p>
+    <i>OSGi JMX Management Model Specification</i> is implemented by several projects. We recommend
+    to use the following two dependencies to be sure that the necessary JMX services will be
+    available, add the following dependencies to your project:
+  </p>
+  <div class="source">
+    <pre>&lt;dependency&gt;
+  &lt;groupId&gt;org.apache.aries.jmx&lt;/groupId&gt;
+  &lt;artifactId&gt;org.apache.aries.jmx.core&lt;/artifactId&gt;
+  &lt;version&gt;1.1.6&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+  &lt;groupId&gt;org.everit.osgi.jmx&lt;/groupId&gt;
+  &lt;artifactId&gt;org.everit.osgi.jmx.activator&lt;/artifactId&gt;
+  &lt;version&gt;1.0.0&lt;/version&gt;
+&lt;/dependency&gt;</pre>
+  </div>
+
+  <h2 id="google_analytics_tracking">Google Analytics tracking</h2>
+  <p>The eosgi-maven-plugin collects anonymous usage statistics. The collected statistics are
+    used to convince our managers that others use the plugin and we should continue our work.
+    Collected data are:</p>
+  <ul>
+    <li>analytics referer: the eosgi-maven-plugin or other plugin. Example eclipse-e4-plugin,
+      which is under development now.</li>
+    <li>executed goal: the executed goal. Available values (goals) are:
       <ul>
         <li>analyse</li>
         <li>dist</li>
         <li>integration-test</li>
       </ul>
     </li>
-    <li>mac address hash: the hashed value of the MAC address of the first network interface controller of the user's computer. 
-    SHA-1 algorithm is used ti create the hash to make the user anonym and unique.</li>
+    <li>mac address hash: the hashed value of the MAC address of the first network interface
+      controller of the user's computer. SHA-1 algorithm is used to create the hash to make the user
+      anonymous and unique.</li>
     <li>plugin version: the plugin version.</li>
   </ul>
   <p>
-    To turn off the Google Analytics tracking add the "-Deosgi.analytics.skip=true" property to the build comman or use the "true" plugin parameter.
+    To turn off the Google Analytics tracking add the "-Deosgi.analytics.skip=true" property to the
+    build command or set the same property in the <i>pom</i> file of your project.
   </p>
 </body>
 </html>

@@ -87,7 +87,7 @@ public class EnvironmentConfiguration {
    * be stopped when this exceeds. Default value is five minutes.
    */
   @Parameter(defaultValue = "180000")
-  private int timeout;
+  private int testRunningTimeout;
 
   public List<EOSGiArtifact> getArtifacts() {
     return artifacts;
@@ -122,7 +122,7 @@ public class EnvironmentConfiguration {
   }
 
   public int getTimeout() {
-    return timeout;
+    return testRunningTimeout;
   }
 
   public void setFramework(final String framework) {

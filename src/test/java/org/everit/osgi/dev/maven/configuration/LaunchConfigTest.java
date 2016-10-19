@@ -28,10 +28,6 @@ import org.junit.Test;
 
 public class LaunchConfigTest {
 
-  private static final String ENVIRONMENT_ID = "test";
-
-  private static final String REPORT_FOLDER = "reportFolder";
-
   private void assertMap(final Map<String, String> actualMap,
       final String... expctedKeyValuePairs) {
 
