@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.apache.maven.plugins.annotations.Parameter;
 import org.everit.osgi.dev.dist.util.DistConstants;
+import org.everit.osgi.dev.maven.IntegrationTestMojo;
 
 /**
  * The OSGI environment that is specified in the pom.xml for the plugin.
@@ -80,14 +81,14 @@ public class EnvironmentConfiguration {
    * CTRL+C was sent. Default value is half a minute.
    */
   @Parameter(defaultValue = "" + DistConstants.DEFAULT_SHUTDOWN_TIMEOUT)
-  private int shutdownTimeout;
+  private int shutdownTimeout = DistConstants.DEFAULT_SHUTDOWN_TIMEOUT;
 
   /**
    * The timeout in milliseconds after the Tests should be finished for sure. The environment will
    * be stopped when this exceeds. Default value is five minutes.
    */
-  @Parameter(defaultValue = "180000")
-  private int testRunningTimeout;
+  @Parameter(defaultValue = "" + IntegrationTestMojo.DEFAULT_TEST_RUNNING_TIMEOUT)
+  private int testRunningTimeout = IntegrationTestMojo.DEFAULT_TEST_RUNNING_TIMEOUT;
 
   public List<EOSGiArtifact> getArtifacts() {
     return artifacts;
@@ -121,7 +122,7 @@ public class EnvironmentConfiguration {
     return shutdownTimeout;
   }
 
-  public int getTimeout() {
+  public int getTestRunningTimeout() {
     return testRunningTimeout;
   }
 
@@ -131,6 +132,14 @@ public class EnvironmentConfiguration {
 
   public void setId(final String id) {
     this.id = id;
+  }
+
+  public void setShutdownTimeout(final int shutdownTimeout) {
+    this.shutdownTimeout = shutdownTimeout;
+  }
+
+  public void setTestRunningTimeout(final int testRunningTimeout) {
+    this.testRunningTimeout = testRunningTimeout;
   }
 
 }

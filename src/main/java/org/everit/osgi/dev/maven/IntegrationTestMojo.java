@@ -131,6 +131,8 @@ public class IntegrationTestMojo extends DistMojo {
 
   }
 
+  public static final int DEFAULT_TEST_RUNNING_TIMEOUT = 180000;
+
   private static final long LOGGING_INTERVAL = 5000;
 
   private static final int MILLISECOND_NUM_IN_SECOND = 1000;
@@ -290,7 +292,7 @@ public class IntegrationTestMojo extends DistMojo {
       String environmentId = environment.getId();
       File distFolderFile = distributedEnvironmentData.getDistributionFolder();
       int shutdownTimeout = environment.getShutdownTimeout();
-      int timeout = environment.getTimeout();
+      int timeout = environment.getTestRunningTimeout();
 
       TestResult testResult = runIntegrationTestsOnEnvironment(
           environmentId, distFolderFile, reportFolderFile, shutdownTimeout, timeout);
