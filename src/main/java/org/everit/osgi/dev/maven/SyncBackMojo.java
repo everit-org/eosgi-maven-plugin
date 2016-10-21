@@ -40,7 +40,7 @@ public class SyncBackMojo extends AbstractEOSGiMojo {
    * overridden if the files with same name already exist.
    *
    */
-  @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi-dist")
+  @Parameter(property = "eosgi.distFolder", defaultValue = "${project.build.directory}/eosgi/dist")
   protected String distFolder;
 
   /**
