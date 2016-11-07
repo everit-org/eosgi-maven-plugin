@@ -242,6 +242,13 @@ public class FileManager {
    * are overwritten in the target file that are changed.
    */
   public boolean overCopyFile(final File source, final File target) throws MojoExecutionException {
+    if (target.exists() && source.lastModified() == target.lastModified()
+        && source.length() == target.length()) {
+
+      touchedFiles.add(target);
+      return false;
+    }
+
     try (FileChannel sourceChannel = FileChannel.open(source.toPath(), StandardOpenOption.READ)) {
       return overCopyFile(sourceChannel, source.length(), source.lastModified(), target);
     } catch (IOException e) {

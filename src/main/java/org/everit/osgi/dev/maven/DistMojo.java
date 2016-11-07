@@ -321,7 +321,6 @@ public class DistMojo extends AbstractEOSGiMojo {
 
   @Override
   protected void doExecute() throws MojoExecutionException, MojoFailureException {
-
     try (EOSGiVMManager virtualMachineManager = createEOSGiVMManager()) {
 
       File globalDistFolderFile = new File(distFolder);
@@ -457,7 +456,6 @@ public class DistMojo extends AbstractEOSGiMojo {
           remoteOSGiManager.setFrameworkStartLevel(frameworkStartLevelAfterUpgrade);
         }
       }
-
     }
   }
 
