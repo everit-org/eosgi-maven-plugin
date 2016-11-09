@@ -435,13 +435,20 @@ public class IntegrationTestMojo extends DistMojo {
       throw new MojoFailureException("Failed to process test results", e);
     }
 
+    boolean foundTestResult = false;
     if (testResultFolder.exists() && testResultFolder.isDirectory()) {
       File[] files = testResultFolder.listFiles();
       for (File resultFile : files) {
         if (resultFile.getName().endsWith(".xml")) {
           processResultXML(results, documentBuilder, resultFile);
+          foundTestResult = true;
         }
       }
+    }
+
+    if (!foundTestResult) {
+      throw new MojoFailureException(
+          "No test result found in folder: " + testResultFolder.toString());
     }
   }
 
