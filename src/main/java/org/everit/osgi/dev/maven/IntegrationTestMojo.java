@@ -454,8 +454,8 @@ public class IntegrationTestMojo extends DistMojo {
 
   private void processResultXML(final TestResult results, final DocumentBuilder documentBuilder,
       final File resultFile) throws MojoFailureException {
-    try {
-      Document document = documentBuilder.parse(resultFile);
+    try (FileInputStream fin = new FileInputStream(resultFile)) {
+      Document document = documentBuilder.parse(fin);
       Element testSuite = document.getDocumentElement();
       if (!"testsuite".equals(testSuite.getNodeName())) {
         throw new MojoFailureException("Invalid test result xml file "
