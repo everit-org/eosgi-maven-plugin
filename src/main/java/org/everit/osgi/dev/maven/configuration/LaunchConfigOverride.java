@@ -26,7 +26,8 @@ import org.everit.osgi.dev.dist.util.configuration.schema.UseByType;
 public class LaunchConfigOverride extends AbstractLaunchConfig {
 
   /**
-   * Defines the case where these overrides must be used.
+   * Defines the case where these overrides must be used. Possible values: PARSABLES,
+   * INTEGRATION_TEST, IDE.
    */
   @Parameter(required = true)
   protected UseByType useBy;
