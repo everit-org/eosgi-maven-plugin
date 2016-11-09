@@ -276,8 +276,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
     if (jmxServiceURL == null) {
       throw new MojoExecutionException("Bundle changes cannot be applied on the running OSGi"
-          + " container as JMX service URL is not available: [environmentId = '" + environmentId
-          + "', virtualMachines = '" + runtimeInfo.virtualMachineId + "'");
+          + " container as JMX service URL is not available: {environmentId : \"" + environmentId
+          + "\", virtualMachine : \"" + runtimeInfo.virtualMachineId + "\"}");
     }
 
     try {
@@ -286,8 +286,9 @@ public class DistMojo extends AbstractEOSGiMojo {
         | ReflectionException e) {
 
       throw new MojoExecutionException(
-          "Could not connect to JVM that belongs to environment:  [environmentId = '"
-              + environmentId + "', virtualMachines = '" + runtimeInfo.virtualMachineId + "'",
+          "Could not connect to OSGi Environment:  {environmentId : \"" + environmentId
+              + "\", virtualMachines : \"" + runtimeInfo.virtualMachineId + "\", jmxService : \""
+              + jmxServiceURL + "\"}",
           e);
     }
 
