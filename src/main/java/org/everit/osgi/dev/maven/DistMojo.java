@@ -51,6 +51,7 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.everit.osgi.dev.dist.util.DistConstants;
 import org.everit.osgi.dev.dist.util.attach.EOSGiVMManager;
+import org.everit.osgi.dev.dist.util.attach.EOSGiVMManagerParameter;
 import org.everit.osgi.dev.dist.util.attach.EnvironmentRuntimeInfo;
 import org.everit.osgi.dev.dist.util.configuration.DistributedEnvironmentConfigurationProvider;
 import org.everit.osgi.dev.dist.util.configuration.schema.ArtifactType;
@@ -215,8 +216,24 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
   }
 
+  /**
+   * Creates an EOSGi VM Manager.
+   *
+   * @return The EOSGi VM Manager.
+   */
   protected EOSGiVMManager createEOSGiVMManager() {
-    return new EOSGiVMManager(resolveAttachAPIClassLoader());
+    EOSGiVMManagerParameter parameter = new EOSGiVMManagerParameter();
+    parameter.classLoader = resolveAttachAPIClassLoader();
+    parameter.deadlockEventHandler = (eventData) -> {
+      getLog().warn("Deadlock during reading info of VM with id '" + eventData.virtualMachineId
+          + "'. Trying to refresh VM list again.");
+      eventData.vmManager.refresh();
+    };
+    parameter.attachNotSupportedExceptionDuringRefreshEventHandler = (eventData) -> {
+      getLog().warn("Cannot attach JVM '" + eventData.virtualMachineId + "' with message: "
+          + eventData.cause.getMessage());
+    };
+    return new EOSGiVMManager(parameter);
   }
 
   private Map<BundleSNV, DistributableArtifact> createJustStartedBundleByUniqueLabelMap(
