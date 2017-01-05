@@ -137,6 +137,8 @@ public class IntegrationTestMojo extends DistMojo {
 
   private static final int MILLISECOND_NUM_IN_SECOND = 1000;
 
+  private static final String SYSTEM_PROPERTY_PREFIX = "-D";
+
   private static final int TIMEOUT_CHECK_INTERVAL = 10;
 
   private static int convertTestSuiteAttributeToInt(final Element element, final String attribute,
@@ -238,9 +240,10 @@ public class IntegrationTestMojo extends DistMojo {
     processBuilder.directory(workingDirFile);
     getLog().info("[" + title + "] Working dir: " + workingDirFile);
 
+    // Supporting TestRunner 4.x and earlier
     Map<String, String> envMap = new HashMap<>(System.getenv());
-    envMap.put(TestRunnerConstants.ENV_STOP_AFTER_TESTS, Boolean.TRUE.toString());
-    envMap.put(TestRunnerConstants.ENV_TEST_RESULT_FOLDER, testResultFolder.getAbsolutePath());
+    envMap.put("EOSGI_STOP_AFTER_TESTS", Boolean.TRUE.toString());
+    envMap.put("EOSGI_TEST_RESULT_FOLDER", testResultFolder.getAbsolutePath());
 
     processBuilder.environment().putAll(envMap);
 
@@ -480,8 +483,7 @@ public class IntegrationTestMojo extends DistMojo {
   }
 
   private String[] resolveCommandForEnvironment(final File distFolderFile,
-      final String uniqueLaunchId)
-      throws MojoFailureException {
+      final File testResultFolder, final String uniqueLaunchId) throws MojoFailureException {
 
     EnvironmentType distributedEnvironment =
         distEnvConfigProvider.getOverriddenDistributedEnvironmentConfig(
@@ -503,7 +505,14 @@ public class IntegrationTestMojo extends DistMojo {
 
     command.addAll(environmentConfigurationDTO.vmArguments);
 
-    command.add("-D" + DistConstants.SYSPROP_LAUNCH_UNIQUE_ID + "=" + uniqueLaunchId);
+    command.add(
+        SYSTEM_PROPERTY_PREFIX + DistConstants.SYSPROP_LAUNCH_UNIQUE_ID + "=" + uniqueLaunchId);
+
+    // Supporting TestRunner 5.x
+    command.add(SYSTEM_PROPERTY_PREFIX + TestRunnerConstants.PROP_DEVELOPMENT_MODE + "=false");
+    command.add(SYSTEM_PROPERTY_PREFIX + TestRunnerConstants.PROP_STOP_AFTER_TESTS + "=true");
+    command.add("-D" + TestRunnerConstants.PROP_TEST_RESULT_FOLDER + '='
+        + testResultFolder.getAbsolutePath());
 
     command.add(environmentConfigurationDTO.mainClass);
 
@@ -521,14 +530,15 @@ public class IntegrationTestMojo extends DistMojo {
 
     TestResult testResult = new TestResult();
 
+    File testResultFolder =
+        PluginUtil.subFolderFile(reportFolderFile, environmentId, "test-result");
+    testResultFolder.mkdirs();
+
     String uniqueLaunchId = UUID.randomUUID().toString();
-    String[] command = resolveCommandForEnvironment(distFolderFile, uniqueLaunchId);
+    String[] command =
+        resolveCommandForEnvironment(distFolderFile, testResultFolder, uniqueLaunchId);
 
     try {
-
-      File testResultFolder =
-          PluginUtil.subFolderFile(reportFolderFile, environmentId, "test-result");
-      testResultFolder.mkdirs();
 
       ProcessBuilder processBuilder = createTestProcessBuilder(
           environmentId, distFolderFile, command, testResultFolder);
