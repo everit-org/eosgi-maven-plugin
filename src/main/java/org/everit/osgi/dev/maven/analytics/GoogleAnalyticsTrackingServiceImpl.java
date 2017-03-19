@@ -199,16 +199,16 @@ public class GoogleAnalyticsTrackingServiceImpl implements GoogleAnalyticsTracki
   }
 
   private Properties loadProperties() {
-    InputStream gaPropertiesInputStream =
-        this.getClass().getResourceAsStream("/META-INF/ga.properties");
 
-    Properties properties = new Properties();
-    try {
+    try (InputStream gaPropertiesInputStream =
+        this.getClass().getResourceAsStream("/META-INF/ga.properties")) {
+
+      Properties properties = new Properties();
       properties.load(gaPropertiesInputStream);
+      return properties;
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    return properties;
   }
 
   @Override
