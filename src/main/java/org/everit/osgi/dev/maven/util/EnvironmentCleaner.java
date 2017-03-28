@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.everit.osgi.dev.dist.util.configuration.schema.EntryType;
 import org.everit.osgi.dev.dist.util.configuration.schema.EnvironmentType;
@@ -63,7 +64,8 @@ public final class EnvironmentCleaner {
       int i = 0;
       for (EntryType pathRegex : pathRegexEntries) {
         try {
-          runtimePathPatterns[i] = Pattern.compile(pathRegex.getValue());
+          runtimePathPatterns[i] =
+              Pattern.compile(StringUtils.replace(pathRegex.getValue(), "\\\\", "/"));
         } catch (PatternSyntaxException e) {
           throw new MojoExecutionException(
               "Invalid regular expression for runtime path in environment '" + environmentId + "': "
@@ -121,7 +123,7 @@ public final class EnvironmentCleaner {
       relativePathString += "/";
     }
     for (Pattern runtimePathPatter : runtimePathPatterns) {
-      if (runtimePathPatter.matcher(relativePathString).matches()) {
+      if (runtimePathPatter.matcher(StringUtils.replace(relativePathString, "\\", "/")).matches()) {
         return true;
       }
     }
