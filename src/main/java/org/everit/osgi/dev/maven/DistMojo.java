@@ -229,9 +229,10 @@ public class DistMojo extends AbstractEOSGiMojo {
           + "'. Trying to refresh VM list again.");
       eventData.vmManager.refresh();
     };
-    parameter.attachNotSupportedExceptionDuringRefreshEventHandler = (eventData) -> {
+    parameter.exceptionDuringAttachVMHandler = (eventData) -> {
       getLog().warn("Cannot attach JVM '" + eventData.virtualMachineId + "' with message: "
           + eventData.cause.getMessage());
+      return true;
     };
     return new EOSGiVMManager(parameter);
   }
@@ -421,7 +422,8 @@ public class DistMojo extends AbstractEOSGiMojo {
 
       int currentInitialBundleStartLevel = remoteOSGiManager.getInitialBundleStartLevel();
       int newInitialBundleStartLevel = (distributedEnvironment.getInitialBundleStartLevel() != null)
-          ? distributedEnvironment.getInitialBundleStartLevel() : currentInitialBundleStartLevel;
+          ? distributedEnvironment.getInitialBundleStartLevel()
+          : currentInitialBundleStartLevel;
 
       int frameworkStartLevelDuringUpdate = resolveNecessaryStartlevel(bundleExecutionPlan,
           originalFrameworkStartLevel, currentInitialBundleStartLevel);
