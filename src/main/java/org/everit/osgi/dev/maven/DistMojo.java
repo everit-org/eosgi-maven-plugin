@@ -18,7 +18,6 @@ package org.everit.osgi.dev.maven;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -385,19 +384,20 @@ public class DistMojo extends AbstractEOSGiMojo {
     Collection<DistributableArtifact> existingDistributedArtifacts = processArtifacts(
         existingDistributedEnvironment);
 
-    File environmentConfigurationTempFile =
-        unpackDistConfigFileToNewTempFile(distPackageFile, fileManager);
-
-    processConfigurationTemplate(environmentConfigurationTempFile, distributableArtifacts,
-        environment, fileManager);
-
-    EnvironmentType distributedEnvironment = distEnvConfigProvider
-        .getOverriddenDistributedEnvironmentConfig(environmentConfigurationTempFile,
-            UseByType.PARSABLES);
+    if (environmentConfigurationFile.exists()) {
+      environmentConfigurationFile.delete();
+    }
 
     fileManager.unpackZipFile(distPackageFile, environmentRootFolder,
         DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
     copyDistFolderToTargetIfExists(environmentRootFolder, fileManager);
+
+    processConfigurationTemplate(environmentConfigurationFile, distributableArtifacts,
+        environment, fileManager);
+
+    EnvironmentType distributedEnvironment = distEnvConfigProvider
+        .getOverriddenDistributedEnvironmentConfig(environmentConfigurationFile,
+            UseByType.PARSABLES);
 
     Collection<DistributableArtifact> newDistributedArtifacts =
         processArtifacts(distributedEnvironment);
@@ -405,9 +405,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     BundleExecutionPlan bundleExecutionPlan = new BundleExecutionPlan(environment.getId(),
         existingDistributedArtifacts, newDistributedArtifacts, environmentRootFolder,
         artifactResolver);
-
-    fileManager.overCopyFile(environmentConfigurationTempFile, environmentConfigurationFile);
-    environmentConfigurationTempFile.delete();
 
     convertBundleUpdatesToUninstallAndInstall(bundleExecutionPlan);
 
@@ -940,22 +937,6 @@ public class DistMojo extends AbstractEOSGiMojo {
     }
 
     return result;
-  }
-
-  private File unpackDistConfigFileToNewTempFile(final File distPackageFile,
-      final FileManager fileManager) {
-    try {
-      File environmentConfigurationTempFile =
-          File.createTempFile("eosgi", DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
-
-      fileManager.unpackZipEntry(distPackageFile, environmentConfigurationTempFile,
-          DistConstants.FILE_NAME_EOSGI_DIST_CONFIG);
-
-      return environmentConfigurationTempFile;
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-
   }
 
 }
